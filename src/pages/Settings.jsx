@@ -19,7 +19,7 @@ const TABS = [
 export default function Settings() {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = searchParams.get('tab') || 'profile';
-  const { user, isDemo } = useAuthStore();
+  const { user } = useAuthStore();
   const [keyInput, setKeyInput] = useState(localStorage.getItem('huntlo_gemini_api_key') || '');
 
   const handleTabChange = (tabId) => {
@@ -37,7 +37,7 @@ export default function Settings() {
   const handleDisconnectKey = () => {
     localStorage.removeItem('huntlo_gemini_api_key');
     setKeyInput('');
-    alert('API key removed. Reverting to Demo Mode.');
+    alert('API key removed.');
     setSearchParams({ tab: 'integrations' });
   };
 
@@ -77,7 +77,7 @@ export default function Settings() {
               <div className="form-group" style={{ maxWidth: 400, marginBottom: 24 }}>
                 <label className="label">Email Address</label>
                 <input className="input-base" defaultValue={user?.email} disabled />
-                {isDemo && <p className="text-xs text-warning mt-1">Cannot change email in demo mode.</p>}
+                <p className="text-xs" style={{ color: 'var(--text-tertiary)', marginTop: '4px' }}>Email cannot be changed here. Contact your workspace admin.</p>
               </div>
               <button className="btn btn-primary btn-md">Save Changes</button>
             </div>

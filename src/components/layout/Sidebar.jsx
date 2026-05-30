@@ -27,7 +27,7 @@ const NAV = [
 
 export default function Sidebar() {
   const { sidebarCollapsed, toggleSidebar, theme, toggleTheme } = useUIStore();
-  const { user, isDemo, signOut } = useAuthStore();
+  const { user, signOut } = useAuthStore();
   const navigate = useNavigate();
 
   const name = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
@@ -72,9 +72,7 @@ export default function Sidebar() {
 
       {/* Bottom */}
       <div className="sidebar-bottom">
-        {isDemo && !sidebarCollapsed && (
-          <div className="demo-badge">Demo Mode</div>
-        )}
+
         <button className="nav-item" onClick={toggleTheme} title="Toggle Light/Dark Mode">
           {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           {!sidebarCollapsed && <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>}

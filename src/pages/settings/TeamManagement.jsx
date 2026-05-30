@@ -7,7 +7,7 @@ import useAuthStore from '../../store/useAuthStore';
 import { sendTeamInvitation, generateInviteToken } from '../../lib/resend';
 
 export default function TeamManagement() {
-  const { team, inviteMember, removeMember, updateMemberRole, user, isDemo } = useAuthStore();
+  const { team, inviteMember, removeMember, updateMemberRole, user } = useAuthStore();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('Member');

@@ -1,23 +1,9 @@
 // ============================================
-// HUNTLO SALES OS — AUTH STORE (Supabase)
+// HUNTLO SALES OS — AUTH STORE (Production)
 // ============================================
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
-
-// Demo user for when Supabase isn't configured
-const DEMO_USER = {
-  id: 'demo-user-1',
-  email: 'alex.reid@huntlo.io',
-  user_metadata: { full_name: 'Alex Reid', avatar_color: '#3b82f6' },
-};
-
-const DEMO_TEAM = [
-  { id: 'u1', name: 'Alex Reid', email: 'alex.reid@huntlo.io', role: 'Admin', initials: 'AR', color: '#3b82f6', status: 'active', joinedAt: '2026-01-15' },
-  { id: 'u2', name: 'Sarah Kim', email: 'sarah.kim@huntlo.io', role: 'Member', initials: 'SK', color: '#8b5cf6', status: 'active', joinedAt: '2026-01-20' },
-  { id: 'u3', name: 'James Park', email: 'james.park@huntlo.io', role: 'Member', initials: 'JP', color: '#22c55e', status: 'active', joinedAt: '2026-02-01' },
-  { id: 'u4', name: 'Priya Nair', email: 'priya.nair@huntlo.io', role: 'Viewer', initials: 'PN', color: '#f59e0b', status: 'invited', joinedAt: '' },
-];
+import { supabase } from '../lib/supabase';
 
 const useAuthStore = create(
   persist(
@@ -26,16 +12,11 @@ const useAuthStore = create(
       session: null,
       loading: true,
       error: null,
-      team: DEMO_TEAM,
+      team: [],
       pendingInvites: [],
-      isDemo: false,
 
-      // Initialize auth state
+      // Initialize auth state from Supabase session
       initialize: async () => {
-        if (!isSupabaseConfigured()) {
-          set({ loading: false, isDemo: true });
-          return;
-        }
         try {
           const { data: { session } } = await supabase.auth.getSession();
           set({ session, user: session?.user ?? null, loading: false });
@@ -44,47 +25,35 @@ const useAuthStore = create(
             set({ session, user: session?.user ?? null });
           });
         } catch (err) {
-          set({ loading: false, isDemo: true });
+          console.error('[Auth] Initialize error:', err);
+          set({ loading: false });
         }
       },
 
-      // Sign in with email/password
+      // Sign in with email + password
       signIn: async (email, password) => {
         set({ error: null, loading: true });
-
-        // Demo mode: accept any credentials
-        if (!isSupabaseConfigured()) {
-          await new Promise(r => setTimeout(r, 800));
-          const demoU = { ...DEMO_USER, email };
-          set({ user: demoU, session: { user: demoU }, loading: false, isDemo: true });
-          return { success: true };
-        }
-
         try {
           const { data, error } = await supabase.auth.signInWithPassword({ email, password });
           if (error) throw error;
           set({ user: data.user, session: data.session, loading: false });
           return { success: true };
         } catch (err) {
-          set({ error: err.message, loading: false });
-          return { success: false, error: err.message };
+          const msg = err.message === 'Invalid login credentials'
+            ? 'Incorrect email or password. Please try again.'
+            : err.message;
+          set({ error: msg, loading: false });
+          return { success: false, error: msg };
         }
       },
 
       // Sign up new user
       signUp: async (email, password, fullName) => {
         set({ error: null, loading: true });
-
-        if (!isSupabaseConfigured()) {
-          await new Promise(r => setTimeout(r, 800));
-          const newUser = { ...DEMO_USER, email, user_metadata: { full_name: fullName, avatar_color: '#3b82f6' } };
-          set({ user: newUser, session: { user: newUser }, loading: false, isDemo: true });
-          return { success: true };
-        }
-
         try {
           const { data, error } = await supabase.auth.signUp({
-            email, password,
+            email,
+            password,
             options: { data: { full_name: fullName } },
           });
           if (error) throw error;
@@ -98,19 +67,12 @@ const useAuthStore = create(
 
       // Sign out
       signOut: async () => {
-        if (!isSupabaseConfigured()) {
-          set({ user: null, session: null, isDemo: false });
-          return;
-        }
         await supabase.auth.signOut();
         set({ user: null, session: null });
       },
 
-      // Reset password
+      // Send password reset email
       resetPassword: async (email) => {
-        if (!isSupabaseConfigured()) {
-          return { success: true, demo: true };
-        }
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`,
         });
@@ -118,21 +80,21 @@ const useAuthStore = create(
         return { success: true };
       },
 
-      // Update password (used after clicking reset link)
+      // Update password after reset link click
       updatePassword: async (newPassword) => {
-        if (!isSupabaseConfigured()) {
-          return { success: true, demo: true };
-        }
         set({ loading: true });
-        const { error } = await supabase.auth.updateUser({
-          password: newPassword
-        });
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
         set({ loading: false });
         if (error) return { success: false, error: error.message };
         return { success: true };
       },
 
-      // Add team member (invite)
+      // Team management
+      fetchTeam: async () => {
+        const { data, error } = await supabase.from('team_members').select('*');
+        if (!error && data) set({ team: data });
+      },
+
       inviteMember: (invite) => {
         const newMember = {
           id: `u${Date.now()}`,
@@ -148,12 +110,10 @@ const useAuthStore = create(
         return newMember;
       },
 
-      // Remove team member
       removeMember: (memberId) => {
         set(state => ({ team: state.team.filter(m => m.id !== memberId) }));
       },
 
-      // Update member role
       updateMemberRole: (memberId, role) => {
         set(state => ({
           team: state.team.map(m => m.id === memberId ? { ...m, role } : m)
@@ -162,16 +122,13 @@ const useAuthStore = create(
 
       clearError: () => set({ error: null }),
 
-      // Helpers
       get currentUser() {
-        const { user, isDemo } = get();
-        if (isDemo && !user) return DEMO_USER;
-        return user;
+        return get().user;
       },
     }),
     {
       name: 'huntlo-auth',
-      partialize: (state) => ({ user: state.user, session: state.session, isDemo: state.isDemo }),
+      partialize: (state) => ({ user: state.user, session: state.session }),
     }
   )
 );

@@ -10,7 +10,7 @@ import './Auth.css';
 import { supabase } from '../../lib/supabase';
 
 export default function ResetPassword() {
-  const { updatePassword, loading, isDemo } = useAuthStore();
+  const { updatePassword, loading } = useAuthStore();
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
