@@ -9,22 +9,8 @@ import useDataStore from '../store/useDataStore';
 import { queryGemini } from '../lib/gemini';
 import './HomeOS.css';
 
-const AI_INSIGHTS = [
-  { icon: '🔥', text: '5 enterprise leads inactive for 7+ days', action: 'Review', type: 'warning' },
-  { icon: '📈', text: 'Demo-to-proposal conversion up 18% this week', action: 'View', type: 'positive' },
-  { icon: '⚡', text: 'Linear deal ready to close — legal unblocked', action: 'Act Now', type: 'urgent' },
-  { icon: '📧', text: 'Notion proposal opened 4× — follow up now', action: 'Follow Up', type: 'warning' },
-  { icon: '🎯', text: 'Anthropic: $320k strategic deal needs exec deck', action: 'Prepare', type: 'info' },
-];
-
-const ACTIVITY_FEED = [
-  { icon: '📅', text: 'Demo completed with Linear (Mia Zhou)', time: '2026-05-15T08:00:00Z', type: 'meeting' },
-  { icon: '📧', text: 'Proposal sent to Notion — $240k ARR', time: '2026-05-14T16:00:00Z', type: 'email' },
-  { icon: '🏆', text: 'PlanetScale deal WON — $120k ARR', time: '2026-05-08T10:00:00Z', type: 'won' },
-  { icon: '💬', text: 'Supabase onboarding kickoff completed', time: '2026-05-12T10:00:00Z', type: 'meeting' },
-  { icon: '🔗', text: 'Vercel replied to LinkedIn outreach', time: '2026-05-12T12:00:00Z', type: 'reply' },
-  { icon: '📝', text: 'Anthropic discovery scheduled for tomorrow', time: '2026-05-15T11:00:00Z', type: 'note' },
-];
+const AI_INSIGHTS = [];
+const ACTIVITY_FEED = [];
 
 function PriorityCard({ icon: Icon, label, count, urgency, color, onClick }) {
   return (
@@ -149,13 +135,17 @@ export default function HomeOS() {
         <section className="section">
           <h2 className="section-title"><Sparkles size={14} /> AI Insights</h2>
           <div className="insights-list">
-            {AI_INSIGHTS.map((ins, i) => (
+            {AI_INSIGHTS.length > 0 ? AI_INSIGHTS.map((ins, i) => (
               <div key={i} className={`insight-card insight-${ins.type}`}>
                 <span className="insight-icon">{ins.icon}</span>
                 <span className="insight-text">{ins.text}</span>
                 <button className="insight-action" onClick={() => alert('Applying AI recommendation...')}>{ins.action} →</button>
               </div>
-            ))}
+            )) : (
+              <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '13px' }}>
+                No active insights. Connect more data sources to generate AI recommendations.
+              </div>
+            )}
           </div>
         </section>
 
@@ -163,7 +153,7 @@ export default function HomeOS() {
         <section className="section">
           <h2 className="section-title"><Activity size={14} /> Activity Feed</h2>
           <div className="activity-list">
-            {ACTIVITY_FEED.map((item, i) => (
+            {ACTIVITY_FEED.length > 0 ? ACTIVITY_FEED.map((item, i) => (
               <div key={i} className="activity-item animate-fade-in" style={{ animationDelay: `${i * 40}ms` }}>
                 <span className="activity-icon">{item.icon}</span>
                 <div className="activity-body">
@@ -173,7 +163,11 @@ export default function HomeOS() {
                   </span>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '13px' }}>
+                No recent activity. Actions taken by your team will appear here.
+              </div>
+            )}
           </div>
         </section>
       </div>

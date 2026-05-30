@@ -6,6 +6,7 @@ import { Search, Bell, Plus, Command } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import useUIStore from '../../store/useUIStore';
 import useAuthStore from '../../store/useAuthStore';
+import NotificationDropdown from './NotificationDropdown';
 import './TopBar.css';
 
 const PAGE_TITLES = {
@@ -26,6 +27,7 @@ export default function TopBar({ onNewDeal }) {
   const { user } = useAuthStore();
   const location = useLocation();
   const [searchFocused, setSearchFocused] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const title = PAGE_TITLES[location.pathname] || 'Huntlo OS';
 
@@ -55,12 +57,17 @@ export default function TopBar({ onNewDeal }) {
           <Plus size={13} />
           New Deal
         </button>
-        <button className="icon-btn relative" title="Notifications">
-          <Bell size={16} />
-          {activeNotifications > 0 && (
-            <span className="notif-badge">{activeNotifications}</span>
+        <div style={{ position: 'relative' }}>
+          <button className="icon-btn relative" title="Notifications" onClick={() => setShowNotifications(!showNotifications)}>
+            <Bell size={16} />
+            {activeNotifications > 0 && (
+              <span className="notif-badge">{activeNotifications}</span>
+            )}
+          </button>
+          {showNotifications && (
+            <NotificationDropdown onClose={() => setShowNotifications(false)} />
           )}
-        </button>
+        </div>
       </div>
     </header>
   );

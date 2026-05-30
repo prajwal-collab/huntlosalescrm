@@ -9,7 +9,7 @@ const useUIStore = create(
     (set) => ({
       sidebarCollapsed: false,
       commandCenterOpen: false,
-      activeNotifications: 3,
+      activeNotifications: 0,
       theme: 'dark',
 
       toggleSidebar: () => set(state => ({ sidebarCollapsed: !state.sidebarCollapsed })),

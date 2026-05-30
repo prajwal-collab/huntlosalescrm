@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import useUIStore from '../../store/useUIStore';
 import useAuthStore from '../../store/useAuthStore';
-import logoImg from '../../assets/logo.png';
+import logoImg from '../../assets/logo.svg';
 import './Sidebar.css';
 
 const NAV = [
@@ -43,12 +43,9 @@ export default function Sidebar() {
     <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
       {/* Logo */}
       <div className="sidebar-logo">
-        <div className="logo-icon" style={{ padding: 0, overflow: 'hidden' }}>
-          <img src={logoImg} alt="Huntlo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <div className="logo-wrapper" style={{ display: 'flex', alignItems: 'center', height: '36px', overflow: 'hidden' }}>
+          <img src={logoImg} alt="Huntlo" style={{ height: '100%', width: 'auto', objectFit: 'contain', marginLeft: sidebarCollapsed ? '-4px' : '0' }} />
         </div>
-        {!sidebarCollapsed && (
-          <span className="logo-text">Huntlo<span className="logo-accent"> OS</span></span>
-        )}
         <button className="collapse-btn" onClick={toggleSidebar} title="Toggle sidebar">
           {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
