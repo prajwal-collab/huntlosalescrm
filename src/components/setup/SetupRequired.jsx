@@ -2,38 +2,11 @@
 // HUNTLO SALES OS — SETUP REQUIRED SCREEN
 // ============================================
 import { useState } from 'react';
-import { ExternalLink, Copy, Check, Terminal, Database, Key, ArrowRight, CheckCircle } from 'lucide-react';
+import { ExternalLink, Copy, Check, Key, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 
-const steps = [
-  {
-    num: '01',
-    title: 'Create a free Supabase project',
-    desc: 'Go to supabase.com, sign up free, and create a new project.',
-    link: 'https://supabase.com/dashboard/new/_',
-    linkLabel: 'Open Supabase Dashboard →',
-    icon: Database,
-  },
-  {
-    num: '02',
-    title: 'Copy your project URL & anon key',
-    desc: 'In your project: Settings → API → copy Project URL and anon/public key.',
-    icon: Key,
-  },
-  {
-    num: '03',
-    title: 'Create a .env file in your project root',
-    desc: 'Paste the values below into a new .env file, then restart the dev server.',
-    icon: Terminal,
-    code: true,
-  },
-  {
-    num: '04',
-    title: 'Create your user account',
-    desc: 'In Supabase: Authentication → Users → Add user → enter prajwal@earlyjobs.in and your password.',
-    icon: CheckCircle,
-  },
-];
+const DETECTED_URL = import.meta.env.VITE_SUPABASE_URL;
+const urlDetected = DETECTED_URL && DETECTED_URL.includes('.supabase.co');
 
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false);
@@ -55,18 +28,18 @@ function CopyButton({ text }) {
   );
 }
 
-const envTemplate = `VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key-here`;
-
 export default function SetupRequired() {
+  const envText = urlDetected
+    ? `VITE_SUPABASE_URL=${DETECTED_URL}\nVITE_SUPABASE_ANON_KEY=<paste your anon key here>\nVITE_APP_URL=http://localhost:3000`
+    : `VITE_SUPABASE_URL=https://your-project-ref.supabase.co\nVITE_SUPABASE_ANON_KEY=<paste your anon key here>\nVITE_APP_URL=http://localhost:3000`;
+
   return (
     <div style={{
       minHeight: '100vh', width: '100vw',
       background: 'var(--bg-base)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '24px', position: 'fixed', inset: 0,
+      padding: '24px', position: 'fixed', inset: 0, overflowY: 'auto',
     }}>
-      {/* Glow */}
       <div style={{
         position: 'fixed', width: '600px', height: '600px',
         background: 'radial-gradient(circle, rgba(59,130,246,0.07) 0%, transparent 70%)',
@@ -74,13 +47,10 @@ export default function SetupRequired() {
         pointerEvents: 'none',
       }} />
 
-      <div style={{ width: '100%', maxWidth: '560px', position: 'relative', zIndex: 1 }}>
+      <div style={{ width: '100%', maxWidth: '520px', position: 'relative', zIndex: 1 }}>
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '32px' }}>
-          <div style={{
-            width: '38px', height: '38px', borderRadius: '8px',
-            overflow: 'hidden', boxShadow: '0 0 24px rgba(59,130,246,0.4)',
-          }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '28px' }}>
+          <div style={{ width: '38px', height: '38px', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 0 24px rgba(59,130,246,0.4)' }}>
             <img src={logoImg} alt="Huntlo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <span style={{ fontSize: '19px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
@@ -88,105 +58,102 @@ export default function SetupRequired() {
           </span>
         </div>
 
-        {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>
-            One-time setup required
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>
+            Almost there — one key missing
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>
-            Connect your Supabase database to unlock all features.<br />
-            Takes about <strong style={{ color: 'var(--text-primary)' }}>2 minutes</strong>.
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.6 }}>
+            Your Supabase project URL is detected. You just need to add your <strong style={{ color: 'var(--text-primary)' }}>anon key</strong>.
           </p>
         </div>
 
-        {/* Steps */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-          {steps.map((step, i) => (
-            <div key={i} style={{
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--bg-border)',
-              borderRadius: '12px',
-              padding: '16px 20px',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-                <div style={{
-                  width: '28px', height: '28px', borderRadius: '8px',
-                  background: 'var(--accent-blue-muted)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'var(--accent-blue)', flexShrink: 0, marginTop: '1px',
-                }}>
-                  <step.icon size={14} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--accent-blue)', letterSpacing: '0.05em' }}>
-                      STEP {step.num}
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                    {step.title}
-                  </p>
-                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                    {step.desc}
-                  </p>
-
-                  {step.link && (
-                    <a href={step.link} target="_blank" rel="noreferrer" style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '5px',
-                      marginTop: '8px', fontSize: '12px', fontWeight: 600,
-                      color: 'var(--accent-blue)', textDecoration: 'none',
-                    }}>
-                      {step.linkLabel} <ExternalLink size={11} />
-                    </a>
-                  )}
-
-                  {step.code && (
-                    <div style={{
-                      marginTop: '10px',
-                      background: 'var(--bg-hover)',
-                      border: '1px solid var(--bg-border)',
-                      borderRadius: '8px',
-                      overflow: 'hidden',
-                    }}>
-                      <div style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '6px 12px',
-                        borderBottom: '1px solid var(--bg-border)',
-                      }}>
-                        <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', fontWeight: 600, letterSpacing: '0.05em' }}>
-                          .env
-                        </span>
-                        <CopyButton text={envTemplate} />
-                      </div>
-                      <pre style={{
-                        margin: 0, padding: '12px',
-                        fontSize: '11.5px', color: 'var(--text-secondary)',
-                        fontFamily: 'var(--font-mono, monospace)',
-                        lineHeight: 1.7, overflowX: 'auto',
-                      }}>
-                        {envTemplate}
-                      </pre>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
+        {/* URL Status */}
+        <div style={{
+          background: urlDetected ? 'rgba(34,197,94,0.06)' : 'rgba(239,68,68,0.06)',
+          border: `1px solid ${urlDetected ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`,
+          borderRadius: '10px', padding: '12px 16px', marginBottom: '16px',
+          display: 'flex', alignItems: 'center', gap: '10px',
+        }}>
+          {urlDetected
+            ? <CheckCircle size={15} color="var(--success)" style={{ flexShrink: 0 }} />
+            : <AlertCircle size={15} color="var(--danger)" style={{ flexShrink: 0 }} />}
+          <div>
+            <p style={{ fontSize: '12px', fontWeight: 600, color: urlDetected ? 'var(--success)' : 'var(--danger)', marginBottom: '2px' }}>
+              {urlDetected ? 'Project URL detected' : 'Project URL missing'}
+            </p>
+            {urlDetected && (
+              <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontFamily: 'monospace' }}>
+                {DETECTED_URL}
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* After setup hint */}
+        {/* Step: Get anon key */}
         <div style={{
-          background: 'var(--accent-blue-muted)',
-          border: '1px solid rgba(59,130,246,0.2)',
-          borderRadius: '10px',
-          padding: '14px 18px',
+          background: 'var(--bg-surface)', border: '1px solid var(--bg-border)',
+          borderRadius: '12px', padding: '18px 20px', marginBottom: '14px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+            <div style={{
+              width: '30px', height: '30px', borderRadius: '8px',
+              background: 'var(--accent-blue-muted)', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', color: 'var(--accent-blue)', flexShrink: 0,
+            }}>
+              <Key size={14} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                Copy your anon key from Supabase
+              </p>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '10px' }}>
+                Go to your Supabase project → <strong>Settings → API</strong> → copy the <code style={{ color: 'var(--accent-blue)', fontSize: '11px', background: 'var(--bg-hover)', padding: '1px 4px', borderRadius: '3px' }}>anon</code> <code style={{ color: 'var(--accent-blue)', fontSize: '11px', background: 'var(--bg-hover)', padding: '1px 4px', borderRadius: '3px' }}>public</code> key.
+              </p>
+              <a
+                href={urlDetected ? `https://supabase.com/dashboard/project/${DETECTED_URL?.split('//')[1]?.split('.')[0]}/settings/api` : 'https://supabase.com/dashboard'}
+                target="_blank" rel="noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 600, color: 'var(--accent-blue)', textDecoration: 'none' }}
+              >
+                Open API Settings → <ExternalLink size={11} />
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Step: Update .env */}
+        <div style={{
+          background: 'var(--bg-surface)', border: '1px solid var(--bg-border)',
+          borderRadius: '12px', padding: '18px 20px', marginBottom: '16px',
+        }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+            Update your <code style={{ color: 'var(--accent-blue)', fontSize: '12px' }}>.env</code> file
+          </p>
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+            Paste the anon key into your <code style={{ fontSize: '11px' }}>.env</code> file in the project root, then restart the dev server.
+          </p>
+          <div style={{ background: 'var(--bg-hover)', border: '1px solid var(--bg-border)', borderRadius: '8px', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', borderBottom: '1px solid var(--bg-border)' }}>
+              <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', fontWeight: 600, letterSpacing: '0.05em' }}>.env</span>
+              <CopyButton text={envText} />
+            </div>
+            <pre style={{ margin: 0, padding: '12px', fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'monospace', lineHeight: 1.7, overflowX: 'auto' }}>
+              {envText}
+            </pre>
+          </div>
+        </div>
+
+        {/* Restart hint */}
+        <div style={{
+          background: 'var(--accent-blue-muted)', border: '1px solid rgba(59,130,246,0.2)',
+          borderRadius: '10px', padding: '12px 16px',
           display: 'flex', alignItems: 'center', gap: '12px',
         }}>
-          <ArrowRight size={16} color="var(--accent-blue)" style={{ flexShrink: 0 }} />
-          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-            After creating <code style={{ color: 'var(--accent-blue)', fontSize: '11px' }}>.env</code> and
-            restarting the dev server with <code style={{ color: 'var(--accent-blue)', fontSize: '11px' }}>npm run dev</code>,
-            the login page will be ready. Use the email and password you set in Supabase.
+          <ArrowRight size={14} color="var(--accent-blue)" style={{ flexShrink: 0 }} />
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+            After saving <code style={{ color: 'var(--accent-blue)', fontSize: '11px' }}>.env</code>, stop and restart with{' '}
+            <code style={{ color: 'var(--accent-blue)', fontSize: '11px' }}>npm run dev</code> — the login page will appear immediately.
+            <br />
+            <strong style={{ color: 'var(--text-primary)' }}>Login:</strong> prajwal@earlyjobs.in with your Supabase password.
           </p>
         </div>
       </div>

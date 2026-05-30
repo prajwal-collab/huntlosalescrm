@@ -82,8 +82,9 @@ const useAuthStore = create(
       // Send password reset email
       resetPassword: async (email) => {
         if (!isConfigured) return { success: false, error: 'Supabase not configured.' };
+        const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: `${appUrl}/reset-password`,
         });
         if (error) return { success: false, error: error.message };
         return { success: true };
