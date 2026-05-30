@@ -1,0 +1,63 @@
+// ============================================
+// HUNTLO SALES OS — MAIN ROUTER (App.jsx)
+// ============================================
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import useAuthStore from './store/useAuthStore';
+
+// Layout & Auth
+import Layout from './components/layout/Layout';
+import AuthGuard from './components/auth/AuthGuard';
+import SignIn from './pages/auth/SignIn';
+import SignUp from './pages/auth/SignUp';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
+
+// Pages
+import HomeOS from './pages/HomeOS';
+import Pipeline from './pages/Pipeline';
+import Companies from './pages/Companies';
+import Contacts from './pages/Contacts';
+import Tasks from './pages/Tasks';
+import Meetings from './pages/Meetings';
+import Sequences from './pages/Sequences';
+import Documents from './pages/Documents';
+import Reports from './pages/Reports';
+import Settings from './pages/Settings';
+
+export default function App() {
+  const { initialize } = useAuthStore();
+
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+
+        {/* Protected Routes */}
+        <Route element={<AuthGuard />}>
+          <Route element={<Layout><HomeOS /></Layout>} path="/" />
+          <Route element={<Layout><Pipeline /></Layout>} path="/pipeline" />
+          <Route element={<Layout><Companies /></Layout>} path="/companies" />
+          <Route element={<Layout><Contacts /></Layout>} path="/contacts" />
+          <Route element={<Layout><Tasks /></Layout>} path="/tasks" />
+          <Route element={<Layout><Meetings /></Layout>} path="/meetings" />
+          <Route element={<Layout><Sequences /></Layout>} path="/sequences" />
+          <Route element={<Layout><Documents /></Layout>} path="/documents" />
+          <Route element={<Layout><Reports /></Layout>} path="/reports" />
+          <Route element={<Layout><Settings /></Layout>} path="/settings" />
+        </Route>
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}

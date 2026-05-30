@@ -1,0 +1,81 @@
+/* TOPBAR */
+.topbar {
+  height: var(--topbar-height);
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--bg-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-5);
+  gap: var(--space-4);
+  flex-shrink: 0;
+}
+
+.topbar-left { display: flex; align-items: center; min-width: 160px; }
+.page-title { font-size: var(--text-md); font-weight: 600; color: var(--text-primary); }
+
+.topbar-center { flex: 1; display: flex; justify-content: center; }
+
+.ai-search-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-md);
+  padding: 7px 12px;
+  cursor: pointer;
+  width: 100%;
+  max-width: 460px;
+  transition: var(--transition-base);
+  color: var(--text-tertiary);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+.ai-search-trigger:hover, .ai-search-trigger.focused {
+  border-color: var(--accent-blue);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  box-shadow: 0 0 0 3px var(--accent-blue-glow);
+}
+.search-placeholder { flex: 1; text-align: left; }
+
+.kbd {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.topbar-right { display: flex; align-items: center; gap: 8px; min-width: 160px; justify-content: flex-end; }
+
+.icon-btn {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  position: relative;
+}
+.icon-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+.notif-badge {
+  position: absolute;
+  top: -4px; right: -4px;
+  background: var(--accent-blue);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--bg-base);
+}

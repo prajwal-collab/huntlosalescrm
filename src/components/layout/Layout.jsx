@@ -1,0 +1,42 @@
+// ============================================
+// HUNTLO SALES OS — MAIN LAYOUT
+// ============================================
+import { useState, useEffect } from 'react';
+import Sidebar from './Sidebar';
+import TopBar from './TopBar';
+import CommandCenter from '../ai/CommandCenter';
+import useUIStore from '../../store/useUIStore';
+import useDataStore from '../../store/useDataStore';
+import { useKeyboard } from '../../hooks/useKeyboard';
+import './Layout.css';
+
+export default function Layout({ children }) {
+  const { commandCenterOpen, toggleCommandCenter, closeCommandCenter } = useUIStore();
+  const { fetchData } = useDataStore();
+  const [newDealOpen, setNewDealOpen] = useState(false);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useKeyboard({
+    'ctrl+k': () => toggleCommandCenter(),
+    'cmd+k': () => toggleCommandCenter(),
+    'escape': () => closeCommandCenter(),
+  });
+
+  return (
+    <div className="app-shell">
+      <Sidebar />
+      <div className="main-area">
+        <TopBar onNewDeal={() => setNewDealOpen(true)} />
+        <main className="page-content">
+          {children}
+        </main>
+      </div>
+      {commandCenterOpen && (
+        <CommandCenter onClose={closeCommandCenter} />
+      )}
+    </div>
+  );
+}

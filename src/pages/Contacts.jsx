@@ -1,0 +1,291 @@
+// ============================================
+// HUNTLO SALES OS — CONTACTS PAGE
+// ============================================
+import { useState, useRef } from 'react';
+import { Search, Mail, Plus, ExternalLink, MessageSquare, X, Users, Upload, Download } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import useDataStore from '../store/useDataStore';
+import './Contacts.css';
+
+const SENTIMENT_COLOR = {
+  'very positive': 'var(--success)', 'positive': '#86efac',
+  'neutral': 'var(--warning)', 'negative': 'var(--danger)',
+};
+
+const TAG_COLORS = {
+  'Decision Maker': 'badge-purple', 'Champion': 'badge-cyan',
+  'Enterprise': 'badge-blue', 'High Intent': 'badge-green',
+  'Warm Lead': 'badge-yellow', 'Ghosted': 'badge-red',
+  'Strategic': 'badge-blue', 'Trial Active': 'badge-green',
+  'Onboarding': 'badge-cyan',
+};
+
+function ContactCard({ contact, onSelect, selected }) {
+  return (
+    <div className={`contact-card ${selected ? 'selected' : ''}`} onClick={() => onSelect(contact)}>
+      <div className="avatar avatar-lg" style={{ background: contact.color || '#3b82f6', color: '#fff', flexShrink: 0 }}>
+        {contact.name ? contact.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'CO'}
+      </div>
+      <div className="cc-info">
+        <div className="cc-top">
+          <span className="cc-name">{contact.name}</span>
+          <span className="cc-sentiment" style={{ color: SENTIMENT_COLOR[contact.sentiment] || 'var(--text-tertiary)' }}>
+            ●
+          </span>
+        </div>
+        <span className="cc-role">{contact.designation}</span>
+        <span className="cc-company">{contact.company}</span>
+        <div className="cc-tags">
+          {contact.tags.slice(0, 2).map(t => (
+            <span key={t} className={`badge ${TAG_COLORS[t] || 'badge-gray'}`}>{t}</span>
+          ))}
+        </div>
+      </div>
+      <div className="cc-right">
+        <div className="cc-score-wrap">
+          <span className="cc-score-num" style={{ color: contact.engagementScore >= 75 ? 'var(--success)' : 'var(--warning)' }}>
+            {contact.engagementScore}
+          </span>
+          <span className="cc-score-lbl">Score</span>
+        </div>
+        <span className="cc-last">{formatDistanceToNow(new Date(contact.lastInteraction), { addSuffix: true })}</span>
+      </div>
+    </div>
+  );
+}
+
+function ContactDetail({ contact, onClose }) {
+  return (
+    <div className="contact-detail animate-slide-right">
+      <div className="panel-header" style={{ marginBottom: 'var(--space-4)' }}>
+        <div className="avatar avatar-xl" style={{ background: contact.color || '#3b82f6', color: '#fff' }}>
+          {contact.name ? contact.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'CO'}
+        </div>
+        <div>
+          <h2 className="panel-title">{contact.name}</h2>
+          <p className="panel-sub">{contact.designation} · {contact.company}</p>
+        </div>
+        <button className="drawer-close" onClick={onClose}>✕</button>
+      </div>
+
+      <div className="contact-detail-tags">
+        {contact.tags.map(t => <span key={t} className={`badge ${TAG_COLORS[t] || 'badge-gray'}`}>{t}</span>)}
+      </div>
+
+      <div className="panel-stats">
+        <div className="ov-stat"><span className="ov-stat-label">Engagement</span><span className="ov-stat-val" style={{ color: 'var(--success)' }}>{contact.engagementScore}</span></div>
+        <div className="ov-stat"><span className="ov-stat-label">Sentiment</span><span className="ov-stat-val" style={{ textTransform: 'capitalize', color: SENTIMENT_COLOR[contact.sentiment] }}>{contact.sentiment}</span></div>
+        <div className="ov-stat"><span className="ov-stat-label">Role</span><span className="ov-stat-val">{contact.role}</span></div>
+        <div className="ov-stat"><span className="ov-stat-label">Timezone</span><span className="ov-stat-val">{contact.timezone}</span></div>
+      </div>
+
+      <div className="contact-reach">
+        <a href={`mailto:${contact.email}`} className="reach-item">
+          <Mail size={14} /> {contact.email}
+        </a>
+        <a href={`https://${contact.linkedin}`} target="_blank" rel="noopener noreferrer" className="reach-item">
+          <ExternalLink size={14} /> LinkedIn Profile
+        </a>
+        <div className="reach-item">
+          <MessageSquare size={14} /> {contact.whatsapp}
+        </div>
+      </div>
+
+      {contact.notes && (
+        <div className="ov-notes">
+          <p className="ov-notes-label">Intelligence</p>
+          <p className="ov-notes-text">{contact.notes}</p>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button className="btn btn-primary btn-sm" onClick={() => alert(`Emailing ${contact.email}...`)}><Mail size={13} /> Send Email</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => alert('WhatsApp integration triggered')}><MessageSquare size={13} /> WhatsApp</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => window.open(contact.linkedin ? `https://${contact.linkedin}` : 'https://linkedin.com', '_blank')}><ExternalLink size={13} /> LinkedIn</button>
+      </div>
+    </div>
+  );
+}
+
+export default function Contacts() {
+  const { contacts, companies, createContact, bulkCreateContacts } = useDataStore();
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState(null);
+  const [filterRole, setFilterRole] = useState('all');
+  const [isAdding, setIsAdding] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const [formData, setFormData] = useState({ name: '', email: '', designation: '', company_id: '', role: 'Decision Maker', linkedin: '' });
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target.result;
+      const lines = text.split('\n');
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      
+      const newContacts = [];
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const values = lines[i].split(',').map(v => v.trim());
+        const contactObj = { tags: [], engagement_score: 0, sentiment: 'neutral' };
+        
+        headers.forEach((header, index) => {
+          if (header === 'name') contactObj.name = values[index];
+          if (header === 'email') contactObj.email = values[index];
+          if (header === 'designation') contactObj.designation = values[index];
+          if (header === 'role') contactObj.role = values[index];
+          if (header === 'linkedin') contactObj.linkedin = values[index];
+        });
+
+        if (contactObj.name) {
+          newContacts.push(contactObj);
+        }
+      }
+
+      if (newContacts.length > 0) {
+        try {
+          await bulkCreateContacts(newContacts);
+          alert(`Successfully imported ${newContacts.length} contacts!`);
+        } catch (err) {
+          console.error(err);
+          alert('Failed to import contacts.');
+        }
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = null; // Reset input
+  };
+
+  const filtered = contacts.filter(c => {
+    const q = search.toLowerCase();
+    const companyMatch = companies.find(comp => comp.id === c.company_id);
+    const coName = companyMatch ? companyMatch.name : '';
+    
+    const matchSearch = c.name.toLowerCase().includes(q) || coName.toLowerCase().includes(q) || (c.designation && c.designation.toLowerCase().includes(q));
+    const matchRole = filterRole === 'all' || c.role === filterRole;
+    return matchSearch && matchRole;
+  });
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    if (!formData.name) return;
+    try {
+      await createContact({
+        name: formData.name,
+        email: formData.email,
+        designation: formData.designation,
+        company_id: formData.company_id || null,
+        role: formData.role,
+        linkedin: formData.linkedin,
+        tags: [],
+        engagement_score: 0,
+        sentiment: 'neutral'
+      });
+      setIsAdding(false);
+      setFormData({ name: '', email: '', designation: '', company_id: '', role: 'Decision Maker', linkedin: '' });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  return (
+    <div className="contacts-page">
+      <div className="page-header-row">
+        <div>
+          <h1 className="page-big-title">Contacts</h1>
+          <p className="page-big-sub">{contacts.length} relationships tracked</p>
+        </div>
+        <div className="page-header-actions">
+          <div className="search-box" style={{ width: 240 }}>
+            <Search size={14} />
+            <input placeholder="Search contacts..." value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <select className="input-base" style={{ width: 180 }} value={filterRole} onChange={e => setFilterRole(e.target.value)}>
+            <option value="all">All Roles</option>
+            <option value="Decision Maker">Decision Maker</option>
+            <option value="Champion">Champion</option>
+            <option value="Technical Evaluator">Technical Evaluator</option>
+            <option value="Influencer">Influencer</option>
+          </select>
+          <button className="btn btn-ghost btn-sm" onClick={() => {
+            const link = document.createElement('a');
+            link.href = '/contacts_template.csv';
+            link.download = 'contacts_template.csv';
+            link.click();
+          }}>
+            <Download size={13} /> Template
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => fileInputRef.current?.click()}>
+            <Upload size={13} /> Import CSV
+          </button>
+          <input type="file" accept=".csv" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} />
+          <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>
+            <Plus size={13} /> Add Contact
+          </button>
+        </div>
+      </div>
+
+      <div className="contacts-layout">
+        <div className="contacts-list-wrap">
+          {filtered.map(c => {
+            const comp = companies.find(comp => comp.id === c.company_id);
+            return <ContactCard key={c.id} contact={{...c, company: comp ? comp.name : 'Unknown'}} selected={selected?.id === c.id} onSelect={co => setSelected(co.id === selected?.id ? null : co)} />;
+          })}
+          {contacts.length === 0 && (
+             <div className="empty-state" style={{ marginTop: 40 }}>
+               <Users size={32} />
+               <h3>No contacts yet</h3>
+               <p>Add people to start building relationships.</p>
+             </div>
+          )}
+        </div>
+        
+        {selected && !isAdding && <ContactDetail contact={{...selected, company: companies.find(comp => comp.id === selected.company_id)?.name}} onClose={() => setSelected(null)} />}
+        
+        {isAdding && (
+          <div className="contact-detail animate-slide-right">
+            <div className="panel-header" style={{ marginBottom: 24 }}>
+              <h2 className="panel-title">Add Contact</h2>
+              <button className="drawer-close" onClick={() => setIsAdding(false)}><X size={16}/></button>
+            </div>
+            <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div className="form-group">
+                <label className="label">Full Name</label>
+                <input className="input-base" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+              </div>
+              <div className="form-group">
+                <label className="label">Email Address</label>
+                <input className="input-base" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+              </div>
+              <div className="form-group">
+                <label className="label">Job Title</label>
+                <input className="input-base" value={formData.designation} onChange={e => setFormData({...formData, designation: e.target.value})} />
+              </div>
+              <div className="form-group">
+                <label className="label">Company</label>
+                <select className="input-base" value={formData.company_id} onChange={e => setFormData({...formData, company_id: e.target.value})}>
+                  <option value="">Select Company</option>
+                  {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="label">Persona Role</label>
+                <select className="input-base" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
+                  <option value="Decision Maker">Decision Maker</option>
+                  <option value="Champion">Champion</option>
+                  <option value="Technical Evaluator">Technical Evaluator</option>
+                  <option value="Influencer">Influencer</option>
+                </select>
+              </div>
+              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }}>Save Contact</button>
+            </form>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

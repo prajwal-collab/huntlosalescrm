@@ -1,0 +1,77 @@
+/* SETTINGS */
+.settings-page { display: flex; flex-direction: column; gap: var(--space-5); height: 100%; }
+
+.settings-layout { display: flex; gap: var(--space-6); flex: 1; overflow: hidden; }
+
+.settings-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  text-align: left;
+}
+.settings-nav-item:hover { background: var(--bg-surface); color: var(--text-primary); }
+.settings-nav-item.active { background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--bg-border); }
+
+.settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: var(--space-4);
+}
+
+.settings-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  max-width: 800px;
+}
+
+/* Integrations */
+.integrations-list { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.integration-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  transition: var(--transition-fast);
+}
+.integration-card:hover { border-color: var(--text-tertiary); }
+.integration-card.connected { border-color: rgba(59,130,246,0.3); background: var(--accent-blue-muted); }
+
+.int-icon {
+  width: 40px; height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 18px; font-weight: 700;
+}
+.int-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.int-name { font-size: var(--text-md); font-weight: 600; color: var(--text-primary); }
+.int-desc { font-size: var(--text-sm); color: var(--text-secondary); }
+
+.mb-6 { margin-bottom: var(--space-6); }
+.mt-1 { margin-top: 4px; }
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 12px; }
+.text-xs { font-size: var(--text-xs); }
+.text-warning { color: var(--warning); }
