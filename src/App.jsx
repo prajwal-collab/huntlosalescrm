@@ -4,6 +4,8 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useAuthStore from './store/useAuthStore';
+import { isConfigured } from './lib/supabase';
+import SetupRequired from './components/setup/SetupRequired';
 
 // Layout & Auth
 import Layout from './components/layout/Layout';
@@ -27,6 +29,9 @@ import Settings from './pages/Settings';
 
 export default function App() {
   const { initialize } = useAuthStore();
+
+  // Show setup screen if Supabase is not configured
+  if (!isConfigured) return <SetupRequired />;
 
   useEffect(() => {
     initialize();

@@ -3,7 +3,7 @@
 // ============================================
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { supabase } from '../lib/supabase';
+import { supabase, isConfigured } from '../lib/supabase';
 
 const useAuthStore = create(
   persist(
@@ -33,6 +33,10 @@ const useAuthStore = create(
       // Sign in with email + password
       signIn: async (email, password) => {
         set({ error: null, loading: true });
+        if (!isConfigured) {
+          set({ error: 'Supabase is not configured. Please complete setup first.', loading: false });
+          return { success: false };
+        }
         try {
           const { data, error } = await supabase.auth.signInWithPassword({ email, password });
           if (error) throw error;
@@ -50,6 +54,10 @@ const useAuthStore = create(
       // Sign up new user
       signUp: async (email, password, fullName) => {
         set({ error: null, loading: true });
+        if (!isConfigured) {
+          set({ error: 'Supabase is not configured. Please complete setup first.', loading: false });
+          return { success: false };
+        }
         try {
           const { data, error } = await supabase.auth.signUp({
             email,
@@ -67,12 +75,13 @@ const useAuthStore = create(
 
       // Sign out
       signOut: async () => {
-        await supabase.auth.signOut();
+        if (isConfigured) await supabase.auth.signOut();
         set({ user: null, session: null });
       },
 
       // Send password reset email
       resetPassword: async (email) => {
+        if (!isConfigured) return { success: false, error: 'Supabase not configured.' };
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`,
         });
