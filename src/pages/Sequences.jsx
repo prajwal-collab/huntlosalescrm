@@ -29,7 +29,21 @@ export default function Sequences() {
   const { sequences, createSequence } = useDataStore();
   const [selected, setSelected] = useState(sequences[0] || null);
   const [isAdding, setIsAdding] = useState(false);
-  const [formData, setFormData] = useState({ name: '', channel: 'Multi-channel' });
+  const [formData, setFormData] = useState({ name: '', channel: 'Email', template: 'Blank Sequence' });
+
+  const TEMPLATES = [
+    "Blank Sequence",
+    "FLOW 1 — FEEDBACK → DEMO → DESIGN PARTNER",
+    "FLOW 2 — RECRUITER WORKFLOW AUDIT",
+    "FLOW 3 — THE CONTRARIAN CAMPAIGN",
+    "FLOW 4 — THE DESIGN PARTNER PROGRAM",
+    "FLOW 5 — THE MARKET INSIGHT SERIES",
+    "FLOW 6 — THE PROBLEM JOURNEY",
+    "FLOW 7 — THE \"HELP US BUILD\" CAMPAIGN",
+    "FLOW 8 — THE RECRUITER RESET",
+    "FLOW 9 — THE HIRING OS NARRATIVE",
+    "FLOW 10 — THE PILOT INVITATION"
+  ];
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -39,14 +53,14 @@ export default function Sequences() {
         name: formData.name,
         channel: formData.channel,
         status: 'inactive',
-        steps: 0,
+        steps: formData.template !== 'Blank Sequence' ? 4 : 0,
         enrolled: 0,
         reply_rate: 0,
         nodes: []
       });
       setIsAdding(false);
       setSelected(newSeq);
-      setFormData({ name: '', channel: 'Multi-channel' });
+      setFormData({ name: '', channel: 'Email', template: 'Blank Sequence' });
     } catch (error) {
       console.error(error);
     }
@@ -144,7 +158,16 @@ export default function Sequences() {
             <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 24px' }}>
               <div className="form-group">
                 <label className="label">Sequence Name</label>
-                <input className="input-base" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Outbound Q3 Founders" />
+                <input className="input-base" autoFocus required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Outbound Q3 Founders" />
+              </div>
+              <div className="form-group">
+                <label className="label">Template</label>
+                <select className="input-base" value={formData.template} onChange={e => {
+                  const val = e.target.value;
+                  setFormData({...formData, template: val, name: val !== 'Blank Sequence' ? val : formData.name});
+                }}>
+                  {TEMPLATES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
               <div className="form-group">
                 <label className="label">Primary Channel</label>

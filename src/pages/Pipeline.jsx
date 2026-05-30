@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import usePipelineStore from '../store/usePipelineStore';
 import useDataStore from '../store/useDataStore';
 import DealDrawer from '../components/pipeline/DealDrawer';
+import NewDealDrawer from '../components/pipeline/NewDealDrawer';
 import './Pipeline.css';
 
 const URGENCY_COLOR = { urgent: 'var(--danger)', high: 'var(--warning)', medium: 'var(--accent-blue)', low: 'var(--text-tertiary)' };
@@ -154,39 +155,7 @@ export default function Pipeline() {
       </div>
 
       {isAdding && (
-        <div className="deal-drawer animate-slide-right">
-          <div className="drawer-header" style={{ marginBottom: 24, padding: 24 }}>
-            <h2 className="panel-title">Add Deal</h2>
-            <button className="drawer-close" onClick={() => setIsAdding(false)}><X size={16}/></button>
-          </div>
-          <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 24px' }}>
-            <div className="form-group">
-              <label className="label">Deal Title</label>
-              <input className="input-base" required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="e.g. Enterprise Q3 Expansion" />
-            </div>
-            <div className="form-group">
-              <label className="label">Company</label>
-              <select className="input-base" required value={formData.company_id} onChange={e => setFormData({...formData, company_id: e.target.value})}>
-                <option value="">Select Company</option>
-                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="label">ARR Estimate ($)</label>
-              <input className="input-base" type="number" required value={formData.arr} onChange={e => setFormData({...formData, arr: e.target.value})} />
-            </div>
-            <div className="form-group">
-              <label className="label">Urgency</label>
-              <select className="input-base" value={formData.urgency} onChange={e => setFormData({...formData, urgency: e.target.value})}>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </select>
-            </div>
-            <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }}>Save Deal</button>
-          </form>
-        </div>
+        <NewDealDrawer onClose={() => setIsAdding(false)} />
       )}
 
       {drawerOpen && selectedDealId && !isAdding && (

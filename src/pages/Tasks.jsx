@@ -2,7 +2,7 @@
 // HUNTLO SALES OS — TASKS PAGE
 // ============================================
 import { useState, useEffect } from 'react';
-import { Search, Plus, CheckCircle, Clock, AlertCircle, X } from 'lucide-react';
+import { Search, Plus, CheckCircle, Clock, AlertCircle, X, Loader } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import useDataStore from '../store/useDataStore';
 import { useKeyboard } from '../hooks/useKeyboard';
@@ -28,6 +28,8 @@ export default function Tasks() {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({ title: '', deal_id: '', priority: 'medium', type: 'follow-up', due: '' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   const filteredTasks = tasks.filter(t => {
     if (filter === 'pending') return t.status !== 'completed';
@@ -44,6 +46,8 @@ export default function Tasks() {
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.title) return;
+    setSaving(true);
+    setError(null);
     try {
       await createTask({
         title: formData.title,
@@ -57,6 +61,9 @@ export default function Tasks() {
       setFormData({ title: '', deal_id: '', priority: 'medium', type: 'follow-up', due: '' });
     } catch (error) {
       console.error(error);
+      setError(error.message || 'Failed to create task');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -148,9 +155,14 @@ export default function Tasks() {
             <button className="drawer-close" onClick={() => setIsAdding(false)}><X size={16}/></button>
           </div>
           <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 24px' }}>
+            {error && (
+              <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertCircle size={14} /> {error}
+              </div>
+            )}
             <div className="form-group">
               <label className="label">Task Title</label>
-              <input className="input-base" required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="e.g. Send follow-up email" />
+              <input className="input-base" autoFocus required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="e.g. Send follow-up email" />
             </div>
             <div className="form-group">
               <label className="label">Related Deal</label>
@@ -181,7 +193,9 @@ export default function Tasks() {
               <label className="label">Due Date</label>
               <input className="input-base" type="datetime-local" value={formData.due} onChange={e => setFormData({...formData, due: e.target.value})} />
             </div>
-            <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }}>Save Task</button>
+            <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }} disabled={saving}>
+              {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Task'}
+            </button>
           </form>
         </div>
       )}

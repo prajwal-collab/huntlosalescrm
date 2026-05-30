@@ -8,6 +8,7 @@ import CommandCenter from '../ai/CommandCenter';
 import useUIStore from '../../store/useUIStore';
 import useDataStore from '../../store/useDataStore';
 import { useKeyboard } from '../../hooks/useKeyboard';
+import NewDealDrawer from '../pipeline/NewDealDrawer';
 import './Layout.css';
 
 export default function Layout({ children }) {
@@ -36,6 +37,9 @@ export default function Layout({ children }) {
       </div>
       {commandCenterOpen && (
         <CommandCenter onClose={closeCommandCenter} />
+      )}
+      {newDealOpen && (
+        <NewDealDrawer onClose={() => setNewDealOpen(false)} />
       )}
     </div>
   );

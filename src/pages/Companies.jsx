@@ -2,7 +2,7 @@
 // HUNTLO SALES OS — COMPANIES PAGE
 // ============================================
 import { useState, useRef } from 'react';
-import { Search, ExternalLink, Building2, Users, TrendingUp, Sparkles, ChevronRight, Plus, X, Upload, Download } from 'lucide-react';
+import { Search, ExternalLink, Building2, Users, TrendingUp, Sparkles, ChevronRight, Plus, X, Upload, Download, AlertCircle, Loader } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { generateCompanyInsight } from '../lib/gemini';
 import useDataStore from '../store/useDataStore';
@@ -124,6 +124,8 @@ export default function Companies() {
   
   // New company form state
   const [formData, setFormData] = useState({ name: '', industry: '', size: '', website: '' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -175,6 +177,8 @@ export default function Companies() {
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.name) return;
+    setSaving(true);
+    setError(null);
     try {
       await createCompany({
         name: formData.name,
@@ -189,6 +193,9 @@ export default function Companies() {
       setFormData({ name: '', industry: '', size: '', website: '' });
     } catch (error) {
       console.error(error);
+      setError(error.message || 'Failed to create company');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -261,9 +268,14 @@ export default function Companies() {
               <button className="drawer-close" onClick={() => setIsAdding(false)}><X size={16}/></button>
             </div>
             <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {error && (
+                <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertCircle size={14} /> {error}
+                </div>
+              )}
               <div className="form-group">
                 <label className="label">Company Name</label>
-                <input className="input-base" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                <input className="input-base" autoFocus required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
               </div>
               <div className="form-group">
                 <label className="label">Industry</label>
@@ -284,7 +296,9 @@ export default function Companies() {
                 <label className="label">Website</label>
                 <input className="input-base" type="url" placeholder="https://" value={formData.website} onChange={e => setFormData({...formData, website: e.target.value})} />
               </div>
-              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }}>Save Company</button>
+              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }} disabled={saving}>
+                {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Company'}
+              </button>
             </form>
           </div>
         )}

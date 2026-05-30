@@ -2,7 +2,7 @@
 // HUNTLO SALES OS — CONTACTS PAGE
 // ============================================
 import { useState, useRef } from 'react';
-import { Search, Mail, Plus, ExternalLink, MessageSquare, X, Users, Upload, Download } from 'lucide-react';
+import { Search, Mail, Plus, ExternalLink, MessageSquare, X, Users, Upload, Download, AlertCircle, Loader } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import useDataStore from '../store/useDataStore';
 import './Contacts.css';
@@ -116,6 +116,8 @@ export default function Contacts() {
   const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({ name: '', email: '', designation: '', company_id: '', role: 'Decision Maker', linkedin: '' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -173,6 +175,8 @@ export default function Contacts() {
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.name) return;
+    setSaving(true);
+    setError(null);
     try {
       await createContact({
         name: formData.name,
@@ -189,6 +193,9 @@ export default function Contacts() {
       setFormData({ name: '', email: '', designation: '', company_id: '', role: 'Decision Maker', linkedin: '' });
     } catch (error) {
       console.error(error);
+      setError(error.message || 'Failed to create contact');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -253,9 +260,14 @@ export default function Contacts() {
               <button className="drawer-close" onClick={() => setIsAdding(false)}><X size={16}/></button>
             </div>
             <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {error && (
+                <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertCircle size={14} /> {error}
+                </div>
+              )}
               <div className="form-group">
                 <label className="label">Full Name</label>
-                <input className="input-base" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                <input className="input-base" autoFocus required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
               </div>
               <div className="form-group">
                 <label className="label">Email Address</label>
@@ -281,7 +293,9 @@ export default function Contacts() {
                   <option value="Influencer">Influencer</option>
                 </select>
               </div>
-              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }}>Save Contact</button>
+              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }} disabled={saving}>
+                {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Contact'}
+              </button>
             </form>
           </div>
         )}

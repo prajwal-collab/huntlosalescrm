@@ -2,7 +2,7 @@
 // HUNTLO SALES OS — MEETINGS PAGE
 // ============================================
 import { useState } from 'react';
-import { Search, Plus, Video, Calendar as CalendarIcon, Clock, Sparkles, X } from 'lucide-react';
+import { Search, Plus, Video, Calendar as CalendarIcon, Clock, Sparkles, X, AlertCircle, Loader } from 'lucide-react';
 import { format } from 'date-fns';
 import useDataStore from '../store/useDataStore';
 import './Meetings.css';
@@ -45,10 +45,14 @@ export default function Meetings() {
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({ title: '', deal_id: '', type: 'Discovery', date: '', duration: 30, platform: 'Google Meet', meeting_link: '' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.title || !formData.date) return;
+    setSaving(true);
+    setError(null);
     try {
       await createMeeting({
         title: formData.title,
@@ -67,6 +71,9 @@ export default function Meetings() {
       setFormData({ title: '', deal_id: '', type: 'Discovery', date: '', duration: 30, platform: 'Google Meet', meeting_link: '' });
     } catch (error) {
       console.error(error);
+      setError(error.message || 'Failed to schedule meeting');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -175,9 +182,14 @@ export default function Meetings() {
               <button className="drawer-close" style={{ position: 'absolute', top: 24, right: 24 }} onClick={() => setIsAdding(false)}><X size={16}/></button>
             </div>
             <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {error && (
+                <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertCircle size={14} /> {error}
+                </div>
+              )}
               <div className="form-group">
                 <label className="label">Meeting Title</label>
-                <input className="input-base" required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="e.g. Acme Corp Discovery" />
+                <input className="input-base" autoFocus required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="e.g. Acme Corp Discovery" />
               </div>
               <div className="form-group">
                 <label className="label">Related Deal</label>
@@ -216,7 +228,9 @@ export default function Meetings() {
                 <label className="label">Meeting Link</label>
                 <input className="input-base" type="url" value={formData.meeting_link} onChange={e => setFormData({...formData, meeting_link: e.target.value})} placeholder="https://zoom.us/j/..." />
               </div>
-              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }}>Schedule Meeting</button>
+              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }} disabled={saving}>
+                {saving ? <Loader size={14} className="cc-spinner" /> : 'Schedule Meeting'}
+              </button>
             </form>
           </div>
         )}
