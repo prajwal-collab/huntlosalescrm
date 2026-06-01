@@ -19,6 +19,7 @@
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.16.0",
     "papaparse": "^5.5.3",
+    "puppeteer": "^25.1.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.15.1",

@@ -3,8 +3,9 @@
 // ============================================
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import useAuthStore from './store/useAuthStore';
 import { isConfigured } from './lib/supabase';
+import useAuthStore from './store/useAuthStore';
+import useUIStore from './store/useUIStore';
 import SetupRequired from './components/setup/SetupRequired';
 
 // Layout & Auth
@@ -29,6 +30,7 @@ import Settings from './pages/Settings';
 
 export default function App() {
   const { initialize } = useAuthStore();
+  const { theme } = useUIStore();
 
   // Show setup screen if Supabase is not configured
   if (!isConfigured) return <SetupRequired />;
@@ -36,6 +38,14 @@ export default function App() {
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light-mode');
+    } else {
+      document.documentElement.classList.remove('light-mode');
+    }
+  }, [theme]);
 
   return (
     <BrowserRouter>
