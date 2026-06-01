@@ -23,13 +23,13 @@ const useDataStore = create((set, get) => ({
       if (!user) throw new Error('Not authenticated');
 
       const results = await Promise.allSettled([
-        supabase.from('companies').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
-        supabase.from('contacts').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
-        supabase.from('deals').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
-        supabase.from('tasks').select('*').is('deleted_at', null).order('due', { ascending: true }),
-        supabase.from('meetings').select('*').is('deleted_at', null).order('date', { ascending: true }),
-        supabase.from('documents').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
-        supabase.from('sequences').select('*').is('deleted_at', null).order('created_at', { ascending: false })
+        supabase.from('companies').select('*').order('created_at', { ascending: false }),
+        supabase.from('contacts').select('*').order('created_at', { ascending: false }),
+        supabase.from('deals').select('*').order('created_at', { ascending: false }),
+        supabase.from('tasks').select('*').order('due', { ascending: true }),
+        supabase.from('meetings').select('*').order('date', { ascending: true }),
+        supabase.from('documents').select('*').order('created_at', { ascending: false }),
+        supabase.from('sequences').select('*').order('created_at', { ascending: false })
       ]);
 
       const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes] = results;
