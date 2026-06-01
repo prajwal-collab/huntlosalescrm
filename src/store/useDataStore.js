@@ -56,9 +56,7 @@ const useDataStore = create((set, get) => ({
 
   // ── Companies ─────────────────────────────
   createCompany: async (company) => {
-    const { user } = useAuthStore.getState();
-    const newCompany = { ...company, owner_id: user?.id };
-    const { data, error } = await supabase.from('companies').insert(newCompany).select().single();
+    const { data, error } = await supabase.from('companies').insert(company).select().single();
     if (error) throw error;
     set(state => ({ companies: [data, ...state.companies] }));
     return data;
@@ -78,9 +76,19 @@ const useDataStore = create((set, get) => ({
   },
 
   bulkCreateCompanies: async (companiesList) => {
-    const { user } = useAuthStore.getState();
-    const listWithOwner = companiesList.map(c => ({ ...c, owner_id: user?.id }));
-    const { data, error } = await supabase.from('companies').insert(listWithOwner).select();
+    const listWithoutOwner = companiesList.map(c => {
+      // Remove any fields that don't belong in the table
+      const { company, title, phone, employees, revenue, ...rest } = c;
+      return {
+        name: c.name,
+        industry: c.industry,
+        size: c.employees, // map from employees
+        arr_estimate: c.revenue, // map from revenue
+        website: c.domain,
+        ...rest
+      };
+    });
+    const { data, error } = await supabase.from('companies').insert(listWithoutOwner).select();
     if (error) throw error;
     set(state => ({ companies: [...data, ...state.companies] }));
     return data;
@@ -88,9 +96,7 @@ const useDataStore = create((set, get) => ({
 
   // ── Contacts ──────────────────────────────
   createContact: async (contact) => {
-    const { user } = useAuthStore.getState();
-    const newContact = { ...contact, owner_id: user?.id };
-    const { data, error } = await supabase.from('contacts').insert(newContact).select().single();
+    const { data, error } = await supabase.from('contacts').insert(contact).select().single();
     if (error) throw error;
     set(state => ({ contacts: [data, ...state.contacts] }));
     return data;
@@ -110,9 +116,23 @@ const useDataStore = create((set, get) => ({
   },
 
   bulkCreateContacts: async (contactsList) => {
-    const { user } = useAuthStore.getState();
-    const listWithOwner = contactsList.map(c => ({ ...c, owner_id: user?.id }));
-    const { data, error } = await supabase.from('contacts').insert(listWithOwner).select();
+    const state = get();
+    const mappedList = contactsList.map(c => {
+      let company_id = null;
+      if (c.company) {
+        const match = state.companies.find(comp => comp.name.toLowerCase() === c.company.toLowerCase());
+        if (match) company_id = match.id;
+      }
+      return {
+        name: c.name,
+        email: c.email,
+        designation: c.title, // map from title
+        whatsapp: c.phone, // map from phone
+        linkedin: c.linkedin,
+        company_id: company_id
+      };
+    });
+    const { data, error } = await supabase.from('contacts').insert(mappedList).select();
     if (error) throw error;
     set(state => ({ contacts: [...data, ...state.contacts] }));
     return data;
