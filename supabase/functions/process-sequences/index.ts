@@ -11,25 +11,39 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 2. Initialize SMTP Transporter
-    const smtpHost = Deno.env.get('SMTP_HOST') || 'smtp.gmail.com';
-    const smtpPort = parseInt(Deno.env.get('SMTP_PORT') || '465');
-    const smtpUser = Deno.env.get('SMTP_USER')!;
-    const smtpPass = Deno.env.get('SMTP_PASS')!;
-    
-    if (!smtpUser || !smtpPass) {
-      throw new Error("SMTP credentials are not configured in environment variables.");
-    }
+    // 2. Initialize Transporter Cache
+    // We will dynamically fetch each SDR's SMTP settings from user_email_settings
+    const transporterCache = new Map();
 
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpPort === 465, 
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
-    });
+    const getSdrTransporter = async (userId: string) => {
+      if (transporterCache.has(userId)) return transporterCache.get(userId);
+
+      const { data, error } = await supabase
+        .from('user_email_settings')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      
+      if (error || !data) {
+        console.error(`No SMTP settings found for user ${userId}`);
+        transporterCache.set(userId, null);
+        return null;
+      }
+
+      const transporter = nodemailer.createTransport({
+        host: data.smtp_host,
+        port: data.smtp_port,
+        secure: data.smtp_port === 465, 
+        auth: {
+          user: data.smtp_user,
+          pass: data.smtp_pass,
+        },
+      });
+
+      const config = { transporter, senderName: data.sender_name || 'Sales Representative', smtpUser: data.smtp_user };
+      transporterCache.set(userId, config);
+      return config;
+    };
 
     // 3. Fetch Enrollments due for sending
     // We only fetch 'active' enrollments where next_step_due is in the past.
@@ -93,8 +107,14 @@ serve(async (req) => {
 
       try {
         // 5. Send Email via SMTP
-        await transporter.sendMail({
-          from: `"Huntlo SDR" <${smtpUser}>`,
+        const sdrConfig = await getSdrTransporter(sequence.user_id);
+        if (!sdrConfig) {
+          console.warn(`Skipping email to ${contact.email} - No SMTP settings for SDR ${sequence.user_id}`);
+          continue; // Skip this enrollment until they configure SMTP
+        }
+
+        await sdrConfig.transporter.sendMail({
+          from: `"${sdrConfig.senderName}" <${sdrConfig.smtpUser}>`,
           to: contact.email,
           subject: subject,
           text: body, // Fallback plain text

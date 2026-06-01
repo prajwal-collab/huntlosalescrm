@@ -236,6 +236,34 @@ const useDataStore = create((set, get) => ({
     if (error) throw error;
     set(state => ({ sequences: state.sequences.filter(s => s.id !== id) }));
   },
+
+  // ── Email Settings ────────────────────────
+  fetchEmailSettings: async () => {
+    const { user } = useAuthStore.getState();
+    if (!user) return null;
+    const { data, error } = await supabase
+      .from('user_email_settings')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 is no rows returned
+    return data || null;
+  },
+
+  saveEmailSettings: async (settings) => {
+    const { user } = useAuthStore.getState();
+    if (!user) throw new Error('Not authenticated');
+    
+    const payload = { ...settings, user_id: user.id };
+    const { data, error } = await supabase
+      .from('user_email_settings')
+      .upsert(payload, { onConflict: 'user_id' })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
 }));
 
 export default useDataStore;

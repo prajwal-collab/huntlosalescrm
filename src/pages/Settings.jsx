@@ -6,6 +6,7 @@ import { useSearchParams } from 'react-router-dom';
 import { User, Key, Bell, Shield } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import TeamManagement from './settings/TeamManagement';
+import EmailSettingsForm from './settings/EmailSettingsForm';
 import { isGeminiConfigured } from '../lib/gemini';
 import { supabase } from '../lib/supabase';
 import './Settings.css';
@@ -107,6 +108,8 @@ export default function Settings() {
             <div className="settings-panel animate-fade-in">
               <h2 className="panel-title">Integrations</h2>
               <p className="panel-sub mb-6">Manage external APIs, channels, and AI configuration keys.</p>
+              
+              <EmailSettingsForm />
 
               <div style={{ 
                 background: 'var(--bg-surface)', 
