@@ -37,26 +37,56 @@ export default function Sequences() {
     "FLOW 2 — RECRUITER WORKFLOW AUDIT",
     "FLOW 3 — THE CONTRARIAN CAMPAIGN",
     "FLOW 4 — THE DESIGN PARTNER PROGRAM",
-    "FLOW 5 — THE MARKET INSIGHT SERIES",
-    "FLOW 6 — THE PROBLEM JOURNEY",
-    "FLOW 7 — THE \"HELP US BUILD\" CAMPAIGN",
-    "FLOW 8 — THE RECRUITER RESET",
-    "FLOW 9 — THE HIRING OS NARRATIVE",
-    "FLOW 10 — THE PILOT INVITATION"
+    "FLOW 5 — THE MARKET INSIGHT SERIES"
   ];
+
+  const TEMPLATE_DATA = {
+    "Blank Sequence": [],
+    "FLOW 1 — FEEDBACK → DEMO → DESIGN PARTNER": [
+      { id: '1', type: 'email', day: 1, subject: 'Quick feedback on your workflow?', content: 'Hi {{first_name}}, would love to get your thoughts on a new design.' },
+      { id: '2', type: 'delay', label: 'Wait 3 Days' },
+      { id: '3', type: 'email', day: 4, subject: 'Following up - Demo?', content: 'Let me show you what we built based on similar feedback.' },
+      { id: '4', type: 'delay', label: 'Wait 2 Days' },
+      { id: '5', type: 'linkedin', day: 6, subject: 'Connection Request', content: 'Connecting to share updates on the Design Partner program.' }
+    ],
+    "FLOW 2 — RECRUITER WORKFLOW AUDIT": [
+      { id: '1', type: 'email', day: 1, subject: 'Your recruiting workflow', content: 'Hi {{first_name}}, how are you currently managing outbound sourcing?' },
+      { id: '2', type: 'delay', label: 'Wait 2 Days' },
+      { id: '3', type: 'email', day: 3, subject: 'Audit template', content: 'Here is a free template we use to audit recruiting workflows.' },
+    ],
+    "FLOW 3 — THE CONTRARIAN CAMPAIGN": [
+      { id: '1', type: 'linkedin', day: 1, subject: 'Profile view & connect', content: 'Loved your post about sales strategies.' },
+      { id: '2', type: 'delay', label: 'Wait 1 Day' },
+      { id: '3', type: 'email', day: 2, subject: 'Unpopular opinion on outbound', content: 'Most people think volume is key. We think differently.' },
+      { id: '4', type: 'delay', label: 'Wait 3 Days' },
+      { id: '5', type: 'email', day: 5, subject: 'Any thoughts?', content: 'Curious if you agree with the approach.' },
+    ],
+    "FLOW 4 — THE DESIGN PARTNER PROGRAM": [
+      { id: '1', type: 'email', day: 1, subject: 'Exclusive invite: Design Partner', content: 'We are looking for 5 forward-thinking companies to shape our product.' },
+      { id: '2', type: 'delay', label: 'Wait 2 Days' },
+      { id: '3', type: 'linkedin', day: 3, subject: 'Checking in', content: 'Sent you an email about our design partner program.' },
+    ],
+    "FLOW 5 — THE MARKET INSIGHT SERIES": [
+      { id: '1', type: 'email', day: 1, subject: 'New insights on Q3 sales trends', content: 'We just analyzed 1M+ emails. Here is what works.' },
+      { id: '2', type: 'delay', label: 'Wait 4 Days' },
+      { id: '3', type: 'email', day: 5, subject: 'Part 2: The Follow-Up Strategy', content: 'Following up on the Q3 insights.' },
+    ]
+  };
 
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.name) return;
     try {
+      const nodesToUse = TEMPLATE_DATA[formData.template] || [];
       const newSeq = await createSequence({
         name: formData.name,
         channel: formData.channel,
         status: 'inactive',
-        steps: formData.template !== 'Blank Sequence' ? 4 : 0,
+        steps: nodesToUse.length,
         enrolled: 0,
         reply_rate: 0,
-        nodes: []
+        nodes: nodesToUse
+
       });
       setIsAdding(false);
       setSelected(newSeq);

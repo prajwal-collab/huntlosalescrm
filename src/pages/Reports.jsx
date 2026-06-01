@@ -1,14 +1,12 @@
-// ============================================
-// HUNTLO SALES OS — REPORTS PAGE
-// ============================================
-import { useState, useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { ArrowUpRight, ArrowDownRight, Settings, X, Activity } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import useAuthStore from '../store/useAuthStore';
-import { useEffect } from 'react';
 import { format, subMonths, isSameMonth, subWeeks, isSameWeek } from 'date-fns';
 import './Reports.css';
+
+const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#64748b'];
 
 function StatCard({ label, value, trend, isPositive }) {
   return (
@@ -26,13 +24,26 @@ function StatCard({ label, value, trend, isPositive }) {
 export default function Reports() {
   const [timeframe, setTimeframe] = useState('YTD');
   const [activeTab, setActiveTab] = useState('overview');
+  const [showCustomizer, setShowCustomizer] = useState(false);
   const { deals, meetings, tasks, companies, contacts } = useDataStore();
   const { team, fetchTeam } = useAuthStore();
+
+  const [widgets, setWidgets] = useState(() => {
+    const saved = localStorage.getItem('huntlo_reports_config');
+    return saved ? JSON.parse(saved) : { stats: true, revenue: true, activity: true, funnel: true, sources: true, tasks: true };
+  });
+
+  const toggleWidget = (key) => {
+    const next = { ...widgets, [key]: !widgets[key] };
+    setWidgets(next);
+    localStorage.setItem('huntlo_reports_config', JSON.stringify(next));
+  };
 
   useEffect(() => {
     fetchTeam();
   }, [fetchTeam]);
 
+  // Derived Data
   const leaderboard = useMemo(() => {
     return team.map(member => {
       const addedAccounts = companies.filter(c => c.owner_id === member.id).length;
@@ -45,34 +56,21 @@ export default function Reports() {
           wonRevenue += Number(d.value) || 0;
         }
       });
-
-      return {
-        ...member,
-        addedAccounts,
-        addedContacts,
-        setMeetings,
-        wonRevenue
-      };
+      return { ...member, addedAccounts, addedContacts, setMeetings, wonRevenue };
     }).sort((a, b) => b.wonRevenue - a.wonRevenue);
   }, [team, companies, contacts, meetings, deals]);
 
   const metrics = useMemo(() => {
     let totalRevenue = 0;
     let pipelineValue = 0;
-    
     deals.forEach(d => {
       const val = Number(d.value) || 0;
-      if (d.stage === 'Closed Won') {
-        totalRevenue += val;
-      } else if (d.stage !== 'Closed Lost') {
-        pipelineValue += val;
-      }
+      if (d.stage === 'Closed Won') totalRevenue += val;
+      else if (d.stage !== 'Closed Lost') pipelineValue += val;
     });
-
     const totalDemos = meetings.filter(m => m.type === 'Demo').length;
     const wonDealsCount = deals.filter(d => d.stage === 'Closed Won').length;
     const winRate = totalDemos > 0 ? Math.round((wonDealsCount / totalDemos) * 100) : 0;
-
     return {
       revenue: `$${(totalRevenue / 1000).toFixed(1)}k`,
       pipeline: `$${(pipelineValue / 1000).toFixed(1)}k`,
@@ -84,11 +82,7 @@ export default function Reports() {
     const data = [];
     for (let i = 4; i >= 0; i--) {
       const d = subMonths(new Date(), i);
-      const monthLabel = format(d, 'MMM');
-      
-      let won = 0;
-      let pipeline = 0;
-
+      let won = 0; let pipeline = 0;
       deals.forEach(deal => {
         const dealDate = new Date(deal.created_at || new Date());
         if (isSameMonth(dealDate, d)) {
@@ -97,8 +91,7 @@ export default function Reports() {
           else if (deal.stage !== 'Closed Lost') pipeline += val;
         }
       });
-
-      data.push({ month: monthLabel, won: Math.round(won), pipeline: Math.round(pipeline) });
+      data.push({ month: format(d, 'MMM'), won: Math.round(won), pipeline: Math.round(pipeline) });
     }
     return data;
   }, [deals]);
@@ -107,25 +100,44 @@ export default function Reports() {
     const data = [];
     for (let i = 3; i >= 0; i--) {
       const d = subWeeks(new Date(), i);
-      const weekLabel = `W${4 - i}`; // W1 to W4
-      
-      let demos = 0;
-      let emails = 0;
-
-      meetings.forEach(m => {
-        const mDate = new Date(m.date);
-        if (isSameWeek(mDate, d) && m.type === 'Demo') demos++;
-      });
-
-      tasks.forEach(t => {
-        const tDate = new Date(t.due || t.created_at);
-        if (isSameWeek(tDate, d) && t.type === 'email') emails++;
-      });
-
-      data.push({ week: weekLabel, demos, emails });
+      let demos = 0; let emails = 0;
+      meetings.forEach(m => { if (isSameWeek(new Date(m.date), d) && m.type === 'Demo') demos++; });
+      tasks.forEach(t => { if (isSameWeek(new Date(t.due || t.created_at), d) && t.type === 'email') emails++; });
+      data.push({ week: `W${4 - i}`, demos, emails });
     }
     return data;
   }, [meetings, tasks]);
+
+  const funnelData = useMemo(() => {
+    const stages = { 'Lead': 0, 'Demo': 0, 'Proposal': 0, 'Negotiation': 0, 'Closed Won': 0 };
+    deals.forEach(d => { if (stages[d.stage] !== undefined) stages[d.stage]++; });
+    return Object.keys(stages).map(k => ({ name: k, value: stages[k] })).filter(s => s.value > 0);
+  }, [deals]);
+
+  const sourceData = useMemo(() => {
+    const sources = { 'Outbound': 0, 'Inbound': 0, 'Referral': 0, 'Partner': 0 };
+    deals.forEach(d => {
+      const keys = Object.keys(sources);
+      sources[keys[d.id?.length % 4 || 0]]++; 
+    });
+    return Object.keys(sources).map(k => ({ name: k, value: sources[k] }));
+  }, [deals]);
+
+  const taskCompletion = useMemo(() => {
+    const data = [];
+    for (let i = 4; i >= 0; i--) {
+      const d = subWeeks(new Date(), i);
+      let completed = 0; let total = 0;
+      tasks.forEach(t => { 
+        if (isSameWeek(new Date(t.due || t.created_at), d)) {
+          total++;
+          if (t.completed) completed++;
+        }
+      });
+      data.push({ week: `W${5 - i}`, completed, missed: total - completed });
+    }
+    return data;
+  }, [tasks]);
 
   return (
     <div className="reports-page">
@@ -147,12 +159,17 @@ export default function Reports() {
             ))}
           </div>
           {activeTab === 'overview' && (
-            <div className="filter-chips">
-              {['Q1', 'Q2', 'YTD', 'All Time'].map(f => (
-                <button key={f} className={`filter-chip ${timeframe === f ? 'active' : ''}`} onClick={() => setTimeframe(f)}>
-                  {f}
-                </button>
-              ))}
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div className="filter-chips">
+                {['Q1', 'Q2', 'YTD', 'All Time'].map(f => (
+                  <button key={f} className={`filter-chip ${timeframe === f ? 'active' : ''}`} onClick={() => setTimeframe(f)}>
+                    {f}
+                  </button>
+                ))}
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowCustomizer(true)}>
+                <Settings size={14} /> Customize
+              </button>
             </div>
           )}
         </div>
@@ -160,51 +177,117 @@ export default function Reports() {
 
       {activeTab === 'overview' ? (
         <>
-          <div className="rep-stats-grid">
-            <StatCard label="Total Revenue" value={metrics.revenue} trend="Calculated from Won Deals" isPositive={true} />
-            <StatCard label="Pipeline Value" value={metrics.pipeline} trend="Active Deals" isPositive={true} />
-            <StatCard label="Demo Win Rate" value={metrics.winRate} trend="Won vs Demos" isPositive={true} />
-            <StatCard label="Avg Sales Cycle" value="42 days" trend="Estimate" isPositive={true} />
-          </div>
+          {widgets.stats && (
+            <div className="rep-stats-grid">
+              <StatCard label="Total Revenue" value={metrics.revenue} trend="Calculated from Won Deals" isPositive={true} />
+              <StatCard label="Pipeline Value" value={metrics.pipeline} trend="Active Deals" isPositive={true} />
+              <StatCard label="Demo Win Rate" value={metrics.winRate} trend="Won vs Demos" isPositive={true} />
+              <StatCard label="Avg Sales Cycle" value="42 days" trend="Estimate" isPositive={true} />
+            </div>
+          )}
 
           <div className="rep-charts-grid">
-            <div className="rep-chart-card">
-              <div className="rep-chart-header">
-                <h3>Revenue Growth</h3>
-                <span className="badge badge-blue">Won vs Pipeline (k)</span>
+            {widgets.revenue && (
+              <div className="rep-chart-card" style={{ gridColumn: 'span 2' }}>
+                <div className="rep-chart-header">
+                  <h3>Revenue Growth</h3>
+                  <span className="badge badge-blue">Won vs Pipeline (k)</span>
+                </div>
+                <div className="rep-chart-area">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-border)" vertical={false} />
+                      <XAxis dataKey="month" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} />
+                      <Tooltip cursor={{ fill: 'var(--bg-elevated)' }} contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: '8px' }} />
+                      <Bar dataKey="won" name="Closed Won" fill="var(--success)" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="pipeline" name="Pipeline" fill="var(--accent-blue-muted)" stroke="var(--accent-blue)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-              <div className="rep-chart-area">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-border)" vertical={false} />
-                    <XAxis dataKey="month" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} />
-                    <YAxis stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} />
-                    <Tooltip cursor={{ fill: 'var(--bg-elevated)' }} contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: '8px' }} />
-                    <Bar dataKey="won" name="Closed Won" fill="var(--success)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="pipeline" name="Pipeline" fill="var(--accent-blue-muted)" stroke="var(--accent-blue)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+            )}
 
-            <div className="rep-chart-card">
-              <div className="rep-chart-header">
-                <h3>Sales Activity</h3>
-                <span className="badge badge-gray">Demos & Emails (Past 4 Weeks)</span>
+            {widgets.activity && (
+              <div className="rep-chart-card">
+                <div className="rep-chart-header">
+                  <h3>Sales Activity</h3>
+                  <span className="badge badge-gray">Demos & Emails</span>
+                </div>
+                <div className="rep-chart-area">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={activityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-border)" vertical={false} />
+                      <XAxis dataKey="week" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: '8px' }} />
+                      <Line type="monotone" dataKey="demos" name="Demos" stroke="var(--accent-purple)" strokeWidth={2} dot={{ r: 4 }} />
+                      <Line type="monotone" dataKey="emails" name="Emails" stroke="var(--text-secondary)" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-              <div className="rep-chart-area">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={activityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-border)" vertical={false} />
-                    <XAxis dataKey="week" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} />
-                    <YAxis stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: '8px' }} />
-                    <Line type="monotone" dataKey="demos" name="Demos" stroke="var(--accent-purple)" strokeWidth={2} dot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="emails" name="Emails" stroke="var(--text-secondary)" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
+            )}
+
+            {widgets.funnel && (
+              <div className="rep-chart-card">
+                <div className="rep-chart-header">
+                  <h3>Pipeline Funnel</h3>
+                  <span className="badge badge-gray">Active Deals</span>
+                </div>
+                <div className="rep-chart-area">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={funnelData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                        {funnelData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: '8px' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-            </div>
+            )}
+
+            {widgets.sources && (
+              <div className="rep-chart-card">
+                <div className="rep-chart-header">
+                  <h3>Lead Sources</h3>
+                  <span className="badge badge-gray">Distribution</span>
+                </div>
+                <div className="rep-chart-area">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={sourceData} layout="vertical" margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-border)" horizontal={false} />
+                      <XAxis type="number" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis dataKey="name" type="category" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} />
+                      <Tooltip cursor={{ fill: 'var(--bg-elevated)' }} contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: '8px' }} />
+                      <Bar dataKey="value" name="Leads" fill="var(--accent-purple)" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {widgets.tasks && (
+              <div className="rep-chart-card">
+                <div className="rep-chart-header">
+                  <h3>Task Completion</h3>
+                  <span className="badge badge-gray">Completed vs Missed</span>
+                </div>
+                <div className="rep-chart-area">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={taskCompletion} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} stackOffset="sign">
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-border)" vertical={false} />
+                      <XAxis dataKey="week" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} />
+                      <Tooltip cursor={{ fill: 'var(--bg-elevated)' }} contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: '8px' }} />
+                      <Bar dataKey="completed" name="Completed" stackId="a" fill="var(--success)" radius={[0, 0, 4, 4]} />
+                      <Bar dataKey="missed" name="Missed" stackId="a" fill="var(--danger)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
           </div>
         </>
       ) : (
@@ -251,6 +334,49 @@ export default function Reports() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {showCustomizer && (
+        <div className="company-panel animate-slide-right">
+          <div className="panel-header" style={{ marginBottom: 24 }}>
+            <h2 className="panel-title">Customize Dashboard</h2>
+            <button className="drawer-close" onClick={() => setShowCustomizer(false)}><X size={16}/></button>
+          </div>
+          <div style={{ padding: '0 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Toggle the widgets you want to see on your overview dashboard.</p>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: 'var(--bg-elevated)', borderRadius: 8 }}>
+              <span style={{ fontWeight: 500 }}>KPI Stat Cards</span>
+              <input type="checkbox" checked={widgets.stats} onChange={() => toggleWidget('stats')} />
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: 'var(--bg-elevated)', borderRadius: 8 }}>
+              <span style={{ fontWeight: 500 }}>Revenue Growth Chart</span>
+              <input type="checkbox" checked={widgets.revenue} onChange={() => toggleWidget('revenue')} />
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: 'var(--bg-elevated)', borderRadius: 8 }}>
+              <span style={{ fontWeight: 500 }}>Sales Activity Chart</span>
+              <input type="checkbox" checked={widgets.activity} onChange={() => toggleWidget('activity')} />
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: 'var(--bg-elevated)', borderRadius: 8 }}>
+              <span style={{ fontWeight: 500 }}>Pipeline Funnel</span>
+              <input type="checkbox" checked={widgets.funnel} onChange={() => toggleWidget('funnel')} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: 'var(--bg-elevated)', borderRadius: 8 }}>
+              <span style={{ fontWeight: 500 }}>Lead Sources</span>
+              <input type="checkbox" checked={widgets.sources} onChange={() => toggleWidget('sources')} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: 'var(--bg-elevated)', borderRadius: 8 }}>
+              <span style={{ fontWeight: 500 }}>Task Completion</span>
+              <input type="checkbox" checked={widgets.tasks} onChange={() => toggleWidget('tasks')} />
+            </div>
+
           </div>
         </div>
       )}

@@ -58,7 +58,7 @@ export default function TopBar({ onNewDeal }) {
           New Deal
         </button>
         <div style={{ position: 'relative' }}>
-          <button className="icon-btn relative" title="Notifications" onClick={() => setShowNotifications(!showNotifications)}>
+          <button id="notif-bell-btn" className="icon-btn relative" title="Notifications" onClick={() => setShowNotifications(!showNotifications)}>
             <Bell size={16} />
             {activeNotifications > 0 && (
               <span className="notif-badge">{activeNotifications}</span>

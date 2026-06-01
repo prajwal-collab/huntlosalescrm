@@ -14,7 +14,7 @@ export default function NotificationDropdown({ onClose }) {
   // Handle click outside to close
   useEffect(() => {
     function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target) && !event.target.closest('#notif-bell-btn')) {
         onClose();
       }
     }
