@@ -1,6 +1,3 @@
-name,email,designation,role,linkedin
-John Doe,john@acme.com,CEO,Decision Maker,linkedin.com/in/johndoe
-Jane Smith,jane@stark.com,CTO,Champion,linkedin.com/in/janesmith
-Bruce Wayne,bruce@wayne.com,Chairman,Technical Evaluator,linkedin.com/in/brucewayne
-Hank Scorpio,hank@globex.com,President,Decision Maker,linkedin.com/in/hankscorpio
-Peter Gibbons,peter@initech.com,Lead Architect,Influencer,linkedin.com/in/petergibbons
+Name,Email,Company,Designation,Phone,LinkedIn
+John Doe,john.doe@example.com,Acme Corp,CEO,555-0100,linkedin.com/in/johndoe
+Jane Smith,jane.smith@example.com,Tech Solutions,CTO,555-0101,linkedin.com/in/janesmith

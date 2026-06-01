@@ -1,6 +1,3 @@
-name,industry,size,website
-Acme Corp,SaaS,11-50,https://acme.com
-Stark Industries,Defense,1000+,https://stark.com
-Wayne Enterprises,Technology,1000+,https://wayne.com
-Globex Corporation,High-Tech,501-1000,https://globex.com
-Initech,Software,51-200,https://initech.com
+Name,Domain,Industry,Employees,Revenue
+Acme Corp,acme.com,Manufacturing,51-200,5000000
+Tech Solutions,techsol.io,Software,11-50,2500000
