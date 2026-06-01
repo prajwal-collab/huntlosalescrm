@@ -80,29 +80,62 @@ export default function Tasks() {
 
   return (
     <div className="tasks-page">
-      <div className="page-header-row">
+      <div className="page-header-row" style={{ padding: '24px 24px 12px' }}>
         <div>
-          <h1 className="page-big-title">Tasks</h1>
-          <p className="page-big-sub">Manage your daily execution and follow-ups</p>
+          <h1 className="page-big-title" style={{ fontSize: 22 }}>Tasks</h1>
         </div>
         <div className="page-header-actions">
-           <div className="filter-chips">
-            {['pending', 'completed', 'all'].map(f => (
-              <button key={f} className={`filter-chip ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
+          <button className="btn btn-ghost btn-sm">Start call session</button>
+          <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}><Plus size={13} /> Create task</button>
+        </div>
+      </div>
+
+      <div className="apollo-tabs-bar">
+        <div className={`apollo-tab ${filter === 'pending' ? 'active' : ''}`} onClick={() => setFilter('pending')}>
+          All tasks <span className="apollo-tab-count">{tasks.filter(t => t.status !== 'completed').length}</span>
+        </div>
+        <div className={`apollo-tab ${filter === 'call' ? 'active' : ''}`} onClick={() => setFilter('call')}>
+          Call tasks <span className="apollo-tab-count">0</span>
+        </div>
+        <div className={`apollo-tab ${filter === 'email' ? 'active' : ''}`} onClick={() => setFilter('email')}>
+          Email tasks <span className="apollo-tab-count">0</span>
+        </div>
+        <div className={`apollo-tab ${filter === 'linkedin' ? 'active' : ''}`} onClick={() => setFilter('linkedin')}>
+          LinkedIn tasks <span className="apollo-tab-count">0</span>
+        </div>
+        <div className="apollo-tab">Overdue tasks</div>
+        <div className={`apollo-tab ${filter === 'completed' ? 'active' : ''}`} onClick={() => setFilter('completed')}>
+          All your tasks
+        </div>
+        <div className="apollo-tab">Views v</div>
+      </div>
+
+      <div className="apollo-sub-bar">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-secondary)' }}>= Show Filters <span className="apollo-tab-count" style={{ background: 'transparent' }}>1</span></button>
+          <div className="search-box" style={{ width: 240, background: 'transparent', border: '1px solid var(--border-light)' }}>
+            <Search size={14} color="var(--text-tertiary)" />
+            <input placeholder="Search tasks" />
           </div>
-          <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}><Plus size={13} /> Add Task (N)</button>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500 }}>
+          <span style={{ cursor: 'pointer' }}>↑↓ Sort <span className="apollo-tab-count" style={{ background: 'transparent' }}>1</span></span>
+          <span style={{ cursor: 'pointer' }}>⚙ View options</span>
         </div>
       </div>
 
       <div className="tasks-list">
         {filteredTasks.length === 0 ? (
-           <div className="empty-state">
-              <CheckCircle size={32} />
-              <h3>All caught up</h3>
-              <p>No tasks found for this view.</p>
+           <div className="apollo-empty-state">
+              <div className="apollo-empty-img">
+                <CheckCircle size={24} /> <span style={{ marginLeft: 8 }}>Complete task</span>
+              </div>
+              <h3 style={{ fontSize: 18, color: 'var(--text-primary)', fontWeight: 500 }}>You have no assigned tasks</h3>
+              <p style={{ fontSize: 13, textDecoration: 'underline', cursor: 'pointer' }}>Learn more about tasks</p>
+              <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                <button className="btn btn-ghost btn-sm" style={{ border: '1px solid var(--border-light)' }}>View all team tasks</button>
+                <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>New task</button>
+              </div>
            </div>
         ) : (
           filteredTasks.map((task, idx) => {
@@ -117,13 +150,13 @@ export default function Tasks() {
               >
                 <button 
                   className={`task-checkbox ${isCompleted ? 'checked' : ''}`}
-                  onClick={(e) => { e.stopPropagation(); handleComplete(task.id); }}
+                  onClick={(e) => { e.stopPropagation(); handleComplete(task.id, isCompleted ? 'pending' : 'completed'); }}
                 >
-                  {isCompleted && <CheckCircle size={14} />}
+                  {isCompleted && <CheckCircle size={12} strokeWidth={3} />}
                 </button>
                 
                 <div className="task-main">
-                  <span className="task-title">{task.title}</span>
+                  <span className="task-title" style={{ textDecoration: isCompleted ? 'line-through' : 'none' }}>{task.title}</span>
                   <div className="task-meta">
                     <span className="badge badge-gray">{task.type}</span>
                     {task.company && <span className="task-company">{task.company}</span>}
@@ -138,8 +171,8 @@ export default function Tasks() {
                   <div className={`task-due ${isOverdue ? 'overdue' : ''}`}>
                     {format(new Date(task.due), 'MMM d, h:mm a')}
                   </div>
-                  <div className="avatar avatar-sm" style={{ background: task.ownerColor, color: '#fff' }}>
-                    {task.ownerInitials}
+                  <div className="avatar avatar-sm" style={{ background: task.ownerColor || '#3b82f6', color: '#fff' }}>
+                    {task.ownerInitials || 'ME'}
                   </div>
                 </div>
               </div>

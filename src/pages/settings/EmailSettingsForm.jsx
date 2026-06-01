@@ -13,10 +13,6 @@ export default function EmailSettingsForm() {
     sender_name: ''
   });
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
   const loadSettings = async () => {
     try {
       const data = await fetchEmailSettings();
@@ -35,6 +31,11 @@ export default function EmailSettingsForm() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

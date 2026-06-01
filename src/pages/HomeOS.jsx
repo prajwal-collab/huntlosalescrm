@@ -1,7 +1,7 @@
 // ============================================
 // HUNTLO SALES OS — HOME OS PAGE
 // ============================================
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Sparkles, AlertCircle, Calendar, FileText, Clock, TrendingUp, ArrowRight, Zap, Activity } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import usePipelineStore from '../store/usePipelineStore';
@@ -31,16 +31,18 @@ export default function HomeOS() {
   const [aiResponse, setAiResponse] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
 
+  const now = useMemo(() => Date.now(), []);
+  
   const pendingTasks = tasks.filter(t => t.status !== 'completed');
-  const overdueTasks = tasks.filter(t => t.status !== 'completed' && new Date(t.due) < new Date());
+  const overdueTasks = tasks.filter(t => t.status !== 'completed' && new Date(t.due).getTime() < now);
   const todayMeetings = meetings.filter(m => {
     const d = new Date(m.date);
-    const today = new Date();
+    const today = new Date(now);
     return d.toDateString() === today.toDateString() || m.status === 'scheduled';
   });
   const hotDeals = deals.filter(d => d.engagement_score >= 75 && d.stage !== 'Closed Won' && d.stage !== 'Closed Lost');
   const staleDeals = deals.filter(d => {
-    const days = (Date.now() - new Date(d.updated_at)) / 86400000;
+    const days = (now - new Date(d.updated_at).getTime()) / 86400000;
     return days > 5 && d.stage !== 'Closed Won' && d.stage !== 'Closed Lost';
   });
 

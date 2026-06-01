@@ -112,7 +112,7 @@ export default function Meetings() {
                   <span>{selected.platform}</span>
                   {selected.meeting_link && (
                     <a href={selected.meeting_link} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <LinkIcon size={12} /> Join Meeting
+                      <ExternalLink size={12} /> Join Meeting
                     </a>
                   )}
                 </div>

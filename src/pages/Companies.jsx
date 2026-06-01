@@ -16,32 +16,35 @@ const TAG_COLORS = {
 
 function CompanyRow({ company, onSelect, selected }) {
   return (
-    <div className={`company-row ${selected ? 'selected' : ''}`} onClick={() => onSelect(company)}>
-      <div className="co-logo" style={{ background: company.logoColor + '22', color: company.logoColor }}>
-        {company.logo}
-      </div>
-      <div className="co-main">
-        <span className="co-name">{company.name}</span>
-        <span className="co-industry">{company.industry}</span>
-      </div>
-      <div className="co-meta">
-        <span className="co-size"><Users size={11} /> {company.size}</span>
-      </div>
-      <div className="co-arr">${(company.arrEstimate / 1000).toFixed(0)}k</div>
-      <div className="co-score">
-        <div className="score-pill" style={{ '--s': (company.engagement_score || 0) + '%', color: (company.engagement_score || 0) >= 75 ? 'var(--success)' : 'var(--warning)' }}>
-          {company.engagement_score || 0}
+    <div className={`company-row ${selected ? 'selected' : ''}`} onClick={() => onSelect(company)} style={{ display: 'flex', alignItems: 'center', height: 56, borderBottom: '1px solid var(--border-light)', cursor: 'pointer', transition: 'background 0.2s', padding: '0 16px' }}>
+      <div className="cr-cell" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="avatar avatar-md" style={{ background: company.logoColor + '22', color: company.logoColor, borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {company.logo || company.name.charAt(0).toUpperCase()}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span className="cr-name" style={{ fontSize: 14, fontWeight: 500 }}>{company.name}</span>
         </div>
       </div>
-      <div className="co-tags">
-        {(company.tags || []).slice(0, 2).map(tag => (
-          <span key={tag} className={`badge ${TAG_COLORS[tag] || 'badge-gray'}`}>{tag}</span>
-        ))}
+      
+      <div className="cr-cell" style={{ width: 140, display: 'flex', alignItems: 'center', gap: 12, color: 'var(--text-secondary)' }}>
+        <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-light)', borderRadius: 4 }}>
+           <span style={{ fontSize: 16 }}>▷</span>
+        </div>
+        <span style={{ cursor: 'pointer', fontSize: 14 }}>≡+</span>
+        <span style={{ cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>...</span>
       </div>
-      <div className="co-activity">
-        {company.last_activity || company.created_at ? formatDistanceToNow(new Date(company.last_activity || company.created_at), { addSuffix: true }) : 'Just now'}
+
+      <div className="cr-cell" style={{ width: 140, display: 'flex', alignItems: 'center', gap: 12, color: 'var(--text-secondary)' }}>
+        <ExternalLink size={14} style={{ cursor: 'pointer' }} />
+        <Building2 size={14} style={{ cursor: 'pointer' }} />
+        <span style={{ fontSize: 12, cursor: 'pointer', fontWeight: 'bold' }}>X</span>
       </div>
-      <ChevronRight size={14} className="co-chevron" />
+      
+      <div className="cr-cell" style={{ width: 120 }}>
+        <span className="badge badge-gray" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)' }}>
+          {company.size || '50-100'}
+        </span>
+      </div>
     </div>
   );
 }
@@ -186,10 +189,10 @@ export default function Companies() {
   return (
     <div className="companies-page">
       {/* Header */}
-      <div className="page-header-row">
+      <div className="page-header-row" style={{ padding: '24px 24px 12px' }}>
         <div>
-          <h1 className="page-big-title">Companies</h1>
-          <p className="page-big-sub">{companies.length} accounts tracked</p>
+          <h1 className="page-big-title" style={{ fontSize: 22 }}>Companies</h1>
+          <p className="page-big-sub" style={{ fontSize: 13 }}>{companies.length} records</p>
         </div>
         <div className="page-header-actions">
           {selectedIds.length > 0 ? (
@@ -198,37 +201,38 @@ export default function Companies() {
             </button>
           ) : (
             <>
-              <div className="search-box" style={{ width: 240 }}>
-                <Search size={14} />
-                <input placeholder="Search companies..." value={search} onChange={e => setSearch(e.target.value)} />
-              </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => {
-                const csvContent = "Name,Domain,Industry,Employees,Revenue\nAcme Corp,acme.com,Manufacturing,51-200,5000000";
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.setAttribute('download', 'companies_template.csv');
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-              }}>
-                <Download size={13} /> Template
-              </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => setIsImporterOpen(true)}>
-                <Upload size={13} /> Import CSV
-              </button>
-              <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>
-                <Plus size={13} /> Add Company
-              </button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setIsImporterOpen(true)}>Import</button>
+              <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}><Plus size={13} /> Create company</button>
             </>
           )}
         </div>
       </div>
 
+      <div className="apollo-sub-bar" style={{ padding: '0 24px 12px', borderBottom: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-secondary)', padding: '4px 8px' }}>
+             My saved companies v
+          </button>
+          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-secondary)', padding: '4px 8px' }}>
+             = Show Filters <span className="apollo-tab-count" style={{ background: 'transparent' }}>1</span>
+          </button>
+          <div className="search-box" style={{ width: 240, background: 'transparent', border: '1px solid var(--border-light)' }}>
+            <Search size={14} color="var(--text-tertiary)" />
+            <input placeholder="Search companies" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500 }}>
+          <button className="btn btn-ghost btn-sm" style={{ border: '1px solid var(--border-light)', padding: '4px 12px' }}>
+             Save as new view
+          </button>
+          <span style={{ cursor: 'pointer' }}>↑↓ Sort</span>
+          <span style={{ cursor: 'pointer' }}>⚙ View options</span>
+        </div>
+      </div>
+
       <div className="companies-layout">
         <div className="companies-table-wrap">
-          <div className="companies-table-head" style={{ paddingLeft: 16 }}>
+          <div className="companies-table-head" style={{ paddingLeft: 16, display: 'flex', alignItems: 'center', height: 40, borderBottom: '1px solid var(--border-light)', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
             <div style={{ width: 32, display: 'flex', alignItems: 'center' }}>
               <input 
                 type="checkbox" 
@@ -240,13 +244,10 @@ export default function Companies() {
                 style={{ width: 16, height: 16, cursor: 'pointer' }}
               />
             </div>
-            <span className="th-cell" style={{ flex: 1 }}>Company</span>
-            <span className="th-cell" style={{ width: 120 }}>Size</span>
-            <span className="th-cell" style={{ width: 80 }}>ARR Est.</span>
-            <span className="th-cell" style={{ width: 70 }}>Score</span>
-            <span className="th-cell" style={{ width: 180 }}>Tags</span>
-            <span className="th-cell" style={{ width: 120 }}>Last Activity</span>
-            <span style={{ width: 20 }} />
+            <span className="th-cell" style={{ flex: 1 }}>Name</span>
+            <span className="th-cell" style={{ width: 140 }}>Actions</span>
+            <span className="th-cell" style={{ width: 140 }}>Links</span>
+            <span className="th-cell" style={{ width: 120 }}>Number of (Size)</span>
           </div>
 
           <div className="companies-list">

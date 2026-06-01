@@ -25,55 +25,37 @@ function ContactRow({ contact, onSelect, selected }) {
     <div className={`contact-row ${selected ? 'selected' : ''}`} onClick={(e) => { e.stopPropagation(); onSelect(contact); }}>
       <div className="cr-cell" style={{ width: 280, paddingRight: 16 }}>
         <div className="cr-name-wrap">
-          <div className="avatar avatar-md" style={{ background: contact.color || '#3b82f6', color: '#fff', flexShrink: 0 }}>
-            {contact.name ? contact.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'CO'}
+          <div className="avatar avatar-md" style={{ background: 'transparent', border: '1px solid var(--border-light)', borderRadius: 4, color: 'var(--text-secondary)', flexShrink: 0, width: 24, height: 24, fontSize: 11 }}>
+            {contact.name ? contact.name.charAt(0).toUpperCase() : 'C'}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <span className="cr-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{contact.name}</span>
-            <span className="cr-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{contact.designation || 'No title'}</span>
+            <span className="cr-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13, fontWeight: 400 }}>{contact.name}</span>
           </div>
         </div>
       </div>
       
       <div className="cr-cell cr-company" style={{ width: 180, paddingRight: 16 }}>
-        {contact.company || '--'}
+        <span className="badge badge-gray" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)' }}>Cold</span>
       </div>
       
       <div className="cr-cell" style={{ width: 140, paddingRight: 16 }}>
-        <div className="cr-contact-info">
-          <a href={`mailto:${contact.email}`} className="cr-contact-icon" title={contact.email} onClick={e => e.stopPropagation()}>
-            <Mail size={13} />
-          </a>
-          {contact.linkedin && (
-            <a href={`https://${contact.linkedin}`} target="_blank" rel="noopener noreferrer" className="cr-contact-icon" title="LinkedIn" onClick={e => e.stopPropagation()}>
-              <ExternalLink size={13} />
-            </a>
-          )}
-        </div>
+        <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>-</span>
       </div>
       
       <div className="cr-cell" style={{ width: 160, paddingRight: 16 }}>
-        <div className="cr-tags">
-          {(contact.tags || []).slice(0, 2).map(t => (
-            <span key={t} className={`badge ${TAG_COLORS[t] || 'badge-gray'}`}>{t}</span>
-          ))}
-          {(!contact.tags || contact.tags.length === 0) && <span style={{ color: 'var(--text-tertiary)' }}>--</span>}
-        </div>
+        <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>-</span>
       </div>
       
-      <div className="cr-cell" style={{ width: 120 }}>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span className="cr-score" style={{ color: (contact.engagement_score || 0) >= 75 ? 'var(--success)' : 'var(--warning)' }}>
-            {contact.engagement_score || 0} Score
-          </span>
-          <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-            {contact.last_activity || contact.created_at ? formatDistanceToNow(new Date(contact.last_activity || contact.created_at), { addSuffix: true }) : 'Just now'}
-          </span>
+      <div className="cr-cell cr-actions" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12, opacity: 1, transform: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--text-secondary)' }}>
+          <Mail size={14} style={{ cursor: 'pointer' }} />
+          <MessageSquare size={14} style={{ cursor: 'pointer' }} />
+          <Plus size={14} style={{ cursor: 'pointer' }} />
+          <span style={{ cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>...</span>
         </div>
-      </div>
-
-      <div className="cr-actions" style={{ marginLeft: 'auto' }}>
-        <button className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); alert('Action triggered'); }}>Action</button>
+        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-tertiary)', padding: '2px 8px' }} onClick={e => { e.stopPropagation(); onSelect(contact); }}>
+          ▷ Click to view
+        </button>
       </div>
     </div>
   );
@@ -208,10 +190,10 @@ export default function Contacts() {
 
   return (
     <div className="contacts-page">
-      <div className="page-header-row">
+      <div className="page-header-row" style={{ padding: '24px 24px 12px' }}>
         <div>
-          <h1 className="page-big-title">Contacts</h1>
-          <p className="page-big-sub">{contacts.length} relationships tracked</p>
+          <h1 className="page-big-title" style={{ fontSize: 22 }}>People</h1>
+          <p className="page-big-sub" style={{ fontSize: 13 }}>{contacts.length} records</p>
         </div>
         <div className="page-header-actions">
           {selectedIds.length > 0 ? (
@@ -220,38 +202,35 @@ export default function Contacts() {
             </button>
           ) : (
             <>
-              <div className="search-box" style={{ width: 240 }}>
-                <Search size={14} />
-                <input placeholder="Search contacts..." value={search} onChange={e => setSearch(e.target.value)} />
-              </div>
-              <select className="input-base" style={{ width: 180 }} value={filterRole} onChange={e => setFilterRole(e.target.value)}>
-                <option value="all">All Roles</option>
-                <option value="Decision Maker">Decision Maker</option>
-                <option value="Champion">Champion</option>
-                <option value="Technical Evaluator">Technical Evaluator</option>
-                <option value="Influencer">Influencer</option>
-              </select>
-              <button className="btn btn-ghost btn-sm" onClick={() => {
-                const csvContent = "Name,Email,Company,Designation,Phone,LinkedIn\nJohn Doe,john.doe@example.com,Acme Corp,CEO,555-0100,linkedin.com/in/johndoe";
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.setAttribute('download', 'contacts_template.csv');
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-              }}>
-                <Download size={13} /> Template
-              </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => setIsImporterOpen(true)}>
-                <Upload size={13} /> Import CSV
-              </button>
-              <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>
-                <Plus size={13} /> Add Contact
-              </button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setIsImporterOpen(true)}>Import</button>
+              <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}><Plus size={13} /> Create person</button>
             </>
           )}
+        </div>
+      </div>
+
+      <div className="apollo-sub-bar" style={{ padding: '0 24px 12px', borderBottom: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-secondary)', padding: '4px 8px' }}>
+             My saved people v
+          </button>
+          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-secondary)', padding: '4px 8px' }}>
+             = Show Filters <span className="apollo-tab-count" style={{ background: 'transparent' }}>1</span>
+          </button>
+          <div className="search-box" style={{ width: 240, background: 'transparent', border: '1px solid var(--border-light)' }}>
+            <Search size={14} color="var(--text-tertiary)" />
+            <input placeholder="Search people" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500 }}>
+          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-secondary)', padding: '4px 8px' }}>
+             Create workflow v
+          </button>
+          <button className="btn btn-ghost btn-sm" style={{ border: '1px solid var(--border-light)', padding: '4px 12px' }}>
+             Save as new view
+          </button>
+          <span style={{ cursor: 'pointer' }}>↑↓ Sort</span>
+          <span style={{ cursor: 'pointer' }}>⚙ View options</span>
         </div>
       </div>
 
@@ -269,11 +248,11 @@ export default function Contacts() {
                 style={{ width: 16, height: 16, cursor: 'pointer' }}
               />
             </div>
-            <span style={{ width: 280 }}>Name & Title</span>
-            <span style={{ width: 180 }}>Company</span>
-            <span style={{ width: 140 }}>Contact</span>
-            <span style={{ width: 160 }}>Tags</span>
-            <span style={{ width: 120 }}>Activity</span>
+            <span style={{ width: 280 }}>Name</span>
+            <span style={{ width: 180 }}>Stage</span>
+            <span style={{ width: 140 }}>Last activity date</span>
+            <span style={{ width: 160 }}>Recommendations</span>
+            <span style={{ marginLeft: 'auto' }}>Actions</span>
           </div>
           
           <div className="contacts-list">
