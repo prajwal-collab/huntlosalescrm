@@ -178,10 +178,15 @@ export default function Contacts() {
             <option value="Influencer">Influencer</option>
           </select>
           <button className="btn btn-ghost btn-sm" onClick={() => {
+            const csvContent = "Name,Email,Company,Designation,Phone,LinkedIn\nJohn Doe,john.doe@example.com,Acme Corp,CEO,555-0100,linkedin.com/in/johndoe";
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
-            link.href = '/contacts_template.csv';
-            link.download = 'contacts_template.csv';
+            link.href = url;
+            link.setAttribute('download', 'contacts_template.csv');
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
           }}>
             <Download size={13} /> Template
           </button>
