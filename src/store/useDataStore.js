@@ -19,26 +19,34 @@ const useDataStore = create((set, get) => ({
   fetchData: async () => {
     set({ loading: true, error: null });
     try {
-      const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes] =
-        await Promise.all([
-          supabase.from('companies').select('*').order('created_at', { ascending: false }),
-          supabase.from('contacts').select('*').order('created_at', { ascending: false }),
-          supabase.from('deals').select('*').order('created_at', { ascending: false }),
-          supabase.from('tasks').select('*').order('created_at', { ascending: false }),
-          supabase.from('meetings').select('*').order('created_at', { ascending: false }),
-          supabase.from('documents').select('*').order('created_at', { ascending: false }),
-          supabase.from('sequences').select('*').order('created_at', { ascending: false }),
-        ]);
+      const { user } = useAuthStore.getState();
+      if (!user) throw new Error('Not authenticated');
+
+      const results = await Promise.allSettled([
+        supabase.from('companies').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
+        supabase.from('contacts').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
+        supabase.from('deals').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
+        supabase.from('tasks').select('*').is('deleted_at', null).order('due', { ascending: true }),
+        supabase.from('meetings').select('*').is('deleted_at', null).order('date', { ascending: true }),
+        supabase.from('documents').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
+        supabase.from('sequences').select('*').is('deleted_at', null).order('created_at', { ascending: false })
+      ]);
+
+      const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes] = results;
+
+      // Helper to safely extract data from allSettled results
+      const extract = (res) => (res.status === 'fulfilled' && !res.value.error) ? res.value.data : [];
 
       set({
-        companies: companiesRes.data || [],
-        contacts: contactsRes.data || [],
-        deals: dealsRes.data || [],
-        tasks: tasksRes.data || [],
-        meetings: meetingsRes.data || [],
-        documents: docsRes.data || [],
-        sequences: seqRes.data || [],
+        companies: extract(companiesRes),
+        contacts: extract(contactsRes),
+        deals: extract(dealsRes),
+        tasks: extract(tasksRes),
+        meetings: extract(meetingsRes),
+        documents: extract(docsRes),
+        sequences: extract(seqRes),
         loading: false,
+        error: null
       });
     } catch (error) {
       console.error('[DataStore] Fetch error:', error);
