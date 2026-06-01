@@ -20,37 +20,60 @@ const TAG_COLORS = {
   'Onboarding': 'badge-cyan',
 };
 
-function ContactCard({ contact, onSelect, selected }) {
+function ContactRow({ contact, onSelect, selected }) {
   return (
-    <div className={`contact-card ${selected ? 'selected' : ''}`} onClick={() => onSelect(contact)}>
-      <div className="avatar avatar-lg" style={{ background: contact.color || '#3b82f6', color: '#fff', flexShrink: 0 }}>
-        {contact.name ? contact.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'CO'}
-      </div>
-      <div className="cc-info">
-        <div className="cc-top">
-          <span className="cc-name">{contact.name}</span>
-          <span className="cc-sentiment" style={{ color: SENTIMENT_COLOR[contact.sentiment] || 'var(--text-tertiary)' }}>
-            ●
-          </span>
+    <div className={`contact-row ${selected ? 'selected' : ''}`} onClick={(e) => { e.stopPropagation(); onSelect(contact); }}>
+      <div className="cr-cell" style={{ width: 280, paddingRight: 16 }}>
+        <div className="cr-name-wrap">
+          <div className="avatar avatar-md" style={{ background: contact.color || '#3b82f6', color: '#fff', flexShrink: 0 }}>
+            {contact.name ? contact.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'CO'}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <span className="cr-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{contact.name}</span>
+            <span className="cr-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{contact.designation || 'No title'}</span>
+          </div>
         </div>
-        <span className="cc-role">{contact.designation}</span>
-        <span className="cc-company">{contact.company}</span>
-        <div className="cc-tags">
+      </div>
+      
+      <div className="cr-cell cr-company" style={{ width: 180, paddingRight: 16 }}>
+        {contact.company || '--'}
+      </div>
+      
+      <div className="cr-cell" style={{ width: 140, paddingRight: 16 }}>
+        <div className="cr-contact-info">
+          <a href={`mailto:${contact.email}`} className="cr-contact-icon" title={contact.email} onClick={e => e.stopPropagation()}>
+            <Mail size={13} />
+          </a>
+          {contact.linkedin && (
+            <a href={`https://${contact.linkedin}`} target="_blank" rel="noopener noreferrer" className="cr-contact-icon" title="LinkedIn" onClick={e => e.stopPropagation()}>
+              <ExternalLink size={13} />
+            </a>
+          )}
+        </div>
+      </div>
+      
+      <div className="cr-cell" style={{ width: 160, paddingRight: 16 }}>
+        <div className="cr-tags">
           {(contact.tags || []).slice(0, 2).map(t => (
             <span key={t} className={`badge ${TAG_COLORS[t] || 'badge-gray'}`}>{t}</span>
           ))}
+          {(!contact.tags || contact.tags.length === 0) && <span style={{ color: 'var(--text-tertiary)' }}>--</span>}
         </div>
       </div>
-      <div className="cc-right">
-        <div className="cc-score-wrap">
-          <span className="cc-score-num" style={{ color: (contact.engagement_score || 0) >= 75 ? 'var(--success)' : 'var(--warning)' }}>
-            {contact.engagement_score || 0}
+      
+      <div className="cr-cell" style={{ width: 120 }}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span className="cr-score" style={{ color: (contact.engagement_score || 0) >= 75 ? 'var(--success)' : 'var(--warning)' }}>
+            {contact.engagement_score || 0} Score
           </span>
-          <span className="cc-score-lbl">Score</span>
+          <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+            {contact.last_activity || contact.created_at ? formatDistanceToNow(new Date(contact.last_activity || contact.created_at), { addSuffix: true }) : 'Just now'}
+          </span>
         </div>
-        <span className="cc-last">
-          {contact.last_activity || contact.created_at ? formatDistanceToNow(new Date(contact.last_activity || contact.created_at), { addSuffix: true }) : 'Just now'}
-        </span>
+      </div>
+
+      <div className="cr-actions" style={{ marginLeft: 'auto' }}>
+        <button className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); alert('Action triggered'); }}>Action</button>
       </div>
     </div>
   );
@@ -233,9 +256,9 @@ export default function Contacts() {
       </div>
 
       <div className="contacts-layout">
-        <div className="contacts-list-wrap">
-          {filtered.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 12, borderBottom: '1px solid var(--border-light)', marginBottom: 12 }}>
+        <div className="contacts-table-wrap">
+          <div className="contacts-table-head">
+            <div style={{ width: 32, display: 'flex', alignItems: 'center' }}>
               <input 
                 type="checkbox" 
                 checked={selectedIds.length === filtered.length && filtered.length > 0}
@@ -245,27 +268,35 @@ export default function Contacts() {
                 }}
                 style={{ width: 16, height: 16, cursor: 'pointer' }}
               />
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>Select All</span>
             </div>
-          )}
-          {filtered.map(c => {
-            const comp = companies.find(comp => comp.id === c.company_id);
-            const isSelected = selectedIds.includes(c.id);
-            return (
-              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <input 
-                  type="checkbox" 
-                  checked={isSelected}
-                  onChange={(e) => toggleSelect(c.id, e)}
-                  style={{ width: 16, height: 16, cursor: 'pointer' }}
-                />
-                <div style={{ flex: 1 }}>
-                  <ContactCard contact={{...c, company: comp ? comp.name : 'Unknown'}} selected={selected?.id === c.id} onSelect={co => setSelected(co.id === selected?.id ? null : co)} />
+            <span style={{ width: 280 }}>Name & Title</span>
+            <span style={{ width: 180 }}>Company</span>
+            <span style={{ width: 140 }}>Contact</span>
+            <span style={{ width: 160 }}>Tags</span>
+            <span style={{ width: 120 }}>Activity</span>
+          </div>
+          
+          <div className="contacts-list">
+            {filtered.map(c => {
+              const comp = companies.find(comp => comp.id === c.company_id);
+              const isSelected = selectedIds.includes(c.id);
+              return (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                  <div style={{ position: 'absolute', left: 16, zIndex: 10, display: 'flex', alignItems: 'center' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={isSelected}
+                      onChange={(e) => toggleSelect(c.id, e)}
+                      style={{ width: 16, height: 16, cursor: 'pointer' }}
+                    />
+                  </div>
+                  <div style={{ flex: 1, paddingLeft: 32 }}>
+                    <ContactRow contact={{...c, company: comp ? comp.name : 'Unknown'}} selected={selected?.id === c.id} onSelect={co => setSelected(co.id === selected?.id ? null : co)} />
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-          {contacts.length === 0 && (
+              );
+            })}
+            {contacts.length === 0 && (
              <div className="empty-state" style={{ marginTop: 40 }}>
                <Users size={32} />
                <h3>No contacts yet</h3>
