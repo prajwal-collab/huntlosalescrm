@@ -29,16 +29,18 @@ function CompanyRow({ company, onSelect, selected }) {
       </div>
       <div className="co-arr">${(company.arrEstimate / 1000).toFixed(0)}k</div>
       <div className="co-score">
-        <div className="score-pill" style={{ '--s': company.engagementScore + '%', color: company.engagementScore >= 75 ? 'var(--success)' : 'var(--warning)' }}>
-          {company.engagementScore}
+        <div className="score-pill" style={{ '--s': (company.engagement_score || 0) + '%', color: (company.engagement_score || 0) >= 75 ? 'var(--success)' : 'var(--warning)' }}>
+          {company.engagement_score || 0}
         </div>
       </div>
       <div className="co-tags">
-        {company.tags.slice(0, 2).map(tag => (
+        {(company.tags || []).slice(0, 2).map(tag => (
           <span key={tag} className={`badge ${TAG_COLORS[tag] || 'badge-gray'}`}>{tag}</span>
         ))}
       </div>
-      <div className="co-activity">{formatDistanceToNow(new Date(company.lastActivity), { addSuffix: true })}</div>
+      <div className="co-activity">
+        {company.last_activity || company.created_at ? formatDistanceToNow(new Date(company.last_activity || company.created_at), { addSuffix: true }) : 'Just now'}
+      </div>
       <ChevronRight size={14} className="co-chevron" />
     </div>
   );
@@ -70,16 +72,16 @@ function CompanyPanel({ company, onClose }) {
       </div>
 
       <div className="panel-tags">
-        {company.tags.map(tag => (
+        {(company.tags || []).map(tag => (
           <span key={tag} className={`badge ${TAG_COLORS[tag] || 'badge-gray'}`}>{tag}</span>
         ))}
       </div>
 
       <div className="panel-stats">
-        <div className="ov-stat"><span className="ov-stat-label">ARR Estimate</span><span className="ov-stat-val">${(company.arrEstimate / 1000).toFixed(0)}k</span></div>
-        <div className="ov-stat"><span className="ov-stat-label">Engagement</span><span className="ov-stat-val" style={{ color: 'var(--success)' }}>{company.engagementScore}</span></div>
-        <div className="ov-stat"><span className="ov-stat-label">Active Deals</span><span className="ov-stat-val">{company.activeDeals}</span></div>
-        <div className="ov-stat"><span className="ov-stat-label">Contacts</span><span className="ov-stat-val">{company.contacts}</span></div>
+        <div className="ov-stat"><span className="ov-stat-label">ARR Estimate</span><span className="ov-stat-val">${((company.arr_estimate || 0) / 1000).toFixed(0)}k</span></div>
+        <div className="ov-stat"><span className="ov-stat-label">Engagement</span><span className="ov-stat-val" style={{ color: 'var(--success)' }}>{company.engagement_score || 0}</span></div>
+        <div className="ov-stat"><span className="ov-stat-label">Active Deals</span><span className="ov-stat-val">{company.activeDeals || 0}</span></div>
+        <div className="ov-stat"><span className="ov-stat-label">Contacts</span><span className="ov-stat-val">{company.contacts || 0}</span></div>
       </div>
 
       <div className="panel-links">

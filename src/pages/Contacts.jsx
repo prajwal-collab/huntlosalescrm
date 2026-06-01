@@ -36,19 +36,21 @@ function ContactCard({ contact, onSelect, selected }) {
         <span className="cc-role">{contact.designation}</span>
         <span className="cc-company">{contact.company}</span>
         <div className="cc-tags">
-          {contact.tags.slice(0, 2).map(t => (
+          {(contact.tags || []).slice(0, 2).map(t => (
             <span key={t} className={`badge ${TAG_COLORS[t] || 'badge-gray'}`}>{t}</span>
           ))}
         </div>
       </div>
       <div className="cc-right">
         <div className="cc-score-wrap">
-          <span className="cc-score-num" style={{ color: contact.engagementScore >= 75 ? 'var(--success)' : 'var(--warning)' }}>
-            {contact.engagementScore}
+          <span className="cc-score-num" style={{ color: (contact.engagement_score || 0) >= 75 ? 'var(--success)' : 'var(--warning)' }}>
+            {contact.engagement_score || 0}
           </span>
           <span className="cc-score-lbl">Score</span>
         </div>
-        <span className="cc-last">{formatDistanceToNow(new Date(contact.lastInteraction), { addSuffix: true })}</span>
+        <span className="cc-last">
+          {contact.last_activity || contact.created_at ? formatDistanceToNow(new Date(contact.last_activity || contact.created_at), { addSuffix: true }) : 'Just now'}
+        </span>
       </div>
     </div>
   );
@@ -69,11 +71,11 @@ function ContactDetail({ contact, onClose }) {
       </div>
 
       <div className="contact-detail-tags">
-        {contact.tags.map(t => <span key={t} className={`badge ${TAG_COLORS[t] || 'badge-gray'}`}>{t}</span>)}
+        {(contact.tags || []).map(t => <span key={t} className={`badge ${TAG_COLORS[t] || 'badge-gray'}`}>{t}</span>)}
       </div>
 
       <div className="panel-stats">
-        <div className="ov-stat"><span className="ov-stat-label">Engagement</span><span className="ov-stat-val" style={{ color: 'var(--success)' }}>{contact.engagementScore}</span></div>
+        <div className="ov-stat"><span className="ov-stat-label">Engagement</span><span className="ov-stat-val" style={{ color: 'var(--success)' }}>{contact.engagement_score || 0}</span></div>
         <div className="ov-stat"><span className="ov-stat-label">Sentiment</span><span className="ov-stat-val" style={{ textTransform: 'capitalize', color: SENTIMENT_COLOR[contact.sentiment] }}>{contact.sentiment}</span></div>
         <div className="ov-stat"><span className="ov-stat-label">Role</span><span className="ov-stat-val">{contact.role}</span></div>
         <div className="ov-stat"><span className="ov-stat-label">Timezone</span><span className="ov-stat-val">{contact.timezone}</span></div>
