@@ -117,10 +117,26 @@ const useDataStore = create((set, get) => ({
 
   bulkCreateContacts: async (contactsList) => {
     const state = get();
+    let allCompanies = [...state.companies];
+    
+    // 1. Auto-create any missing companies from the import
+    const newCompanyNames = [...new Set(contactsList.map(c => c.company).filter(Boolean))];
+    const companiesToCreate = newCompanyNames.filter(name => !allCompanies.some(comp => comp.name.toLowerCase() === name.toLowerCase()));
+    
+    if (companiesToCreate.length > 0) {
+      const { data: newComps, error: compErr } = await supabase.from('companies').insert(
+        companiesToCreate.map(name => ({ name, industry: 'Unknown', arr_estimate: 0, engagement_score: 0 }))
+      ).select();
+      if (!compErr && newComps) {
+        allCompanies = [...allCompanies, ...newComps];
+        set(state => ({ companies: [...newComps, ...state.companies] }));
+      }
+    }
+
     const mappedList = contactsList.map(c => {
       let company_id = null;
       if (c.company) {
-        const match = state.companies.find(comp => comp.name.toLowerCase() === c.company.toLowerCase());
+        const match = allCompanies.find(comp => comp.name.toLowerCase() === c.company.toLowerCase());
         if (match) company_id = match.id;
       }
       return {

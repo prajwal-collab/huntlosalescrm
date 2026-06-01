@@ -65,7 +65,7 @@ function ContactDetail({ contact, onClose }) {
         </div>
         <div>
           <h2 className="panel-title">{contact.name}</h2>
-          <p className="panel-sub">{contact.designation} · {contact.company}</p>
+          <p className="panel-sub">{contact.designation}{contact.company && contact.company !== 'Unknown' ? ` · ${contact.company}` : ''}</p>
         </div>
         <button className="drawer-close" onClick={onClose}>✕</button>
       </div>
@@ -75,10 +75,11 @@ function ContactDetail({ contact, onClose }) {
       </div>
 
       <div className="panel-stats">
+        <div className="ov-stat"><span className="ov-stat-label">Company</span><span className="ov-stat-val" style={{ fontWeight: 600 }}>{contact.company && contact.company !== 'Unknown' ? contact.company : '--'}</span></div>
         <div className="ov-stat"><span className="ov-stat-label">Engagement</span><span className="ov-stat-val" style={{ color: 'var(--success)' }}>{contact.engagement_score || 0}</span></div>
-        <div className="ov-stat"><span className="ov-stat-label">Sentiment</span><span className="ov-stat-val" style={{ textTransform: 'capitalize', color: SENTIMENT_COLOR[contact.sentiment] }}>{contact.sentiment}</span></div>
-        <div className="ov-stat"><span className="ov-stat-label">Role</span><span className="ov-stat-val">{contact.role}</span></div>
-        <div className="ov-stat"><span className="ov-stat-label">Timezone</span><span className="ov-stat-val">{contact.timezone}</span></div>
+        <div className="ov-stat"><span className="ov-stat-label">Sentiment</span><span className="ov-stat-val" style={{ textTransform: 'capitalize', color: SENTIMENT_COLOR[contact.sentiment] }}>{contact.sentiment || 'Neutral'}</span></div>
+        <div className="ov-stat"><span className="ov-stat-label">Role</span><span className="ov-stat-val">{contact.role || '--'}</span></div>
+        <div className="ov-stat"><span className="ov-stat-label">Timezone</span><span className="ov-stat-val">{contact.timezone || '--'}</span></div>
       </div>
 
       <div className="contact-reach">
