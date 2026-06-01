@@ -78,7 +78,7 @@ const useDataStore = create((set, get) => ({
   bulkCreateCompanies: async (companiesList) => {
     const listWithoutOwner = companiesList.map(c => {
       // Remove any fields that don't belong in the table
-      const { company, title, phone, employees, revenue, ...rest } = c;
+      const { company, title, phone, employees, revenue, status, ...rest } = c;
       return {
         name: c.name,
         industry: c.industry,
