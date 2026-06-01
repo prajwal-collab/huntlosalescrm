@@ -1,29 +1,81 @@
 // ============================================
 // HUNTLO SALES OS — SIDEBAR
 // ============================================
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, BarChart3, Building2, Users, CheckSquare,
   Calendar, Zap, FileText, Settings, Bell, ChevronLeft,
-  ChevronRight, LogOut, Sparkles, Sun, Moon, TrendingUp
+  ChevronRight, LogOut, Sparkles, Sun, Moon, TrendingUp,
+  Search, ChevronDown
 } from 'lucide-react';
 import useUIStore from '../../store/useUIStore';
 import useAuthStore from '../../store/useAuthStore';
 import logoImg from '../../assets/logo.svg';
 import './Sidebar.css';
 
-const NAV = [
-  { to: '/', icon: LayoutDashboard, label: 'Home OS' },
-  { to: '/pipeline', icon: BarChart3, label: 'Pipeline' },
-  { to: '/companies', icon: Building2, label: 'Companies' },
-  { to: '/contacts', icon: Users, label: 'Contacts' },
-  { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
-  { to: '/meetings', icon: Calendar, label: 'Meetings' },
-  { to: '/sequences', icon: Zap, label: 'Sequences' },
-  { to: '/documents', icon: FileText, label: 'Documents' },
-  { to: '/reports', icon: TrendingUp, label: 'Reports' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
+const NAV_GROUPS = [
+  {
+    title: 'General',
+    items: [
+      { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/search', icon: Search, label: 'Search' },
+    ]
+  },
+  {
+    title: 'Sales Center',
+    items: [
+      { to: '/pipeline', icon: BarChart3, label: 'Opportunities' },
+      { to: '/companies', icon: Building2, label: 'Accounts' },
+      { to: '/contacts', icon: Users, label: 'Contacts' },
+    ]
+  },
+  {
+    title: 'Workflow',
+    items: [
+      { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
+      { to: '/meetings', icon: Calendar, label: 'Meetings' },
+      { to: '/sequences', icon: Zap, label: 'Sequences' },
+      { to: '/documents', icon: FileText, label: 'Documents' },
+      { to: '/reports', icon: TrendingUp, label: 'Reports' },
+    ]
+  }
 ];
+
+function NavGroup({ group, sidebarCollapsed }) {
+  const [expanded, setExpanded] = useState(true);
+  
+  if (sidebarCollapsed) {
+    return (
+      <div className="sidebar-group collapsed">
+        {group.items.map(({ to, icon: Icon, label }) => (
+          <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title={label}>
+            <Icon size={16} />
+          </NavLink>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="sidebar-group">
+      <div className="group-header" onClick={() => setExpanded(!expanded)}>
+        <span className="group-title">{group.title}</span>
+        <ChevronDown size={14} className={`group-chevron ${expanded ? 'expanded' : ''}`} />
+      </div>
+      {expanded && (
+        <div className="group-items">
+          {group.items.map(({ to, icon: Icon, label }) => (
+            <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+              <Icon size={16} />
+              <span>{label}</span>
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Sidebar() {
   const { sidebarCollapsed, toggleSidebar, theme, toggleTheme } = useUIStore();
@@ -43,8 +95,9 @@ export default function Sidebar() {
     <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
       {/* Logo */}
       <div className="sidebar-logo">
-        <div className="logo-wrapper" style={{ display: 'flex', alignItems: 'center', height: '36px', overflow: 'hidden' }}>
+        <div className="logo-wrapper" style={{ display: 'flex', alignItems: 'center', height: '32px', overflow: 'hidden' }}>
           <img src={logoImg} alt="Huntlo" style={{ height: '100%', width: 'auto', objectFit: 'contain', marginLeft: sidebarCollapsed ? '-4px' : '0' }} />
+          {!sidebarCollapsed && <span style={{ marginLeft: 12, fontWeight: 700, fontSize: 16, letterSpacing: '-0.5px' }}>Huntlo</span>}
         </div>
         <button className="collapse-btn" onClick={toggleSidebar} title="Toggle sidebar">
           {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
@@ -53,23 +106,13 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="sidebar-nav">
-        {NAV.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            title={sidebarCollapsed ? label : ''}
-          >
-            <Icon size={16} />
-            {!sidebarCollapsed && <span>{label}</span>}
-          </NavLink>
+        {NAV_GROUPS.map((group) => (
+          <NavGroup key={group.title} group={group} sidebarCollapsed={sidebarCollapsed} />
         ))}
       </nav>
 
       {/* Bottom */}
       <div className="sidebar-bottom">
-
         <button className="nav-item" onClick={toggleTheme} title="Toggle Light/Dark Mode">
           {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           {!sidebarCollapsed && <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>}
@@ -78,20 +121,23 @@ export default function Sidebar() {
           <Bell size={16} />
           {!sidebarCollapsed && <span>Notifications</span>}
         </button>
+        <button className="nav-item" onClick={() => navigate('/settings')}>
+          <Settings size={16} />
+          {!sidebarCollapsed && <span>Settings</span>}
+        </button>
 
         <div className="sidebar-user" onClick={() => navigate('/settings?tab=profile')}>
-          <div className="avatar avatar-sm" style={{ background: avatarColor }}>
+          <div className="avatar avatar-sm" style={{ background: avatarColor, width: 24, height: 24, fontSize: 10, borderRadius: 6 }}>
             {initials}
           </div>
           {!sidebarCollapsed && (
             <div className="user-info">
               <span className="user-name">{name}</span>
-              <span className="user-role">Admin</span>
             </div>
           )}
           {!sidebarCollapsed && (
             <button className="sign-out-btn" onClick={(e) => { e.stopPropagation(); handleSignOut(); }} title="Sign out">
-              <LogOut size={13} />
+              <LogOut size={14} />
             </button>
           )}
         </div>

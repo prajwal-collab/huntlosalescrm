@@ -20,33 +20,40 @@ const TAG_COLORS = {
   'Onboarding': 'badge-cyan',
 };
 
-function ContactRow({ contact, onSelect, selected }) {
+function ContactRow({ contact, onSelect, selected, isSelected, toggleSelect }) {
   return (
     <div className={`contact-row ${selected ? 'selected' : ''}`} onClick={(e) => { e.stopPropagation(); onSelect(contact); }}>
-      <div className="cr-cell" style={{ width: 280, paddingRight: 16 }}>
+      <div className="c-cell" onClick={(e) => e.stopPropagation()}>
+        <input 
+          type="checkbox" 
+          checked={isSelected}
+          onChange={(e) => toggleSelect(contact.id, e)}
+          style={{ width: 16, height: 16, cursor: 'pointer' }}
+        />
+      </div>
+      
+      <div className="c-cell" style={{ paddingRight: 16 }}>
         <div className="cr-name-wrap">
-          <div className="avatar avatar-md" style={{ background: 'transparent', border: '1px solid var(--border-light)', borderRadius: 4, color: 'var(--text-secondary)', flexShrink: 0, width: 24, height: 24, fontSize: 11 }}>
+          <div className="avatar avatar-md" style={{ background: 'transparent', border: '1px solid var(--border-light)', borderRadius: 4, color: 'var(--text-secondary)', flexShrink: 0, width: 24, height: 24, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {contact.name ? contact.name.charAt(0).toUpperCase() : 'C'}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <span className="cr-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13, fontWeight: 400 }}>{contact.name}</span>
-          </div>
+          <span className="c-cell-text" style={{ fontSize: 13, fontWeight: 500 }}>{contact.name}</span>
         </div>
       </div>
       
-      <div className="cr-cell cr-company" style={{ width: 180, paddingRight: 16 }}>
+      <div className="c-cell" style={{ paddingRight: 16 }}>
         <span className="badge badge-gray" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)' }}>Cold</span>
       </div>
       
-      <div className="cr-cell" style={{ width: 140, paddingRight: 16 }}>
+      <div className="c-cell" style={{ paddingRight: 16 }}>
         <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>-</span>
       </div>
       
-      <div className="cr-cell" style={{ width: 160, paddingRight: 16 }}>
+      <div className="c-cell" style={{ paddingRight: 16 }}>
         <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>-</span>
       </div>
       
-      <div className="cr-cell cr-actions" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12, opacity: 1, transform: 'none' }}>
+      <div className="c-cell cr-actions" style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: 1, transform: 'none' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--text-secondary)' }}>
           <Mail size={14} style={{ cursor: 'pointer' }} />
           <MessageSquare size={14} style={{ cursor: 'pointer' }} />
@@ -152,11 +159,15 @@ export default function Contacts() {
   };
 
   const filtered = contacts.filter(c => {
-    const q = search.toLowerCase();
+    const q = (search || '').toString().toLowerCase();
     const companyMatch = companies.find(comp => comp.id === c.company_id);
-    const coName = companyMatch ? companyMatch.name : '';
+    const coName = companyMatch ? (companyMatch.name || '') : '';
     
-    const matchSearch = c.name.toLowerCase().includes(q) || coName.toLowerCase().includes(q) || (c.designation && c.designation.toLowerCase().includes(q));
+    const nameStr = (c.name || '').toString().toLowerCase();
+    const coNameStr = coName.toString().toLowerCase();
+    const desigStr = (c.designation || '').toString().toLowerCase();
+
+    const matchSearch = nameStr.includes(q) || coNameStr.includes(q) || desigStr.includes(q);
     const matchRole = filterRole === 'all' || c.role === filterRole;
     return matchSearch && matchRole;
   });
@@ -237,7 +248,7 @@ export default function Contacts() {
       <div className="contacts-layout">
         <div className="contacts-table-wrap">
           <div className="contacts-table-head">
-            <div style={{ width: 32, display: 'flex', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
               <input 
                 type="checkbox" 
                 checked={selectedIds.length === filtered.length && filtered.length > 0}
@@ -248,31 +259,25 @@ export default function Contacts() {
                 style={{ width: 16, height: 16, cursor: 'pointer' }}
               />
             </div>
-            <span style={{ width: 280 }}>Name</span>
-            <span style={{ width: 180 }}>Stage</span>
-            <span style={{ width: 140 }}>Last activity date</span>
-            <span style={{ width: 160 }}>Recommendations</span>
-            <span style={{ marginLeft: 'auto' }}>Actions</span>
+            <span>Name</span>
+            <span>Stage</span>
+            <span>Last activity date</span>
+            <span>Recommendations</span>
+            <span>Actions</span>
           </div>
           
-          <div className="contacts-list">
+          <div className="contacts-list apollo-grid-table">
             {filtered.map(c => {
               const comp = companies.find(comp => comp.id === c.company_id);
-              const isSelected = selectedIds.includes(c.id);
               return (
-                <div key={c.id} style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-                  <div style={{ position: 'absolute', left: 16, zIndex: 10, display: 'flex', alignItems: 'center' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={isSelected}
-                      onChange={(e) => toggleSelect(c.id, e)}
-                      style={{ width: 16, height: 16, cursor: 'pointer' }}
-                    />
-                  </div>
-                  <div style={{ flex: 1, paddingLeft: 32 }}>
-                    <ContactRow contact={{...c, company: comp ? comp.name : 'Unknown'}} selected={selected?.id === c.id} onSelect={co => setSelected(co.id === selected?.id ? null : co)} />
-                  </div>
-                </div>
+                <ContactRow 
+                  key={c.id} 
+                  contact={{...c, company: comp ? comp.name : 'Unknown'}} 
+                  selected={selected?.id === c.id} 
+                  isSelected={selectedIds.includes(c.id)}
+                  toggleSelect={toggleSelect}
+                  onSelect={co => setSelected(co.id === selected?.id ? null : co)} 
+                />
               );
             })}
             {contacts.length === 0 && (

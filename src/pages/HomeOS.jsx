@@ -30,8 +30,7 @@ export default function HomeOS() {
   const [aiQuery, setAiQuery] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
-
-  const now = useMemo(() => Date.now(), []);
+  const [now] = useState(() => Date.now());
   
   const pendingTasks = tasks.filter(t => t.status !== 'completed');
   const overdueTasks = tasks.filter(t => t.status !== 'completed' && new Date(t.due).getTime() < now);

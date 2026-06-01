@@ -81,16 +81,10 @@ const useDataStore = create((set, get) => ({
     set(state => ({ companies: state.companies.filter(c => !ids.includes(c.id)) }));
   },
 
-  deleteCompany: async (id) => {
-    const { error } = await supabase.from('companies').delete().eq('id', id);
-    if (error) throw error;
-    set(state => ({ companies: state.companies.filter(c => c.id !== id) }));
-  },
-
   bulkCreateCompanies: async (companiesList) => {
     const listWithoutOwner = companiesList.map(c => {
       // Remove any fields that don't belong in the table
-      const { company, title, phone, employees, revenue, status, ...rest } = c;
+      const { company: _c, title: _t, phone: _p, employees: _e, revenue: _r, status: _s, ...rest } = c;
       return {
         name: c.name,
         industry: c.industry,
@@ -131,12 +125,6 @@ const useDataStore = create((set, get) => ({
     const { error } = await supabase.from('contacts').delete().in('id', ids);
     if (error) throw error;
     set(state => ({ contacts: state.contacts.filter(c => !ids.includes(c.id)) }));
-  },
-
-  deleteContact: async (id) => {
-    const { error } = await supabase.from('contacts').delete().eq('id', id);
-    if (error) throw error;
-    set(state => ({ contacts: state.contacts.filter(c => c.id !== id) }));
   },
 
   bulkCreateContacts: async (contactsList) => {

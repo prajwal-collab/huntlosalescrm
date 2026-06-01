@@ -123,7 +123,13 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
       if (type === 'contacts') obj.status = 'New';
       if (type === 'companies') obj.status = 'Target';
       return obj;
-    }).filter(obj => obj.name); // basic filter to ensure not totally empty
+    }).filter(obj => {
+      if (!obj.name || obj.name.trim() === '') return false;
+      if (type === 'contacts') {
+        return (obj.email && obj.email.trim() !== '') || (obj.phone && obj.phone.trim() !== '');
+      }
+      return true;
+    });
 
     if (mappedData.length === 0) {
       setError('No valid data found to import.');

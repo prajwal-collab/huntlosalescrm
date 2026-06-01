@@ -97,11 +97,11 @@
 }
 
 .task-row:hover {
-  background: var(--bg-elevated);
+  background: var(--bg-hover);
 }
 
 .task-row.selected {
-  background: rgba(59, 130, 246, 0.04);
+  background: var(--accent-blue-muted);
 }
 
 .task-row.completed {

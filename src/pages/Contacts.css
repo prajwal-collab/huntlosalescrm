@@ -8,23 +8,32 @@
   display: flex;
   flex-direction: column;
   background: var(--bg-surface);
-  border: 1px solid var(--bg-border);
-  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
-.contacts-table-head {
+.apollo-grid-table {
+  --table-grid: 40px minmax(200px, 2fr) 1fr 1.5fr 1fr 140px;
   display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.contacts-table-head {
+  display: grid;
+  grid-template-columns: var(--table-grid);
   align-items: center;
+  height: 40px;
   padding: 0 16px;
-  height: 44px;
-  background: var(--bg-elevated);
-  border-bottom: 1px solid var(--bg-border);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-light);
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   color: var(--text-tertiary);
   letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .contacts-list {
@@ -32,37 +41,37 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  background: var(--bg-surface);
 }
 
 .contact-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--table-grid);
   align-items: center;
+  height: 56px;
   padding: 0 16px;
-  height: 60px;
   border-bottom: 1px solid var(--border-light);
   cursor: pointer;
-  background: transparent;
-  transition: background 0.15s, transform 0.15s;
+  background: var(--bg-surface);
+  transition: background 0.15s;
   position: relative;
 }
 
-.contact-row:hover {
-  background: var(--bg-elevated);
-}
+.contact-row:hover { background: var(--bg-hover); }
+.contact-row.selected { background: var(--accent-blue-muted); }
 
-.contact-row.selected {
-  background: rgba(59, 130, 246, 0.04);
-}
-
-.cr-cell {
+.c-cell {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  align-items: center;
   font-size: 13px;
   color: var(--text-secondary);
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.c-cell-text {
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cr-name-wrap {
@@ -138,6 +147,7 @@
   background: var(--bg-surface);
   border: 1px solid var(--bg-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   padding: var(--space-5);
   display: flex;
   flex-direction: column;

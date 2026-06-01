@@ -14,33 +14,39 @@ const TAG_COLORS = {
   'Trial Active': 'badge-green', 'Onboarding': 'badge-cyan',
 };
 
-function CompanyRow({ company, onSelect, selected }) {
+function CompanyRow({ company, onSelect, selected, isSelected, toggleSelect }) {
   return (
-    <div className={`company-row ${selected ? 'selected' : ''}`} onClick={() => onSelect(company)} style={{ display: 'flex', alignItems: 'center', height: 56, borderBottom: '1px solid var(--border-light)', cursor: 'pointer', transition: 'background 0.2s', padding: '0 16px' }}>
-      <div className="cr-cell" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div className="avatar avatar-md" style={{ background: company.logoColor + '22', color: company.logoColor, borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div className={`company-row ${selected ? 'selected' : ''}`} onClick={() => onSelect(company)}>
+      <div className="c-cell" onClick={(e) => e.stopPropagation()}>
+        <input 
+          type="checkbox" 
+          checked={isSelected}
+          onChange={(e) => toggleSelect(company.id, e)}
+          style={{ width: 16, height: 16, cursor: 'pointer' }}
+        />
+      </div>
+
+      <div className="c-cell" style={{ gap: 12 }}>
+        <div className="avatar avatar-md" style={{ background: company.logoColor + '22', color: company.logoColor, borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           {company.logo || company.name.charAt(0).toUpperCase()}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span className="cr-name" style={{ fontSize: 14, fontWeight: 500 }}>{company.name}</span>
-        </div>
+        <span className="c-cell-text" style={{ fontSize: 14, fontWeight: 500 }}>{company.name}</span>
       </div>
       
-      <div className="cr-cell" style={{ width: 140, display: 'flex', alignItems: 'center', gap: 12, color: 'var(--text-secondary)' }}>
-        <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-light)', borderRadius: 4 }}>
-           <span style={{ fontSize: 16 }}>▷</span>
+      <div className="c-cell" style={{ gap: 12, color: 'var(--text-secondary)' }}>
+        <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-light)', borderRadius: 4, cursor: 'pointer' }}>
+           <span style={{ fontSize: 12 }}>▷</span>
         </div>
         <span style={{ cursor: 'pointer', fontSize: 14 }}>≡+</span>
         <span style={{ cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>...</span>
       </div>
 
-      <div className="cr-cell" style={{ width: 140, display: 'flex', alignItems: 'center', gap: 12, color: 'var(--text-secondary)' }}>
+      <div className="c-cell" style={{ gap: 12, color: 'var(--text-secondary)' }}>
         <ExternalLink size={14} style={{ cursor: 'pointer' }} />
         <Building2 size={14} style={{ cursor: 'pointer' }} />
-        <span style={{ fontSize: 12, cursor: 'pointer', fontWeight: 'bold' }}>X</span>
       </div>
       
-      <div className="cr-cell" style={{ width: 120 }}>
+      <div className="c-cell">
         <span className="badge badge-gray" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)' }}>
           {company.size || '50-100'}
         </span>
@@ -156,10 +162,12 @@ export default function Companies() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const filtered = companies.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    (c.industry && c.industry.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filtered = companies.filter(c => {
+    const q = (search || '').toString().toLowerCase();
+    const nameStr = (c.name || '').toString().toLowerCase();
+    const indStr = (c.industry || '').toString().toLowerCase();
+    return nameStr.includes(q) || indStr.includes(q);
+  });
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -250,23 +258,17 @@ export default function Companies() {
             <span className="th-cell" style={{ width: 120 }}>Number of (Size)</span>
           </div>
 
-          <div className="companies-list">
-            {filtered.map(c => {
-              const isSelected = selectedIds.includes(c.id);
-              return (
-                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, paddingLeft: 16 }}>
-                  <input 
-                    type="checkbox" 
-                    checked={isSelected}
-                    onChange={(e) => toggleSelect(c.id, e)}
-                    style={{ width: 16, height: 16, cursor: 'pointer' }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <CompanyRow company={c} selected={selected?.id === c.id} onSelect={co => setSelected(co.id === selected?.id ? null : co)} />
-                  </div>
-                </div>
-              );
-            })}
+          <div className="companies-list apollo-grid-table">
+            {filtered.map(c => (
+              <CompanyRow 
+                key={c.id} 
+                company={c} 
+                selected={selected?.id === c.id} 
+                isSelected={selectedIds.includes(c.id)}
+                toggleSelect={toggleSelect}
+                onSelect={co => setSelected(co.id === selected?.id ? null : co)} 
+              />
+            ))}
             {companies.length === 0 && (
                <div className="empty-state" style={{ marginTop: 40 }}>
                  <Building2 size={32} />

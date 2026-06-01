@@ -2,7 +2,7 @@
 // HUNTLO SALES OS — MEETINGS PAGE
 // ============================================
 import { useState } from 'react';
-import { Search, Plus, Video, Calendar as CalendarIcon, Clock, Sparkles, X, AlertCircle, Loader } from 'lucide-react';
+import { Calendar, Clock, Video, Users, ExternalLink, CalendarIcon, Search, Plus, Sparkles, X, AlertCircle, Loader } from 'lucide-react';
 import { format } from 'date-fns';
 import useDataStore from '../store/useDataStore';
 import './Meetings.css';
