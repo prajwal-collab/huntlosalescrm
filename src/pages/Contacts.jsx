@@ -234,6 +234,20 @@ export default function Contacts() {
 
       <div className="contacts-layout">
         <div className="contacts-list-wrap">
+          {filtered.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 12, borderBottom: '1px solid var(--border-light)', marginBottom: 12 }}>
+              <input 
+                type="checkbox" 
+                checked={selectedIds.length === filtered.length && filtered.length > 0}
+                onChange={() => {
+                  if (selectedIds.length === filtered.length) setSelectedIds([]);
+                  else setSelectedIds(filtered.map(c => c.id));
+                }}
+                style={{ width: 16, height: 16, cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>Select All</span>
+            </div>
+          )}
           {filtered.map(c => {
             const comp = companies.find(comp => comp.id === c.company_id);
             const isSelected = selectedIds.includes(c.id);

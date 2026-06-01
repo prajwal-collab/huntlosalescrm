@@ -228,8 +228,18 @@ export default function Companies() {
 
       <div className="companies-layout">
         <div className="companies-table-wrap">
-          <div className="companies-table-head" style={{ paddingLeft: 40 }}>
-            <span style={{ width: 32 }} />
+          <div className="companies-table-head" style={{ paddingLeft: 16 }}>
+            <div style={{ width: 32, display: 'flex', alignItems: 'center' }}>
+              <input 
+                type="checkbox" 
+                checked={selectedIds.length === filtered.length && filtered.length > 0}
+                onChange={() => {
+                  if (selectedIds.length === filtered.length) setSelectedIds([]);
+                  else setSelectedIds(filtered.map(c => c.id));
+                }}
+                style={{ width: 16, height: 16, cursor: 'pointer' }}
+              />
+            </div>
             <span className="th-cell" style={{ flex: 1 }}>Company</span>
             <span className="th-cell" style={{ width: 120 }}>Size</span>
             <span className="th-cell" style={{ width: 80 }}>ARR Est.</span>
