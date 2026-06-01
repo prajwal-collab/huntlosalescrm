@@ -73,6 +73,34 @@ const useAuthStore = create(
         }
       },
 
+      // Link Google Workspace
+      linkGoogle: async () => {
+        set({ error: null, loading: true });
+        if (!isConfigured) {
+          set({ error: 'Supabase is not configured.', loading: false });
+          return { success: false };
+        }
+        try {
+          const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+          const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: `${appUrl}/settings?tab=integrations`,
+              scopes: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/gmail.readonly',
+              queryParams: {
+                access_type: 'offline',
+                prompt: 'consent',
+              }
+            }
+          });
+          if (error) throw error;
+          // The page will redirect to Google
+        } catch (err) {
+          set({ error: err.message, loading: false });
+          return { success: false, error: err.message };
+        }
+      },
+
       // Sign out
       signOut: async () => {
         if (isConfigured) await supabase.auth.signOut();
