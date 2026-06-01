@@ -115,59 +115,19 @@ function CompanyPanel({ company, onClose }) {
   );
 }
 
+import CsvImporterModal from '../components/CsvImporterModal';
+
 export default function Companies() {
   const { companies, createCompany, bulkCreateCompanies } = useDataStore();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
-  const fileInputRef = useRef(null);
+  const [isImporterOpen, setIsImporterOpen] = useState(false);
   
   // New company form state
   const [formData, setFormData] = useState({ name: '', industry: '', size: '', website: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target.result;
-      const lines = text.split('\n');
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-      
-      const newCompanies = [];
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        const values = lines[i].split(',').map(v => v.trim());
-        const companyObj = { tags: [], arr_estimate: 0, engagement_score: 0 };
-        
-        headers.forEach((header, index) => {
-          if (header === 'name') companyObj.name = values[index];
-          if (header === 'industry') companyObj.industry = values[index];
-          if (header === 'size') companyObj.size = values[index];
-          if (header === 'website') companyObj.website = values[index];
-        });
-
-        if (companyObj.name) {
-          newCompanies.push(companyObj);
-        }
-      }
-
-      if (newCompanies.length > 0) {
-        try {
-          await bulkCreateCompanies(newCompanies);
-          alert(`Successfully imported ${newCompanies.length} companies!`);
-        } catch (err) {
-          console.error(err);
-          alert('Failed to import companies.');
-        }
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = null; // Reset input
-  };
 
   const filtered = companies.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -220,10 +180,9 @@ export default function Companies() {
           }}>
             <Download size={13} /> Template
           </button>
-          <button className="btn btn-ghost btn-sm" onClick={() => fileInputRef.current?.click()}>
+          <button className="btn btn-ghost btn-sm" onClick={() => setIsImporterOpen(true)}>
             <Upload size={13} /> Import CSV
           </button>
-          <input type="file" accept=".csv" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} />
           <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>
             <Plus size={13} /> Add Company
           </button>
@@ -303,6 +262,12 @@ export default function Companies() {
           </div>
         )}
       </div>
+
+      <CsvImporterModal 
+        isOpen={isImporterOpen} 
+        onClose={() => setIsImporterOpen(false)} 
+        type="companies" 
+      />
     </div>
   );
 }

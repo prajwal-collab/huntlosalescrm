@@ -107,60 +107,19 @@ function ContactDetail({ contact, onClose }) {
   );
 }
 
+import CsvImporterModal from '../components/CsvImporterModal';
+
 export default function Contacts() {
   const { contacts, companies, createContact, bulkCreateContacts } = useDataStore();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [filterRole, setFilterRole] = useState('all');
   const [isAdding, setIsAdding] = useState(false);
-  const fileInputRef = useRef(null);
+  const [isImporterOpen, setIsImporterOpen] = useState(false);
 
   const [formData, setFormData] = useState({ name: '', email: '', designation: '', company_id: '', role: 'Decision Maker', linkedin: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target.result;
-      const lines = text.split('\n');
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-      
-      const newContacts = [];
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        const values = lines[i].split(',').map(v => v.trim());
-        const contactObj = { tags: [], engagement_score: 0, sentiment: 'neutral' };
-        
-        headers.forEach((header, index) => {
-          if (header === 'name') contactObj.name = values[index];
-          if (header === 'email') contactObj.email = values[index];
-          if (header === 'designation') contactObj.designation = values[index];
-          if (header === 'role') contactObj.role = values[index];
-          if (header === 'linkedin') contactObj.linkedin = values[index];
-        });
-
-        if (contactObj.name) {
-          newContacts.push(contactObj);
-        }
-      }
-
-      if (newContacts.length > 0) {
-        try {
-          await bulkCreateContacts(newContacts);
-          alert(`Successfully imported ${newContacts.length} contacts!`);
-        } catch (err) {
-          console.error(err);
-          alert('Failed to import contacts.');
-        }
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = null; // Reset input
-  };
 
   const filtered = contacts.filter(c => {
     const q = search.toLowerCase();
@@ -226,10 +185,9 @@ export default function Contacts() {
           }}>
             <Download size={13} /> Template
           </button>
-          <button className="btn btn-ghost btn-sm" onClick={() => fileInputRef.current?.click()}>
+          <button className="btn btn-ghost btn-sm" onClick={() => setIsImporterOpen(true)}>
             <Upload size={13} /> Import CSV
           </button>
-          <input type="file" accept=".csv" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} />
           <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>
             <Plus size={13} /> Add Contact
           </button>
@@ -300,6 +258,12 @@ export default function Contacts() {
           </div>
         )}
       </div>
+
+      <CsvImporterModal 
+        isOpen={isImporterOpen} 
+        onClose={() => setIsImporterOpen(false)} 
+        type="contacts" 
+      />
     </div>
   );
 }
