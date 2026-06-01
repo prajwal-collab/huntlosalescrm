@@ -40,10 +40,16 @@ CREATE TABLE public.profiles (
 -- Enable Row Level Security (RLS) for Profiles
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+-- Create a secure function to get the current user's organization ID
+CREATE OR REPLACE FUNCTION get_user_organization_id()
+RETURNS UUID AS $$
+  SELECT organization_id FROM public.profiles WHERE id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER;
+
 -- RLS Policies for Profiles
 CREATE POLICY "Public profiles are viewable by everyone in organization." 
   ON public.profiles FOR SELECT USING (
-    organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())
+    organization_id = get_user_organization_id()
   );
 
 CREATE POLICY "Users can update their own profile." 
@@ -206,6 +212,26 @@ CREATE POLICY "Tenant isolation check" ON public.documents FOR ALL TO authentica
 
 CREATE POLICY "Tenant isolation check" ON public.sequences FOR ALL TO authenticated
   USING (organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid()) AND deleted_at IS NULL);
+
+
+-- 10.5 Triggers for automatic organization_id insertion
+CREATE OR REPLACE FUNCTION set_organization_id()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.organization_id IS NULL THEN
+    NEW.organization_id := get_user_organization_id();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER set_companies_org_id BEFORE INSERT ON public.companies FOR EACH ROW EXECUTE PROCEDURE set_organization_id();
+CREATE TRIGGER set_contacts_org_id BEFORE INSERT ON public.contacts FOR EACH ROW EXECUTE PROCEDURE set_organization_id();
+CREATE TRIGGER set_deals_org_id BEFORE INSERT ON public.deals FOR EACH ROW EXECUTE PROCEDURE set_organization_id();
+CREATE TRIGGER set_tasks_org_id BEFORE INSERT ON public.tasks FOR EACH ROW EXECUTE PROCEDURE set_organization_id();
+CREATE TRIGGER set_meetings_org_id BEFORE INSERT ON public.meetings FOR EACH ROW EXECUTE PROCEDURE set_organization_id();
+CREATE TRIGGER set_documents_org_id BEFORE INSERT ON public.documents FOR EACH ROW EXECUTE PROCEDURE set_organization_id();
+CREATE TRIGGER set_sequences_org_id BEFORE INSERT ON public.sequences FOR EACH ROW EXECUTE PROCEDURE set_organization_id();
 
 
 -- 11. Trigger to automatically create a default organization and profile when a user signs up
