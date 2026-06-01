@@ -6,7 +6,7 @@ import './CsvImporterModal.css'; // We'll create this next
 
 const CONTACT_FIELDS = [
   { key: 'name', label: 'Full Name', required: true },
-  { key: 'email', label: 'Email Address', required: true },
+  { key: 'email', label: 'Email Address' },
   { key: 'company', label: 'Company Name' },
   { key: 'title', label: 'Job Title' },
   { key: 'phone', label: 'Phone Number' },
@@ -15,7 +15,7 @@ const CONTACT_FIELDS = [
 
 const COMPANY_FIELDS = [
   { key: 'name', label: 'Company Name', required: true },
-  { key: 'domain', label: 'Website Domain', required: true },
+  { key: 'domain', label: 'Website Domain' },
   { key: 'industry', label: 'Industry' },
   { key: 'employees', label: 'Employee Count' },
   { key: 'revenue', label: 'Annual Revenue' }
@@ -96,6 +96,13 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
     if (missingReq.length > 0) {
       setError(`Please map all required fields: ${missingReq.map(f => f.label).join(', ')}`);
       return;
+    }
+
+    if (type === 'contacts') {
+      if (!mapping['email'] && !mapping['phone']) {
+        setError('Please map either Email Address OR Phone Number. At least one is required.');
+        return;
+      }
     }
 
     setStep('importing');
