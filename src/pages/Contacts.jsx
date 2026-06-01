@@ -302,7 +302,8 @@ export default function Contacts() {
                <h3>No contacts yet</h3>
                <p>Add people to start building relationships.</p>
              </div>
-          )}
+            )}
+          </div>
         </div>
         
         {selected && !isAdding && <ContactDetail contact={{...selected, company: companies.find(comp => comp.id === selected.company_id)?.name}} onClose={() => setSelected(null)} />}
