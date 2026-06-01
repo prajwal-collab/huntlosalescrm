@@ -48,7 +48,9 @@ const useDataStore = create((set, get) => ({
 
   // ── Companies ─────────────────────────────
   createCompany: async (company) => {
-    const { data, error } = await supabase.from('companies').insert(company).select().single();
+    const { user } = useAuthStore.getState();
+    const newCompany = { ...company, owner_id: user?.id };
+    const { data, error } = await supabase.from('companies').insert(newCompany).select().single();
     if (error) throw error;
     set(state => ({ companies: [data, ...state.companies] }));
     return data;
@@ -68,7 +70,9 @@ const useDataStore = create((set, get) => ({
   },
 
   bulkCreateCompanies: async (companiesList) => {
-    const { data, error } = await supabase.from('companies').insert(companiesList).select();
+    const { user } = useAuthStore.getState();
+    const listWithOwner = companiesList.map(c => ({ ...c, owner_id: user?.id }));
+    const { data, error } = await supabase.from('companies').insert(listWithOwner).select();
     if (error) throw error;
     set(state => ({ companies: [...data, ...state.companies] }));
     return data;
@@ -76,7 +80,9 @@ const useDataStore = create((set, get) => ({
 
   // ── Contacts ──────────────────────────────
   createContact: async (contact) => {
-    const { data, error } = await supabase.from('contacts').insert(contact).select().single();
+    const { user } = useAuthStore.getState();
+    const newContact = { ...contact, owner_id: user?.id };
+    const { data, error } = await supabase.from('contacts').insert(newContact).select().single();
     if (error) throw error;
     set(state => ({ contacts: [data, ...state.contacts] }));
     return data;
@@ -96,7 +102,9 @@ const useDataStore = create((set, get) => ({
   },
 
   bulkCreateContacts: async (contactsList) => {
-    const { data, error } = await supabase.from('contacts').insert(contactsList).select();
+    const { user } = useAuthStore.getState();
+    const listWithOwner = contactsList.map(c => ({ ...c, owner_id: user?.id }));
+    const { data, error } = await supabase.from('contacts').insert(listWithOwner).select();
     if (error) throw error;
     set(state => ({ contacts: [...data, ...state.contacts] }));
     return data;
