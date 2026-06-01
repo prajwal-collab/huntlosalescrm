@@ -124,6 +124,28 @@ export default function Contacts() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} contacts?`)) return;
+    setDeleting(true);
+    try {
+      await useDataStore.getState().bulkDeleteContacts(selectedIds);
+      setSelectedIds([]);
+      setSelected(null);
+    } catch (err) {
+      alert('Failed to delete: ' + err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const toggleSelect = (id, e) => {
+    e.stopPropagation();
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
   const filtered = contacts.filter(c => {
     const q = search.toLowerCase();
     const companyMatch = companies.find(comp => comp.id === c.company_id);
@@ -169,36 +191,44 @@ export default function Contacts() {
           <p className="page-big-sub">{contacts.length} relationships tracked</p>
         </div>
         <div className="page-header-actions">
-          <div className="search-box" style={{ width: 240 }}>
-            <Search size={14} />
-            <input placeholder="Search contacts..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <select className="input-base" style={{ width: 180 }} value={filterRole} onChange={e => setFilterRole(e.target.value)}>
-            <option value="all">All Roles</option>
-            <option value="Decision Maker">Decision Maker</option>
-            <option value="Champion">Champion</option>
-            <option value="Technical Evaluator">Technical Evaluator</option>
-            <option value="Influencer">Influencer</option>
-          </select>
-          <button className="btn btn-ghost btn-sm" onClick={() => {
-            const csvContent = "Name,Email,Company,Designation,Phone,LinkedIn\nJohn Doe,john.doe@example.com,Acme Corp,CEO,555-0100,linkedin.com/in/johndoe";
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', 'contacts_template.csv');
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }}>
-            <Download size={13} /> Template
-          </button>
-          <button className="btn btn-ghost btn-sm" onClick={() => setIsImporterOpen(true)}>
-            <Upload size={13} /> Import CSV
-          </button>
-          <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>
-            <Plus size={13} /> Add Contact
-          </button>
+          {selectedIds.length > 0 ? (
+            <button className="btn btn-primary btn-sm" style={{ backgroundColor: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleBulkDelete} disabled={deleting}>
+              {deleting ? 'Deleting...' : `Delete ${selectedIds.length} Selected`}
+            </button>
+          ) : (
+            <>
+              <div className="search-box" style={{ width: 240 }}>
+                <Search size={14} />
+                <input placeholder="Search contacts..." value={search} onChange={e => setSearch(e.target.value)} />
+              </div>
+              <select className="input-base" style={{ width: 180 }} value={filterRole} onChange={e => setFilterRole(e.target.value)}>
+                <option value="all">All Roles</option>
+                <option value="Decision Maker">Decision Maker</option>
+                <option value="Champion">Champion</option>
+                <option value="Technical Evaluator">Technical Evaluator</option>
+                <option value="Influencer">Influencer</option>
+              </select>
+              <button className="btn btn-ghost btn-sm" onClick={() => {
+                const csvContent = "Name,Email,Company,Designation,Phone,LinkedIn\nJohn Doe,john.doe@example.com,Acme Corp,CEO,555-0100,linkedin.com/in/johndoe";
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', 'contacts_template.csv');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}>
+                <Download size={13} /> Template
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setIsImporterOpen(true)}>
+                <Upload size={13} /> Import CSV
+              </button>
+              <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>
+                <Plus size={13} /> Add Contact
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -206,7 +236,20 @@ export default function Contacts() {
         <div className="contacts-list-wrap">
           {filtered.map(c => {
             const comp = companies.find(comp => comp.id === c.company_id);
-            return <ContactCard key={c.id} contact={{...c, company: comp ? comp.name : 'Unknown'}} selected={selected?.id === c.id} onSelect={co => setSelected(co.id === selected?.id ? null : co)} />;
+            const isSelected = selectedIds.includes(c.id);
+            return (
+              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <input 
+                  type="checkbox" 
+                  checked={isSelected}
+                  onChange={(e) => toggleSelect(c.id, e)}
+                  style={{ width: 16, height: 16, cursor: 'pointer' }}
+                />
+                <div style={{ flex: 1 }}>
+                  <ContactCard contact={{...c, company: comp ? comp.name : 'Unknown'}} selected={selected?.id === c.id} onSelect={co => setSelected(co.id === selected?.id ? null : co)} />
+                </div>
+              </div>
+            );
           })}
           {contacts.length === 0 && (
              <div className="empty-state" style={{ marginTop: 40 }}>

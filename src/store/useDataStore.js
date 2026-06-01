@@ -75,6 +75,18 @@ const useDataStore = create((set, get) => ({
     set(state => ({ companies: state.companies.filter(c => c.id !== id) }));
   },
 
+  bulkDeleteCompanies: async (ids) => {
+    const { error } = await supabase.from('companies').delete().in('id', ids);
+    if (error) throw error;
+    set(state => ({ companies: state.companies.filter(c => !ids.includes(c.id)) }));
+  },
+
+  deleteCompany: async (id) => {
+    const { error } = await supabase.from('companies').delete().eq('id', id);
+    if (error) throw error;
+    set(state => ({ companies: state.companies.filter(c => c.id !== id) }));
+  },
+
   bulkCreateCompanies: async (companiesList) => {
     const listWithoutOwner = companiesList.map(c => {
       // Remove any fields that don't belong in the table
@@ -107,6 +119,18 @@ const useDataStore = create((set, get) => ({
     if (error) throw error;
     set(state => ({ contacts: state.contacts.map(c => c.id === id ? data : c) }));
     return data;
+  },
+
+  deleteContact: async (id) => {
+    const { error } = await supabase.from('contacts').delete().eq('id', id);
+    if (error) throw error;
+    set(state => ({ contacts: state.contacts.filter(c => c.id !== id) }));
+  },
+
+  bulkDeleteContacts: async (ids) => {
+    const { error } = await supabase.from('contacts').delete().in('id', ids);
+    if (error) throw error;
+    set(state => ({ contacts: state.contacts.filter(c => !ids.includes(c.id)) }));
   },
 
   deleteContact: async (id) => {

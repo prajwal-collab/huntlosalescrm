@@ -131,6 +131,28 @@ export default function Companies() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} companies?`)) return;
+    setDeleting(true);
+    try {
+      await useDataStore.getState().bulkDeleteCompanies(selectedIds);
+      setSelectedIds([]);
+      setSelected(null);
+    } catch (err) {
+      alert('Failed to delete: ' + err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const toggleSelect = (id, e) => {
+    e.stopPropagation();
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
   const filtered = companies.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     (c.industry && c.industry.toLowerCase().includes(search.toLowerCase()))
@@ -170,35 +192,43 @@ export default function Companies() {
           <p className="page-big-sub">{companies.length} accounts tracked</p>
         </div>
         <div className="page-header-actions">
-          <div className="search-box" style={{ width: 240 }}>
-            <Search size={14} />
-            <input placeholder="Search companies..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <button className="btn btn-ghost btn-sm" onClick={() => {
-            const csvContent = "Name,Domain,Industry,Employees,Revenue\nAcme Corp,acme.com,Manufacturing,51-200,5000000";
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', 'companies_template.csv');
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }}>
-            <Download size={13} /> Template
-          </button>
-          <button className="btn btn-ghost btn-sm" onClick={() => setIsImporterOpen(true)}>
-            <Upload size={13} /> Import CSV
-          </button>
-          <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>
-            <Plus size={13} /> Add Company
-          </button>
+          {selectedIds.length > 0 ? (
+            <button className="btn btn-primary btn-sm" style={{ backgroundColor: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleBulkDelete} disabled={deleting}>
+              {deleting ? 'Deleting...' : `Delete ${selectedIds.length} Selected`}
+            </button>
+          ) : (
+            <>
+              <div className="search-box" style={{ width: 240 }}>
+                <Search size={14} />
+                <input placeholder="Search companies..." value={search} onChange={e => setSearch(e.target.value)} />
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => {
+                const csvContent = "Name,Domain,Industry,Employees,Revenue\nAcme Corp,acme.com,Manufacturing,51-200,5000000";
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', 'companies_template.csv');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}>
+                <Download size={13} /> Template
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setIsImporterOpen(true)}>
+                <Upload size={13} /> Import CSV
+              </button>
+              <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>
+                <Plus size={13} /> Add Company
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       <div className="companies-layout">
         <div className="companies-table-wrap">
-          <div className="companies-table-head">
+          <div className="companies-table-head" style={{ paddingLeft: 40 }}>
             <span style={{ width: 32 }} />
             <span className="th-cell" style={{ flex: 1 }}>Company</span>
             <span className="th-cell" style={{ width: 120 }}>Size</span>
@@ -210,9 +240,22 @@ export default function Companies() {
           </div>
 
           <div className="companies-list">
-            {filtered.map(c => (
-              <CompanyRow key={c.id} company={c} selected={selected?.id === c.id} onSelect={co => setSelected(co.id === selected?.id ? null : co)} />
-            ))}
+            {filtered.map(c => {
+              const isSelected = selectedIds.includes(c.id);
+              return (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, paddingLeft: 16 }}>
+                  <input 
+                    type="checkbox" 
+                    checked={isSelected}
+                    onChange={(e) => toggleSelect(c.id, e)}
+                    style={{ width: 16, height: 16, cursor: 'pointer' }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <CompanyRow company={c} selected={selected?.id === c.id} onSelect={co => setSelected(co.id === selected?.id ? null : co)} />
+                  </div>
+                </div>
+              );
+            })}
             {companies.length === 0 && (
                <div className="empty-state" style={{ marginTop: 40 }}>
                  <Building2 size={32} />
