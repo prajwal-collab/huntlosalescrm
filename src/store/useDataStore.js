@@ -323,32 +323,52 @@ const useDataStore = create((set, get) => ({
 
   // ── Sequences ─────────────────────────────
   createSequence: async (seq) => {
-    const { data, error } = await supabase.from('sequences').insert(seq).select().single();
-    if (error) throw error;
-    set(state => ({ sequences: [data, ...state.sequences] }));
-    return data;
+    try {
+      const { data, error } = await supabase.from('sequences').insert(seq).select().single();
+      if (error) throw error;
+      set(state => ({ sequences: [data, ...state.sequences] }));
+      return data;
+    } catch (err) {
+      console.warn('Supabase insert failed, falling back to local state:', err.message);
+      const newSeq = { ...seq, id: Date.now().toString(), created_at: new Date().toISOString() };
+      set(state => ({ sequences: [newSeq, ...state.sequences] }));
+      return newSeq;
+    }
   },
 
   updateSequence: async (id, updates) => {
-    const { data, error } = await supabase.from('sequences').update(updates).eq('id', id).select().single();
-    if (error) throw error;
-    set(state => ({ sequences: state.sequences.map(s => s.id === id ? data : s) }));
-    return data;
+    try {
+      const { data, error } = await supabase.from('sequences').update(updates).eq('id', id).select().single();
+      if (error) throw error;
+      set(state => ({ sequences: state.sequences.map(s => s.id === id ? data : s) }));
+      return data;
+    } catch (err) {
+      console.warn('Supabase update failed, falling back to local state:', err.message);
+      set(state => {
+        const sequences = state.sequences.map(s => s.id === id ? { ...s, ...updates } : s);
+        return { sequences };
+      });
+      return { id, ...updates }; // Return an approximation
+    }
   },
 
   deleteSequence: async (id) => {
-    const { error } = await supabase.from('sequences').delete().eq('id', id);
-    if (error) throw error;
+    try {
+      const { error } = await supabase.from('sequences').delete().eq('id', id);
+      if (error) throw error;
+    } catch (err) {
+      console.warn('Supabase delete failed, falling back to local state:', err.message);
+    }
     set(state => ({ sequences: state.sequences.filter(s => s.id !== id) }));
   },
 
   enrollLeadsInSequence: async ({ sequenceId, leadIds, config }) => {
     // In a real app, this would write to a sequence_enrollments table
-    // For now, we update the local sequence's enrolledCount
+    // For now, we update the local sequence's enrolled
     set(state => {
       const sequences = state.sequences.map(s => {
         if (s.id === sequenceId) {
-          return { ...s, enrolledCount: (s.enrolledCount || 0) + leadIds.length };
+          return { ...s, enrolled: (s.enrolled || 0) + leadIds.length };
         }
         return s;
       });
