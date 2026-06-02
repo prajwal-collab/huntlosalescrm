@@ -27,12 +27,10 @@ function SequenceNode({ node, isLast }) {
 }
 
 export default function Sequences() {
-  const { sequences, createSequence, updateSequence } = useDataStore();
+  const { sequences, createSequence } = useDataStore();
   const navigate = useNavigate();
-  const [selected, setSelected] = useState(sequences[0] || null);
+  const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
-  const [isNodeModalOpen, setIsNodeModalOpen] = useState(false);
-  const [nodeFormData, setNodeFormData] = useState({ type: 'email', day: 1, subject: '', content: '', label: '' });
   const [formData, setFormData] = useState({ name: '', channel: 'Email', template: 'Blank Sequence' });
   const [error, setError] = useState(null);
 
@@ -48,33 +46,24 @@ export default function Sequences() {
   const TEMPLATE_DATA = {
     "Blank Sequence": [],
     "FLOW 1 — FEEDBACK → DEMO → DESIGN PARTNER": [
-      { id: '1', type: 'email', day: 1, subject: 'Quick feedback on your workflow?', content: 'Hi {{first_name}}, would love to get your thoughts on a new design.' },
-      { id: '2', type: 'delay', label: 'Wait 3 Days' },
-      { id: '3', type: 'email', day: 4, subject: 'Following up - Demo?', content: 'Let me show you what we built based on similar feedback.' },
-      { id: '4', type: 'delay', label: 'Wait 2 Days' },
-      { id: '5', type: 'linkedin', day: 6, subject: 'Connection Request', content: 'Connecting to share updates on the Design Partner program.' }
+      { id: '1', type: 'email', day: 1, time: '09:00', subject: 'Quick feedback on your workflow?', content: 'Hi {{first_name}}, would love to get your thoughts on a new design.' },
+      { id: '3', type: 'email', day: 4, time: '09:00', subject: 'Following up - Demo?', content: 'Let me show you what we built based on similar feedback.' },
     ],
     "FLOW 2 — RECRUITER WORKFLOW AUDIT": [
-      { id: '1', type: 'email', day: 1, subject: 'Your recruiting workflow', content: 'Hi {{first_name}}, how are you currently managing outbound sourcing?' },
-      { id: '2', type: 'delay', label: 'Wait 2 Days' },
-      { id: '3', type: 'email', day: 3, subject: 'Audit template', content: 'Here is a free template we use to audit recruiting workflows.' },
+      { id: '1', type: 'email', day: 1, time: '09:00', subject: 'Your recruiting workflow', content: 'Hi {{first_name}}, how are you currently managing outbound sourcing?' },
+      { id: '3', type: 'email', day: 3, time: '09:00', subject: 'Audit template', content: 'Here is a free template we use to audit recruiting workflows.' },
     ],
     "FLOW 3 — THE CONTRARIAN CAMPAIGN": [
-      { id: '1', type: 'linkedin', day: 1, subject: 'Profile view & connect', content: 'Loved your post about sales strategies.' },
-      { id: '2', type: 'delay', label: 'Wait 1 Day' },
-      { id: '3', type: 'email', day: 2, subject: 'Unpopular opinion on outbound', content: 'Most people think volume is key. We think differently.' },
-      { id: '4', type: 'delay', label: 'Wait 3 Days' },
-      { id: '5', type: 'email', day: 5, subject: 'Any thoughts?', content: 'Curious if you agree with the approach.' },
+      { id: '1', type: 'email', day: 1, time: '09:00', subject: 'Unpopular opinion about SDRs', content: 'I think SDRs should stop personalizing emails.' },
+      { id: '3', type: 'email', day: 4, time: '09:00', subject: 'The data behind the claim', content: 'We analyzed 10k emails and found that...' },
     ],
     "FLOW 4 — THE DESIGN PARTNER PROGRAM": [
-      { id: '1', type: 'email', day: 1, subject: 'Exclusive invite: Design Partner', content: 'We are looking for 5 forward-thinking companies to shape our product.' },
-      { id: '2', type: 'delay', label: 'Wait 2 Days' },
-      { id: '3', type: 'linkedin', day: 3, subject: 'Checking in', content: 'Sent you an email about our design partner program.' },
+      { id: '1', type: 'email', day: 1, time: '09:00', subject: 'Exclusive invite: Design Partner', content: 'We are looking for 5 forward-thinking companies to shape...' },
+      { id: '3', type: 'email', day: 3, time: '09:00', subject: 'Checking in', content: 'Sent you an email about our design partner program.' },
     ],
     "FLOW 5 — THE MARKET INSIGHT SERIES": [
-      { id: '1', type: 'email', day: 1, subject: 'New insights on Q3 sales trends', content: 'We just analyzed 1M+ emails. Here is what works.' },
-      { id: '2', type: 'delay', label: 'Wait 4 Days' },
-      { id: '3', type: 'email', day: 5, subject: 'Part 2: The Follow-Up Strategy', content: 'Following up on the Q3 insights.' },
+      { id: '1', type: 'email', day: 1, time: '09:00', subject: 'Market Insight: Series A Trends', content: 'We are seeing a massive shift in how Series A companies buy software.' },
+      { id: '3', type: 'email', day: 4, time: '09:00', subject: 'Market Insight: The AI Impact', content: 'Following up on my last email, here is our data on AI...' },
     ]
   };
 
@@ -99,29 +88,6 @@ export default function Sequences() {
     } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to create sequence.');
-    }
-  };
-
-  const handleAddNode = async (e) => {
-    e.preventDefault();
-    if (!selected) return;
-    try {
-      const newNode = {
-        id: Date.now().toString(),
-        type: nodeFormData.type,
-        day: nodeFormData.day,
-        subject: nodeFormData.subject,
-        content: nodeFormData.content,
-        label: nodeFormData.type === 'delay' ? `Wait ${nodeFormData.day} Days` : ''
-      };
-      const updatedNodes = [...(selected.nodes || []), newNode];
-      const updatedSeq = await updateSequence(selected.id, { nodes: updatedNodes, steps: updatedNodes.length });
-      setSelected(updatedSeq);
-      setIsNodeModalOpen(false);
-      setNodeFormData({ type: 'email', day: 1, subject: '', content: '', label: '' });
-    } catch (err) {
-      console.error(err);
-      alert('Failed to add node: ' + err.message);
     }
   };
 
@@ -171,43 +137,6 @@ export default function Sequences() {
           </div>
         </div>
 
-        {selected && !isAdding && (
-          <div className="sequence-builder animate-fade-in">
-            <div className="seq-builder-header">
-               <div>
-                 <h2 className="seq-builder-title">{selected.name}</h2>
-                 <div className="seq-builder-stats">
-                   <span className="badge badge-gray">{selected.channel}</span>
-                   <span>{selected.enrolled || 0} currently enrolled</span>
-                   <span>{selected.reply_rate || 0}% reply rate</span>
-                 </div>
-               </div>
-               <div style={{ display: 'flex', gap: 8 }}>
-                 <button className="btn btn-ghost btn-sm" onClick={() => setIsNodeModalOpen(true)}>Add Step</button>
-                 <button className="btn btn-primary btn-sm" onClick={() => navigate('/leads')}>Add Prospects</button>
-               </div>
-            </div>
-
-            <div className="seq-canvas">
-              {(selected.nodes || []).length > 0 ? (
-                <div className="seq-flow">
-                  {selected.nodes.map((node, i) => (
-                    <SequenceNode key={node.id || i} node={node} isLast={i === selected.nodes.length - 1} />
-                  ))}
-                  <button className="add-node-btn" onClick={() => setIsNodeModalOpen(true)}><Plus size={16} /></button>
-                </div>
-              ) : (
-                <div className="empty-state">
-                  <GitMerge size={32} />
-                  <h3>Empty Sequence</h3>
-                  <p>Start building your automated workflow</p>
-                  <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => setIsNodeModalOpen(true)}>Add First Step</button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
         {isAdding && (
           <div className="sequence-builder animate-slide-right" style={{ borderLeft: '1px solid var(--bg-border)', position: 'absolute', right: 0, top: 0, bottom: 0, width: 450, background: 'var(--bg-surface)', zIndex: 10, boxShadow: 'var(--shadow-lg)' }}>
             <div className="seq-builder-header" style={{ marginBottom: 12, padding: 24, paddingBottom: 16, borderBottom: '1px solid var(--bg-border)' }}>
@@ -248,45 +177,6 @@ export default function Sequences() {
                 <button type="button" className="btn btn-ghost w-full" onClick={() => setIsAdding(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary w-full">Create Workflow</button>
               </div>
-            </form>
-          </div>
-        )}
-
-        {isNodeModalOpen && (
-          <div className="sequence-builder animate-slide-right" style={{ borderLeft: '1px solid var(--bg-border)', position: 'absolute', right: 0, top: 0, bottom: 0, width: 400, background: 'var(--bg-surface)', zIndex: 10, boxShadow: 'var(--shadow-lg)' }}>
-            <div className="seq-builder-header" style={{ marginBottom: 24, padding: 24, borderBottom: '1px solid var(--bg-border)' }}>
-              <h2 className="panel-title">Add Step</h2>
-              <button className="drawer-close" style={{ position: 'absolute', top: 24, right: 24 }} onClick={() => setIsNodeModalOpen(false)}><X size={16}/></button>
-            </div>
-            <form onSubmit={handleAddNode} style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 24px' }}>
-              <div className="form-group">
-                <label className="label">Step Type</label>
-                <select className="input-base" value={nodeFormData.type} onChange={e => setNodeFormData({...nodeFormData, type: e.target.value})}>
-                  <option value="email">Email</option>
-                  <option value="linkedin">LinkedIn Message</option>
-                  <option value="delay">Time Delay</option>
-                </select>
-              </div>
-
-              {nodeFormData.type !== 'delay' ? (
-                <>
-                  <div className="form-group">
-                    <label className="label">Subject / Title</label>
-                    <input className="input-base" autoFocus required value={nodeFormData.subject} onChange={e => setNodeFormData({...nodeFormData, subject: e.target.value})} placeholder="Message Subject" />
-                  </div>
-                  <div className="form-group">
-                    <label className="label">Message Content</label>
-                    <textarea className="input-base" required rows={4} value={nodeFormData.content} onChange={e => setNodeFormData({...nodeFormData, content: e.target.value})} placeholder="Hi {{first_name}}..." style={{ resize: 'vertical' }} />
-                  </div>
-                </>
-              ) : (
-                <div className="form-group">
-                  <label className="label">Wait For (Days)</label>
-                  <input className="input-base" type="number" min="1" required value={nodeFormData.day} onChange={e => setNodeFormData({...nodeFormData, day: parseInt(e.target.value) || 1})} />
-                </div>
-              )}
-
-              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }}><Save size={14} style={{ marginRight: 6 }}/> Save Step</button>
             </form>
           </div>
         )}
