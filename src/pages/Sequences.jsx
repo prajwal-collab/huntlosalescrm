@@ -209,39 +209,45 @@ export default function Sequences() {
         )}
 
         {isAdding && (
-          <div className="sequence-builder animate-fade-in">
-            <div className="seq-builder-header" style={{ marginBottom: 24 }}>
-              <h2 className="panel-title">Create Sequence</h2>
+          <div className="sequence-builder animate-slide-right" style={{ borderLeft: '1px solid var(--bg-border)', position: 'absolute', right: 0, top: 0, bottom: 0, width: 450, background: 'var(--bg-surface)', zIndex: 10, boxShadow: 'var(--shadow-lg)' }}>
+            <div className="seq-builder-header" style={{ marginBottom: 12, padding: 24, paddingBottom: 16, borderBottom: '1px solid var(--bg-border)' }}>
+              <div>
+                <h2 className="panel-title" style={{ fontSize: 18 }}>Create Sequence</h2>
+                <p className="page-big-sub" style={{ fontSize: 13, marginTop: 4 }}>Configure a new automated outreach workflow.</p>
+              </div>
               <button className="drawer-close" style={{ position: 'absolute', top: 24, right: 24 }} onClick={() => setIsAdding(false)}><X size={16}/></button>
             </div>
-            <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 24px' }}>
+            <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '24px' }}>
               {error && (
                 <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.08)', color: 'var(--danger)', fontSize: 13, display: 'flex', gap: 8 }}>
                   <X size={14} /> {error}
                 </div>
               )}
               <div className="form-group">
-                <label className="label">Sequence Name</label>
-                <input className="input-base" autoFocus required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Outbound Q3 Founders" />
+                <label className="label" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>Sequence Name *</label>
+                <input className="input-base" autoFocus required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Outbound Q3 Founders" style={{ background: 'var(--bg-body)' }} />
               </div>
               <div className="form-group">
-                <label className="label">Template</label>
+                <label className="label" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>Template</label>
                 <select className="input-base" value={formData.template} onChange={e => {
                   const val = e.target.value;
                   setFormData({...formData, template: val, name: val !== 'Blank Sequence' ? val : formData.name});
-                }}>
+                }} style={{ background: 'var(--bg-body)' }}>
                   {TEMPLATES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="form-group">
-                <label className="label">Primary Channel</label>
-                <select className="input-base" value={formData.channel} onChange={e => setFormData({...formData, channel: e.target.value})}>
+                <label className="label" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>Primary Channel</label>
+                <select className="input-base" value={formData.channel} onChange={e => setFormData({...formData, channel: e.target.value})} style={{ background: 'var(--bg-body)' }}>
                   <option value="Multi-channel">Multi-channel</option>
                   <option value="Email">Email Only</option>
                   <option value="LinkedIn">LinkedIn Only</option>
                 </select>
               </div>
-              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }}>Create Workflow</button>
+              <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+                <button type="button" className="btn btn-ghost w-full" onClick={() => setIsAdding(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary w-full">Create Workflow</button>
+              </div>
             </form>
           </div>
         )}
