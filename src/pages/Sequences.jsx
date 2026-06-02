@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Search, Plus, Play, Pause, GitMerge, Mail, Globe, Clock, X } from 'lucide-react';
+import { Search, Plus, Play, Pause, GitMerge, Mail, Globe, Clock, X, Save } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import useDataStore from '../store/useDataStore';
 import './Sequences.css';
 
@@ -26,9 +27,12 @@ function SequenceNode({ node, isLast }) {
 }
 
 export default function Sequences() {
-  const { sequences, createSequence } = useDataStore();
+  const { sequences, createSequence, updateSequence } = useDataStore();
+  const navigate = useNavigate();
   const [selected, setSelected] = useState(sequences[0] || null);
   const [isAdding, setIsAdding] = useState(false);
+  const [isNodeModalOpen, setIsNodeModalOpen] = useState(false);
+  const [nodeFormData, setNodeFormData] = useState({ type: 'email', day: 1, subject: '', content: '', label: '' });
   const [formData, setFormData] = useState({ name: '', channel: 'Email', template: 'Blank Sequence' });
   const [error, setError] = useState(null);
 
@@ -98,6 +102,29 @@ export default function Sequences() {
     }
   };
 
+  const handleAddNode = async (e) => {
+    e.preventDefault();
+    if (!selected) return;
+    try {
+      const newNode = {
+        id: Date.now().toString(),
+        type: nodeFormData.type,
+        day: nodeFormData.day,
+        subject: nodeFormData.subject,
+        content: nodeFormData.content,
+        label: nodeFormData.type === 'delay' ? `Wait ${nodeFormData.day} Days` : ''
+      };
+      const updatedNodes = [...(selected.nodes || []), newNode];
+      const updatedSeq = await updateSequence(selected.id, { nodes: updatedNodes, steps: updatedNodes.length });
+      setSelected(updatedSeq);
+      setIsNodeModalOpen(false);
+      setNodeFormData({ type: 'email', day: 1, subject: '', content: '', label: '' });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add node: ' + err.message);
+    }
+  };
+
   return (
     <div className="sequences-page">
       <div className="page-header-row">
@@ -156,8 +183,8 @@ export default function Sequences() {
                  </div>
                </div>
                <div style={{ display: 'flex', gap: 8 }}>
-                 <button className="btn btn-ghost btn-sm" onClick={() => alert('Editor opening soon...')}>Edit Workflow</button>
-                 <button className="btn btn-primary btn-sm" onClick={() => alert('Add prospects feature integrated.')}>Add Prospects</button>
+                 <button className="btn btn-ghost btn-sm" onClick={() => setIsNodeModalOpen(true)}>Add Step</button>
+                 <button className="btn btn-primary btn-sm" onClick={() => navigate('/leads')}>Add Prospects</button>
                </div>
             </div>
 
@@ -167,14 +194,14 @@ export default function Sequences() {
                   {selected.nodes.map((node, i) => (
                     <SequenceNode key={node.id || i} node={node} isLast={i === selected.nodes.length - 1} />
                   ))}
-                  <button className="add-node-btn" onClick={() => alert('Add node triggered')}><Plus size={16} /></button>
+                  <button className="add-node-btn" onClick={() => setIsNodeModalOpen(true)}><Plus size={16} /></button>
                 </div>
               ) : (
                 <div className="empty-state">
                   <GitMerge size={32} />
                   <h3>Empty Sequence</h3>
                   <p>Start building your automated workflow</p>
-                  <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => alert('Node creation modal triggered')}>Add First Step</button>
+                  <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => setIsNodeModalOpen(true)}>Add First Step</button>
                 </div>
               )}
             </div>
@@ -215,6 +242,45 @@ export default function Sequences() {
                 </select>
               </div>
               <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }}>Create Workflow</button>
+            </form>
+          </div>
+        )}
+
+        {isNodeModalOpen && (
+          <div className="sequence-builder animate-slide-right" style={{ borderLeft: '1px solid var(--bg-border)', position: 'absolute', right: 0, top: 0, bottom: 0, width: 400, background: 'var(--bg-surface)', zIndex: 10, boxShadow: 'var(--shadow-lg)' }}>
+            <div className="seq-builder-header" style={{ marginBottom: 24, padding: 24, borderBottom: '1px solid var(--bg-border)' }}>
+              <h2 className="panel-title">Add Step</h2>
+              <button className="drawer-close" style={{ position: 'absolute', top: 24, right: 24 }} onClick={() => setIsNodeModalOpen(false)}><X size={16}/></button>
+            </div>
+            <form onSubmit={handleAddNode} style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 24px' }}>
+              <div className="form-group">
+                <label className="label">Step Type</label>
+                <select className="input-base" value={nodeFormData.type} onChange={e => setNodeFormData({...nodeFormData, type: e.target.value})}>
+                  <option value="email">Email</option>
+                  <option value="linkedin">LinkedIn Message</option>
+                  <option value="delay">Time Delay</option>
+                </select>
+              </div>
+
+              {nodeFormData.type !== 'delay' ? (
+                <>
+                  <div className="form-group">
+                    <label className="label">Subject / Title</label>
+                    <input className="input-base" autoFocus required value={nodeFormData.subject} onChange={e => setNodeFormData({...nodeFormData, subject: e.target.value})} placeholder="Message Subject" />
+                  </div>
+                  <div className="form-group">
+                    <label className="label">Message Content</label>
+                    <textarea className="input-base" required rows={4} value={nodeFormData.content} onChange={e => setNodeFormData({...nodeFormData, content: e.target.value})} placeholder="Hi {{first_name}}..." style={{ resize: 'vertical' }} />
+                  </div>
+                </>
+              ) : (
+                <div className="form-group">
+                  <label className="label">Wait For (Days)</label>
+                  <input className="input-base" type="number" min="1" required value={nodeFormData.day} onChange={e => setNodeFormData({...nodeFormData, day: parseInt(e.target.value) || 1})} />
+                </div>
+              )}
+
+              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }}><Save size={14} style={{ marginRight: 6 }}/> Save Step</button>
             </form>
           </div>
         )}

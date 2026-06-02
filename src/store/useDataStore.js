@@ -323,9 +323,7 @@ const useDataStore = create((set, get) => ({
 
   // ── Sequences ─────────────────────────────
   createSequence: async (seq) => {
-    const { user } = useAuthStore.getState();
-    const newSeq = { ...seq, owner_id: user?.id };
-    const { data, error } = await supabase.from('sequences').insert(newSeq).select().single();
+    const { data, error } = await supabase.from('sequences').insert(seq).select().single();
     if (error) throw error;
     set(state => ({ sequences: [data, ...state.sequences] }));
     return data;
