@@ -93,8 +93,8 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="sidebar-logo">
         <div className="logo-wrapper" style={{ display: 'flex', alignItems: 'center', height: '32px', overflow: 'hidden' }}>
-          <img src={logoImg} alt="Huntlo" style={{ height: '100%', width: 'auto', objectFit: 'contain', marginLeft: sidebarCollapsed ? '-4px' : '0' }} />
-          {!sidebarCollapsed && <span style={{ marginLeft: 12, fontWeight: 700, fontSize: 16, letterSpacing: '-0.5px' }}>Huntlo</span>}
+          <img src={logoImg} alt="Huntlo Icon" style={{ height: '32px', width: '32px', objectFit: 'contain', marginLeft: sidebarCollapsed ? '2px' : '0' }} />
+          {!sidebarCollapsed && <span style={{ marginLeft: 8, fontWeight: 800, fontSize: 22, letterSpacing: '-0.03em', color: '#1b66f2', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>Huntlo</span>}
         </div>
         <button className="collapse-btn" onClick={toggleSidebar} title="Toggle sidebar">
           {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}

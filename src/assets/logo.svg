@@ -1,10 +1,7 @@
-<svg width="180" height="40" viewBox="0 0 180 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Circle background -->
-  <circle cx="20" cy="20" r="18" fill="#ffffff" />
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Blue Circle -->
+  <circle cx="20" cy="20" r="20" fill="#1b66f2" />
   
-  <!-- Paper Plane (dark) -->
-  <path d="M10 21 L17 24 L27 12 L19 26 L22 32 L31 10 Z" fill="#1e1e1e" />
-  
-  <!-- Text -->
-  <text x="46" y="28" fill="#ffffff" font-size="24" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-weight="800" letter-spacing="-0.03em">Huntlo</text>
+  <!-- White Abstract Shape (Dynamic Star/Swoosh) -->
+  <path d="M20 5 C20 17 17 20 5 20 C17 20 20 23 20 35 C20 23 23 20 35 20 C23 20 20 17 20 5 Z" fill="#ffffff" />
 </svg>
