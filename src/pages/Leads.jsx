@@ -13,6 +13,7 @@ import useDataStore from '../store/useDataStore';
 import LeadDrawer from '../components/leads/LeadDrawer';
 import NewLeadForm from '../components/leads/NewLeadForm';
 import EnrollSequenceModal from '../components/sequences/EnrollSequenceModal';
+import CsvImporterModal from '../components/CsvImporterModal';
 import './Leads.css';
 
 // ── Signal score computation ────────────────────────────────
@@ -196,6 +197,7 @@ export default function Leads() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [showImporter, setShowImporter] = useState(false);
 
   // Enrich each lead with computed score
   const enriched = useMemo(() =>
@@ -262,6 +264,13 @@ export default function Leads() {
         <div className="leads-header-right">
           <button className="btn btn-ghost btn-sm" style={{ gap: 6, fontSize: 12 }}>
             <SlidersHorizontal size={14} /> Filter
+          </button>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => setShowImporter(true)}
+            style={{ fontSize: 13 }}
+          >
+            Import
           </button>
           <button
             className="btn btn-primary btn-sm"
@@ -425,6 +434,13 @@ export default function Leads() {
           }}
         />
       )}
+
+      {/* CSV Importer Modal */}
+      <CsvImporterModal
+        isOpen={showImporter}
+        onClose={() => setShowImporter(false)}
+        type="leads"
+      />
     </div>
   );
 }

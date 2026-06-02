@@ -21,6 +21,15 @@ const COMPANY_FIELDS = [
   { key: 'revenue', label: 'Annual Revenue' }
 ];
 
+const LEAD_FIELDS = [
+  { key: 'company_name', label: 'Company Name', required: true },
+  { key: 'contact_name', label: 'Contact Name' },
+  { key: 'email', label: 'Email Address' },
+  { key: 'designation', label: 'Job Title' },
+  { key: 'contact_linkedin', label: 'LinkedIn URL' },
+  { key: 'industry', label: 'Industry' },
+];
+
 export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' }) {
   const [step, setStep] = useState('upload'); // 'upload' | 'map' | 'importing' | 'done'
   const [file, setFile] = useState(null);
@@ -31,8 +40,8 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
   const [results, setResults] = useState({ success: 0, failed: 0 });
   const fileInputRef = useRef(null);
 
-  const { bulkCreateContacts, bulkCreateCompanies } = useDataStore();
-  const crmFields = type === 'contacts' ? CONTACT_FIELDS : COMPANY_FIELDS;
+  const { bulkCreateContacts, bulkCreateCompanies, bulkCreateLeads } = useDataStore();
+  const crmFields = type === 'contacts' ? CONTACT_FIELDS : type === 'leads' ? LEAD_FIELDS : COMPANY_FIELDS;
 
   // Reset state when modal opens
   useEffect(() => {
@@ -104,6 +113,12 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
         return;
       }
     }
+    if (type === 'leads') {
+      if (!mapping['company_name']) {
+        setError('Company Name is required for Leads.');
+        return;
+      }
+    }
 
     setStep('importing');
     setError(null);
@@ -122,8 +137,12 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
       // Add status/stages defaults
       if (type === 'contacts') obj.status = 'New';
       if (type === 'companies') obj.status = 'Target';
+      if (type === 'leads') obj.stage = 'New Lead';
       return obj;
     }).filter(obj => {
+      if (type === 'leads') {
+        return obj.company_name && obj.company_name.trim() !== '';
+      }
       if (!obj.name || obj.name.trim() === '') return false;
       if (type === 'contacts') {
         return (obj.email && obj.email.trim() !== '') || (obj.phone && obj.phone.trim() !== '');
@@ -141,6 +160,8 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
       // Chunking if massive, but let's assume < 1000 for standard UI
       if (type === 'contacts') {
         await bulkCreateContacts(mappedData);
+      } else if (type === 'leads') {
+        await bulkCreateLeads(mappedData);
       } else {
         await bulkCreateCompanies(mappedData);
       }

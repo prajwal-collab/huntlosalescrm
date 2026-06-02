@@ -86,6 +86,15 @@ const useDataStore = create((set, get) => ({
     set(state => ({ leads: state.leads.filter(l => !ids.includes(l.id)) }));
   },
 
+  bulkCreateLeads: async (leadsList) => {
+    const { user } = useAuthStore.getState();
+    const records = leadsList.map(l => ({ ...l, owner_id: user?.id }));
+    const { data, error } = await supabase.from('leads').insert(records).select();
+    if (error) throw error;
+    set(state => ({ leads: [...data, ...state.leads] }));
+    return data;
+  },
+
   // ── Companies ─────────────────────────────
   createCompany: async (company) => {
     const { data, error } = await supabase.from('companies').insert(company).select().single();
