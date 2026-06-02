@@ -18,6 +18,7 @@ import ResetPassword from './pages/auth/ResetPassword';
 
 // Pages
 import HomeOS from './pages/HomeOS';
+import Leads from './pages/Leads';
 import Pipeline from './pages/Pipeline';
 import Companies from './pages/Companies';
 import Contacts from './pages/Contacts';
@@ -59,6 +60,7 @@ export default function App() {
         {/* Protected Routes */}
         <Route element={<AuthGuard />}>
           <Route element={<Layout><HomeOS /></Layout>} path="/" />
+          <Route element={<Layout><Leads /></Layout>} path="/leads" />
           <Route element={<Layout><Pipeline /></Layout>} path="/pipeline" />
           <Route element={<Layout><Companies /></Layout>} path="/companies" />
           <Route element={<Layout><Contacts /></Layout>} path="/contacts" />

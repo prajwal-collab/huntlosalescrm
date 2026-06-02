@@ -1,13 +1,10 @@
-// ============================================
-// HUNTLO SALES OS — SIDEBAR
-// ============================================
 import { useState } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, BarChart3, Building2, Users, CheckSquare,
   Calendar, Zap, FileText, Settings, Bell, ChevronLeft,
-  ChevronRight, LogOut, Sparkles, Sun, Moon, TrendingUp,
-  Search, ChevronDown
+  ChevronRight, LogOut, Sun, Moon, TrendingUp,
+  ChevronDown, Target
 } from 'lucide-react';
 import useUIStore from '../../store/useUIStore';
 import useAuthStore from '../../store/useAuthStore';
@@ -16,25 +13,25 @@ import './Sidebar.css';
 
 const NAV_GROUPS = [
   {
-    title: 'General',
+    title: 'Revenue',
     items: [
       { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-      { to: '/search', icon: Search, label: 'Search' },
+      { to: '/leads', icon: Target, label: 'Leads' },
+      { to: '/pipeline', icon: BarChart3, label: 'Pipeline' },
     ]
   },
   {
     title: 'Sales Center',
     items: [
-      { to: '/pipeline', icon: BarChart3, label: 'Opportunities' },
       { to: '/companies', icon: Building2, label: 'Accounts' },
       { to: '/contacts', icon: Users, label: 'Contacts' },
+      { to: '/meetings', icon: Calendar, label: 'Meetings' },
     ]
   },
   {
     title: 'Workflow',
     items: [
       { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
-      { to: '/meetings', icon: Calendar, label: 'Meetings' },
       { to: '/sequences', icon: Zap, label: 'Sequences' },
       { to: '/documents', icon: FileText, label: 'Documents' },
       { to: '/reports', icon: TrendingUp, label: 'Reports' },

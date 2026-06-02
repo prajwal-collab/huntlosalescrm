@@ -1,0 +1,410 @@
+// ============================================
+// HUNTLO — LEADS PAGE
+// AI-Native Signal-Driven Lead System
+// ============================================
+import { useState, useMemo } from 'react';
+import {
+  Search, Plus, X, Zap, TrendingUp, Building2,
+  Mail, Link2, Phone, Globe, ChevronDown,
+  AlertCircle, Calendar, Target, DollarSign,
+  Users, SlidersHorizontal, CheckCircle2
+} from 'lucide-react';
+import useDataStore from '../store/useDataStore';
+import LeadDrawer from '../components/leads/LeadDrawer';
+import NewLeadForm from '../components/leads/NewLeadForm';
+import './Leads.css';
+
+// ── Signal score computation ────────────────────────────────
+function computeSignalScore(lead) {
+  const s = lead.signals || {};
+  let score = 0;
+  if (s.hiring_activity)      score += 25;
+  if (s.recruiter_hiring)     score += 20;
+  if (s.funding_activity)     score += 20;
+  if (s.linkedin_activity)    score += 10;
+  if (s.job_posting_activity) score += 10;
+  if (s.company_growth)       score += 10;
+  if (lead.demo_requested)    score += 20;
+  if (lead.positive_interest) score += 15;
+  if (lead.reply_status === 'Positive') score += 20;
+  if (lead.email_status === 'Replied')  score += 15;
+  return Math.min(score, 100);
+}
+
+function getPriority(score) {
+  if (score >= 70) return 'Hot';
+  if (score >= 35) return 'Warm';
+  return 'Cold';
+}
+
+// ── Stage colours ───────────────────────────────────────────
+const STAGE_COLORS = {
+  'New Lead':          { bg: 'rgba(100,116,139,0.1)', color: '#64748b' },
+  'Researching':       { bg: 'rgba(99,102,241,0.1)',  color: '#6366f1' },
+  'Ready for Outreach':{ bg: 'rgba(6,182,212,0.1)',   color: '#0891b2' },
+  'Outreach Started':  { bg: 'rgba(245,158,11,0.1)',  color: '#d97706' },
+  'Engaged':           { bg: 'rgba(249,115,22,0.1)',  color: '#ea580c' },
+  'Qualified':         { bg: 'rgba(59,130,246,0.1)',  color: '#2563eb' },
+  'Demo Scheduled':    { bg: 'rgba(139,92,246,0.1)',  color: '#7c3aed' },
+  'Demo Complete':     { bg: 'rgba(34,197,94,0.1)',   color: '#16a34a' },
+  'Trial Started':     { bg: 'rgba(34,197,94,0.15)',  color: '#15803d' },
+  'Customer':          { bg: 'rgba(34,197,94,0.2)',   color: '#166534' },
+  'Lost':              { bg: 'rgba(239,68,68,0.1)',   color: '#dc2626' },
+};
+
+// Logo colour palette
+const LOGO_COLORS = ['#3b82f6','#8b5cf6','#06b6d4','#f97316','#22c55e','#ec4899','#6366f1','#14b8a6'];
+
+// ── Smart View definitions ──────────────────────────────────
+const VIEWS = [
+  { id: 'all',         label: 'All Leads',          dot: '#64748b',  filter: () => true },
+  { id: 'hot',         label: '🔥 Hot Leads',        dot: '#dc2626',  filter: l => computeSignalScore(l) >= 70 },
+  { id: 'signals',     label: '📈 Buying Signals',   dot: '#16a34a',  filter: l => {
+    const s = l.signals || {};
+    return s.hiring_activity || s.recruiter_hiring || s.funding_activity || l.demo_requested || l.positive_interest;
+  }},
+  { id: 'followup',    label: '⏰ Needs Follow-up',  dot: '#d97706',  filter: l => {
+    if (!l.next_action_due) return false;
+    return new Date(l.next_action_due) < new Date();
+  }},
+  { id: 'demo',        label: '📅 Demo Scheduled',   dot: '#7c3aed',  filter: l => l.stage === 'Demo Scheduled' },
+  { id: 'trial',       label: '🧪 Trial Users',       dot: '#0891b2',  filter: l => l.stage === 'Trial Started' },
+  { id: 'lost',        label: '❌ Lost',              dot: '#dc2626',  filter: l => l.stage === 'Lost' },
+  { id: 'highMRR',     label: '💰 High MRR Potential',dot: '#16a34a', filter: l => (l.estimated_mrr || 0) >= 500 },
+];
+
+// ── Lead Row ────────────────────────────────────────────────
+function LeadRow({ lead, isSelected, onSelect, onClick }) {
+  const score = useMemo(() => computeSignalScore(lead), [lead]);
+  const priority = getPriority(score);
+  const signals = lead.signals || {};
+  const stageStyle = STAGE_COLORS[lead.stage] || STAGE_COLORS['New Lead'];
+  const logoColor = LOGO_COLORS[(lead.company_name?.charCodeAt(0) || 0) % LOGO_COLORS.length];
+  const initial = (lead.company_name || '?').charAt(0).toUpperCase();
+  const isOverdue = lead.next_action_due && new Date(lead.next_action_due) < new Date();
+  const scoreColor = score >= 70 ? '#dc2626' : score >= 35 ? '#d97706' : '#94a3b8';
+
+  const activeSignals = [
+    { key: 'hiring_activity',      emoji: '💼', tip: 'Hiring Activity' },
+    { key: 'recruiter_hiring',     emoji: '🎯', tip: 'Recruiter Hiring' },
+    { key: 'funding_activity',     emoji: '💰', tip: 'Funding Activity' },
+    { key: 'linkedin_activity',    emoji: '🔗', tip: 'LinkedIn Activity' },
+    { key: 'job_posting_activity', emoji: '📋', tip: 'Job Postings' },
+    { key: 'company_growth',       emoji: '📈', tip: 'Company Growth' },
+  ];
+
+  return (
+    <div
+      className={`lead-row${isSelected ? ' selected' : ''}${!lead.next_action ? ' no-action' : ''}`}
+      onClick={() => onClick(lead)}
+    >
+      {/* Checkbox */}
+      <div className="lc" onClick={e => { e.stopPropagation(); onSelect(lead.id); }}>
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => {}}
+          style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--accent-blue)' }}
+        />
+      </div>
+
+      {/* Company + Contact */}
+      <div className="lead-company-cell">
+        <div className="lead-logo" style={{ background: logoColor }}>{initial}</div>
+        <div className="lead-company-info">
+          <span className="lead-company-name">{lead.company_name || '—'}</span>
+          <span className="lead-contact-name">{lead.contact_name || lead.designation || 'No contact'}</span>
+        </div>
+      </div>
+
+      {/* Stage */}
+      <div className="lc">
+        <span className="stage-badge" style={{ background: stageStyle.bg, color: stageStyle.color }}>
+          {lead.stage || 'New Lead'}
+        </span>
+      </div>
+
+      {/* Signal Score */}
+      <div className="lc">
+        <div className="signal-score-wrap">
+          <div className="signal-score-bar">
+            <div className="signal-score-fill" style={{ width: `${score}%`, background: scoreColor }} />
+          </div>
+          <span className="signal-score-text" style={{ color: scoreColor }}>{score}</span>
+        </div>
+      </div>
+
+      {/* Priority */}
+      <div className="lc">
+        <span className={`badge priority-${priority.toLowerCase()}`}>{priority}</span>
+      </div>
+
+      {/* Signals */}
+      <div className="lc">
+        <div className="signals-cell">
+          {activeSignals.map(({ key, emoji, tip }) => (
+            <span
+              key={key}
+              className={`signal-icon ${signals[key] ? 'active-signal' : 'inactive'}`}
+              title={signals[key] ? tip : `No ${tip}`}
+              style={{ fontSize: 13 }}
+            >
+              {emoji}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Next Action */}
+      <div className="lc">
+        {lead.next_action ? (
+          <div className="next-action-cell">
+            <span className="next-action-text">{lead.next_action}</span>
+            {lead.next_action_due && (
+              <span className={`next-action-due${isOverdue ? ' overdue' : ''}`}>
+                {isOverdue ? '⚠ Overdue · ' : ''}
+                {new Date(lead.next_action_due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+            )}
+          </div>
+        ) : (
+          <span style={{ fontSize: 12, color: 'var(--danger)', fontWeight: 600 }}>⚠ No action set</span>
+        )}
+      </div>
+
+      {/* Est. MRR */}
+      <div className="lc">
+        {lead.estimated_mrr ? (
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#16a34a' }}>
+            ${lead.estimated_mrr.toLocaleString()}/mo
+          </span>
+        ) : (
+          <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>—</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ───────────────────────────────────────────────
+export default function Leads() {
+  const { leads, deleteLead, bulkDeleteLeads, updateLead } = useDataStore();
+  const [activeView, setActiveView] = useState('all');
+  const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [showNewForm, setShowNewForm] = useState(false);
+
+  // Enrich each lead with computed score
+  const enriched = useMemo(() =>
+    leads.map(l => ({ ...l, _score: computeSignalScore(l) })),
+    [leads]
+  );
+
+  // Apply view filter
+  const viewDef = VIEWS.find(v => v.id === activeView) || VIEWS[0];
+  const viewFiltered = useMemo(() => enriched.filter(viewDef.filter), [enriched, viewDef]);
+
+  // Apply search
+  const filtered = useMemo(() => {
+    const q = (search || '').toLowerCase();
+    if (!q) return viewFiltered;
+    return viewFiltered.filter(l =>
+      (l.company_name || '').toLowerCase().includes(q) ||
+      (l.contact_name || '').toLowerCase().includes(q) ||
+      (l.email || '').toLowerCase().includes(q) ||
+      (l.stage || '').toLowerCase().includes(q)
+    );
+  }, [viewFiltered, search]);
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.length === filtered.length) setSelectedIds([]);
+    else setSelectedIds(filtered.map(l => l.id));
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Delete ${selectedIds.length} leads?`)) return;
+    await bulkDeleteLeads(selectedIds);
+    setSelectedIds([]);
+    if (selectedLead && selectedIds.includes(selectedLead.id)) setSelectedLead(null);
+  };
+
+  const handleLeadClick = (lead) => {
+    setSelectedLead(prev => prev?.id === lead.id ? null : lead);
+  };
+
+  const handleLeadUpdate = async (id, updates) => {
+    const updated = await updateLead(id, updates);
+    setSelectedLead(updated);
+  };
+
+  const viewCounts = useMemo(() =>
+    Object.fromEntries(VIEWS.map(v => [v.id, enriched.filter(v.filter).length])),
+    [enriched]
+  );
+
+  return (
+    <div className="leads-page">
+      {/* Header */}
+      <div className="leads-header">
+        <div className="leads-header-left">
+          <span className="leads-title">Leads</span>
+          <span className="leads-count">{filtered.length}</span>
+        </div>
+        <div className="leads-header-right">
+          <button className="btn btn-ghost btn-sm" style={{ gap: 6, fontSize: 12 }}>
+            <SlidersHorizontal size={14} /> Filter
+          </button>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => setShowNewForm(true)}
+            style={{ gap: 6, fontSize: 13 }}
+          >
+            <Plus size={15} /> New Lead
+          </button>
+        </div>
+      </div>
+
+      {/* Smart View Tabs */}
+      <div className="leads-view-bar">
+        {VIEWS.map(view => (
+          <button
+            key={view.id}
+            className={`view-tab${activeView === view.id ? ' active' : ''}`}
+            onClick={() => { setActiveView(view.id); setSelectedIds([]); }}
+          >
+            {view.label}
+            {viewCounts[view.id] > 0 && (
+              <span style={{
+                fontSize: 10, fontWeight: 700,
+                background: activeView === view.id ? 'var(--accent-blue-dim)' : 'var(--bg-border)',
+                color: activeView === view.id ? '#fff' : 'var(--text-tertiary)',
+                padding: '1px 6px', borderRadius: 10
+              }}>
+                {viewCounts[view.id]}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Toolbar */}
+      <div className="leads-toolbar">
+        <div className="leads-search-wrap">
+          <Search size={14} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+          <input
+            placeholder="Search companies, contacts…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && (
+            <X size={14} style={{ color: 'var(--text-tertiary)', cursor: 'pointer', flexShrink: 0 }}
+              onClick={() => setSearch('')} />
+          )}
+        </div>
+      </div>
+
+      {/* Bulk action bar */}
+      {selectedIds.length > 0 && (
+        <div className="bulk-bar">
+          <span>{selectedIds.length} selected</span>
+          <button
+            onClick={handleBulkDelete}
+            className="btn btn-sm"
+            style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 12 }}
+          >
+            Delete
+          </button>
+          <button
+            onClick={() => setSelectedIds([])}
+            className="btn btn-sm"
+            style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: 12 }}
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
+      {/* Body */}
+      <div className="leads-body">
+        <div className="leads-table-wrap">
+          {/* Head */}
+          <div className="leads-table-head">
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <input
+                type="checkbox"
+                checked={selectedIds.length === filtered.length && filtered.length > 0}
+                onChange={toggleAll}
+                style={{ width: 15, height: 15, accentColor: 'var(--accent-blue)' }}
+              />
+            </div>
+            <span>Company / Contact</span>
+            <span>Stage</span>
+            <span>Signal Score</span>
+            <span>Priority</span>
+            <span>Active Signals</span>
+            <span>Next Action</span>
+            <span>Est. MRR</span>
+          </div>
+
+          {/* Rows */}
+          <div className="leads-list">
+            {filtered.length === 0 ? (
+              <div className="leads-empty">
+                <Target size={36} style={{ opacity: 0.3 }} />
+                <h3>{search ? 'No leads match your search' : 'No leads in this view'}</h3>
+                <p>
+                  {search
+                    ? 'Try adjusting your search terms.'
+                    : activeView === 'all'
+                      ? 'Add your first lead to get started.'
+                      : `No leads match the "${viewDef.label}" filter yet.`
+                  }
+                </p>
+                {activeView === 'all' && !search && (
+                  <button className="btn btn-primary btn-sm" onClick={() => setShowNewForm(true)}>
+                    <Plus size={14} /> Add First Lead
+                  </button>
+                )}
+              </div>
+            ) : (
+              filtered.map(lead => (
+                <LeadRow
+                  key={lead.id}
+                  lead={lead}
+                  isSelected={selectedIds.includes(lead.id)}
+                  onSelect={toggleSelect}
+                  onClick={handleLeadClick}
+                />
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Right Drawer */}
+        {selectedLead && (
+          <LeadDrawer
+            lead={selectedLead}
+            onClose={() => setSelectedLead(null)}
+            onUpdate={handleLeadUpdate}
+            onDelete={async (id) => {
+              await deleteLead(id);
+              setSelectedLead(null);
+            }}
+          />
+        )}
+      </div>
+
+      {/* New Lead Modal */}
+      {showNewForm && (
+        <NewLeadForm onClose={() => setShowNewForm(false)} />
+      )}
+    </div>
+  );
+}

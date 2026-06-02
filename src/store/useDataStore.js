@@ -13,6 +13,7 @@ const useDataStore = create((set, get) => ({
   meetings: [],
   documents: [],
   sequences: [],
+  leads: [],
   loading: false,
   error: null,
 
@@ -29,10 +30,11 @@ const useDataStore = create((set, get) => ({
         supabase.from('tasks').select('*').order('due', { ascending: true }),
         supabase.from('meetings').select('*').order('date', { ascending: true }),
         supabase.from('documents').select('*').order('created_at', { ascending: false }),
-        supabase.from('sequences').select('*').order('created_at', { ascending: false })
+        supabase.from('sequences').select('*').order('created_at', { ascending: false }),
+        supabase.from('leads').select('*').order('signal_score', { ascending: false }),
       ]);
 
-      const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes] = results;
+      const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes, leadsRes] = results;
 
       // Helper to safely extract data from allSettled results
       const extract = (res) => (res.status === 'fulfilled' && !res.value.error) ? res.value.data : [];
@@ -45,6 +47,7 @@ const useDataStore = create((set, get) => ({
         meetings: extract(meetingsRes),
         documents: extract(docsRes),
         sequences: extract(seqRes),
+        leads: extract(leadsRes),
         loading: false,
         error: null
       });
@@ -52,6 +55,35 @@ const useDataStore = create((set, get) => ({
       console.error('[DataStore] Fetch error:', error);
       set({ error: error.message, loading: false });
     }
+  },
+
+  // ── Leads ──────────────────────────────────
+  createLead: async (lead) => {
+    const { user } = useAuthStore.getState();
+    const newLead = { ...lead, owner_id: user?.id };
+    const { data, error } = await supabase.from('leads').insert(newLead).select().single();
+    if (error) throw error;
+    set(state => ({ leads: [data, ...state.leads] }));
+    return data;
+  },
+
+  updateLead: async (id, updates) => {
+    const { data, error } = await supabase.from('leads').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    set(state => ({ leads: state.leads.map(l => l.id === id ? data : l) }));
+    return data;
+  },
+
+  deleteLead: async (id) => {
+    const { error } = await supabase.from('leads').delete().eq('id', id);
+    if (error) throw error;
+    set(state => ({ leads: state.leads.filter(l => l.id !== id) }));
+  },
+
+  bulkDeleteLeads: async (ids) => {
+    const { error } = await supabase.from('leads').delete().in('id', ids);
+    if (error) throw error;
+    set(state => ({ leads: state.leads.filter(l => !ids.includes(l.id)) }));
   },
 
   // ── Companies ─────────────────────────────
