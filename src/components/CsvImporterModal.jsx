@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import Papa from 'papaparse';
-import { X, Upload, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
+import { X, Upload, CheckCircle, AlertCircle, ArrowRight, Download } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import './CsvImporterModal.css'; // We'll create this next
 
@@ -174,11 +174,22 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
     }
   };
 
+  const downloadTemplate = () => {
+    const headers = crmFields.map(f => f.label).join(',');
+    const blob = new Blob([headers], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `huntlo_${type}_template.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="csv-modal-overlay">
       <div className="csv-modal-content">
         <div className="csv-modal-header">
-          <h2>Import {type === 'contacts' ? 'Contacts' : 'Accounts'}</h2>
+          <h2>Import {type === 'contacts' ? 'Contacts' : type === 'leads' ? 'Leads' : 'Accounts'}</h2>
           <button className="btn-close" onClick={onClose}><X size={20} /></button>
         </div>
 
@@ -191,17 +202,24 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
           )}
 
           {step === 'upload' && (
-            <div className="csv-upload-zone" onClick={() => fileInputRef.current?.click()}>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                accept=".csv" 
-                style={{ display: 'none' }} 
-                onChange={handleFileUpload}
-              />
-              <Upload size={48} color="var(--text-tertiary)" />
-              <h3>Select a CSV file to import</h3>
-              <p>Drag and drop or click to browse</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div className="csv-upload-zone" onClick={() => fileInputRef.current?.click()}>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  accept=".csv" 
+                  style={{ display: 'none' }} 
+                  onChange={handleFileUpload}
+                />
+                <Upload size={48} color="var(--text-tertiary)" />
+                <h3>Select a CSV file to import</h3>
+                <p>Drag and drop or click to browse</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <button className="btn btn-ghost btn-sm" onClick={downloadTemplate} style={{ gap: 6 }}>
+                  <Download size={14} /> Download CSV Template
+                </button>
+              </div>
             </div>
           )}
 
