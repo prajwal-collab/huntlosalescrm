@@ -431,45 +431,54 @@ export default function Contacts() {
 
         {isAdding && (
           <div className="contact-detail animate-slide-right">
-            <div className="cd-header" style={{ marginBottom: 20 }}>
-              <h2 className="cd-name">Add Contact</h2>
+            <div className="cd-header" style={{ marginBottom: 12 }}>
+              <div>
+                <h2 className="cd-name">Add Contact</h2>
+                <p className="cd-title" style={{ marginTop: 4 }}>Create a new person record.</p>
+              </div>
               <button className="drawer-close" onClick={() => setIsAdding(false)}><X size={16} /></button>
             </div>
-            <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <form onSubmit={handleAdd} className="cd-form">
               {error && (
-                <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.08)', color: 'var(--danger)', fontSize: 13, display: 'flex', gap: 8 }}>
+                <div className="cd-form-error">
                   <AlertCircle size={14} /> {error}
                 </div>
               )}
-              {[
-                { label: 'Full Name *', key: 'name', type: 'text', required: true },
-                { label: 'Email', key: 'email', type: 'email' },
-                { label: 'Job Title', key: 'designation', type: 'text' },
-                { label: 'Phone / WhatsApp', key: 'whatsapp', type: 'text' },
-                { label: 'LinkedIn URL', key: 'linkedin', type: 'text' },
-              ].map(({ label, key, type, required }) => (
-                <div key={key} className="form-group">
-                  <label className="form-label">{label}</label>
-                  <input
-                    className="form-input"
-                    type={type}
-                    required={required}
-                    value={formData[key]}
-                    onChange={e => setFormData({ ...formData, [key]: e.target.value })}
-                    autoFocus={key === 'name'}
-                  />
+              <div className="cd-form-body">
+                {[
+                  { label: 'Full Name *', key: 'name', type: 'text', required: true, placeholder: 'e.g. Jane Doe' },
+                  { label: 'Email', key: 'email', type: 'email', placeholder: 'jane@example.com' },
+                  { label: 'Job Title', key: 'designation', type: 'text', placeholder: 'e.g. VP of Sales' },
+                  { label: 'Phone / WhatsApp', key: 'whatsapp', type: 'text', placeholder: '+1 (555) 000-0000' },
+                  { label: 'LinkedIn URL', key: 'linkedin', type: 'text', placeholder: 'https://linkedin.com/in/...' },
+                ].map(({ label, key, type, required, placeholder }) => (
+                  <div key={key} className="cd-form-group">
+                    <label className="cd-form-label">{label}</label>
+                    <input
+                      className="cd-form-input"
+                      type={type}
+                      required={required}
+                      placeholder={placeholder}
+                      value={formData[key]}
+                      onChange={e => setFormData({ ...formData, [key]: e.target.value })}
+                      autoFocus={key === 'name'}
+                    />
+                  </div>
+                ))}
+                <div className="cd-form-group">
+                  <label className="cd-form-label">Company</label>
+                  <select className="cd-form-input" value={formData.company_id} onChange={e => setFormData({ ...formData, company_id: e.target.value })}>
+                    <option value="">Select Company…</option>
+                    {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
                 </div>
-              ))}
-              <div className="form-group">
-                <label className="form-label">Company</label>
-                <select className="form-input" value={formData.company_id} onChange={e => setFormData({ ...formData, company_id: e.target.value })}>
-                  <option value="">Select Company…</option>
-                  {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
               </div>
-              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 4 }} disabled={saving}>
-                {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Contact'}
-              </button>
+              <div className="cd-form-footer">
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setIsAdding(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>
+                  {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Contact'}
+                </button>
+              </div>
             </form>
           </div>
         )}

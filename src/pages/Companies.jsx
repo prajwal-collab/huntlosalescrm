@@ -440,39 +440,47 @@ export default function Companies() {
 
         {isAdding && (
           <div className="company-panel animate-slide-right">
-            <div className="cp-header" style={{ marginBottom: 20 }}>
-              <h2 className="cp-name">Add Company</h2>
+            <div className="cp-header" style={{ marginBottom: 12 }}>
+              <div>
+                <h2 className="cp-name">Add Company</h2>
+                <p className="cp-sub" style={{ marginTop: 4 }}>Create a new account record.</p>
+              </div>
               <button className="drawer-close" onClick={() => setIsAdding(false)}><X size={16} /></button>
             </div>
-            <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <form onSubmit={handleAdd} className="cp-form">
               {error && (
-                <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.08)', color: 'var(--danger)', fontSize: 13, display: 'flex', gap: 8 }}>
+                <div className="cp-form-error">
                   <AlertCircle size={14} /> {error}
                 </div>
               )}
-              {[
-                { label: 'Company Name *', key: 'name', type: 'text', required: true },
-                { label: 'Industry', key: 'industry', type: 'text' },
-                { label: 'Website', key: 'website', type: 'text', placeholder: 'https://...' },
-                { label: 'LinkedIn URL', key: 'linkedin', type: 'text' },
-              ].map(({ label, key, type, required, placeholder }) => (
-                <div key={key} className="form-group">
-                  <label className="form-label">{label}</label>
-                  <input className="form-input" type={type} required={required} placeholder={placeholder}
-                    value={formData[key]} onChange={e => setFormData({ ...formData, [key]: e.target.value })}
-                    autoFocus={key === 'name'} />
+              <div className="cp-form-body">
+                {[
+                  { label: 'Company Name *', key: 'name', type: 'text', required: true, placeholder: 'e.g. Acme Corp' },
+                  { label: 'Industry', key: 'industry', type: 'text', placeholder: 'e.g. Software' },
+                  { label: 'Website', key: 'website', type: 'text', placeholder: 'https://acme.com' },
+                  { label: 'LinkedIn URL', key: 'linkedin', type: 'text', placeholder: 'https://linkedin.com/company/acme' },
+                ].map(({ label, key, type, required, placeholder }) => (
+                  <div key={key} className="cp-form-group">
+                    <label className="cp-form-label">{label}</label>
+                    <input className="cp-form-input" type={type} required={required} placeholder={placeholder}
+                      value={formData[key]} onChange={e => setFormData({ ...formData, [key]: e.target.value })}
+                      autoFocus={key === 'name'} />
+                  </div>
+                ))}
+                <div className="cp-form-group">
+                  <label className="cp-form-label">Company Size</label>
+                  <select className="cp-form-input" value={formData.size} onChange={e => setFormData({ ...formData, size: e.target.value })}>
+                    <option value="">Select size…</option>
+                    {['1-10','11-50','51-200','201-1000','1000+'].map(s => <option key={s}>{s}</option>)}
+                  </select>
                 </div>
-              ))}
-              <div className="form-group">
-                <label className="form-label">Company Size</label>
-                <select className="form-input" value={formData.size} onChange={e => setFormData({ ...formData, size: e.target.value })}>
-                  <option value="">Select size…</option>
-                  {['1-10','11-50','51-200','201-1000','1000+'].map(s => <option key={s}>{s}</option>)}
-                </select>
               </div>
-              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 4 }} disabled={saving}>
-                {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Company'}
-              </button>
+              <div className="cp-form-footer">
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setIsAdding(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>
+                  {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Company'}
+                </button>
+              </div>
             </form>
           </div>
         )}
