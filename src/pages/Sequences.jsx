@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Search, Plus, Play, Pause, GitMerge, Mail, Globe, Clock, X, Save } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useDataStore from '../store/useDataStore';
+import { generateFullSequence } from '../lib/gemini';
 import './Sequences.css';
 
 const NODE_ICONS = {
@@ -31,11 +32,13 @@ export default function Sequences() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
-  const [formData, setFormData] = useState({ name: '', channel: 'Email', template: 'Blank Sequence' });
+  const [formData, setFormData] = useState({ name: '', channel: 'Email', template: 'Blank Sequence', persona: '', painPoint: '' });
   const [error, setError] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const TEMPLATES = [
     "Blank Sequence",
+    "Generate with AI",
     "FLOW 1 — FEEDBACK → DEMO → DESIGN PARTNER",
     "FLOW 2 — RECRUITER WORKFLOW AUDIT",
     "FLOW 3 — THE CONTRARIAN CAMPAIGN",
@@ -72,9 +75,42 @@ export default function Sequences() {
     if (!formData.name) return;
     setError(null);
     try {
-      const nodesToUse = TEMPLATE_DATA[formData.template] || [];
+      let nodesToUse = [];
+      let sequenceName = formData.name;
+      
+      if (formData.template === 'Generate with AI') {
+        setIsGenerating(true);
+        try {
+          const rawResponse = await generateFullSequence(formData.persona || 'B2B Buyers', formData.painPoint || 'Increasing sales velocity', sequenceName);
+          
+          // Attempt to extract JSON from the raw response
+          const jsonStr = rawResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+          const aiData = JSON.parse(jsonStr);
+          if (aiData.planName) {
+            sequenceName = aiData.planName;
+          }
+          if (aiData.touchpoints && Array.isArray(aiData.touchpoints)) {
+            nodesToUse = aiData.touchpoints.map((tp, idx) => ({
+              id: Date.now().toString() + idx,
+              type: 'email',
+              day: tp.waitDays > 0 ? tp.waitDays : 1,
+              time: '09:00',
+              subject: tp.subject,
+              content: tp.body
+            }));
+          }
+        } catch (parseErr) {
+          console.error("Failed to parse AI response:", parseErr);
+          throw new Error("AI generated an invalid format. Please try again.");
+        } finally {
+          setIsGenerating(false);
+        }
+      } else {
+        nodesToUse = TEMPLATE_DATA[formData.template] || [];
+      }
+
       const newSeq = await createSequence({
-        name: formData.name,
+        name: sequenceName,
         channel: formData.channel,
         status: 'inactive',
         steps: nodesToUse.length,
@@ -84,9 +120,10 @@ export default function Sequences() {
       });
       setIsAdding(false);
       setSelected(newSeq);
-      setFormData({ name: '', channel: 'Email', template: 'Blank Sequence' });
+      setFormData({ name: '', channel: 'Email', template: 'Blank Sequence', persona: '', painPoint: '' });
     } catch (err) {
       console.error(err);
+      setIsGenerating(false);
       setError(err.message || 'Failed to create sequence.');
     }
   };
@@ -160,11 +197,25 @@ export default function Sequences() {
                 <label className="label" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>Template</label>
                 <select className="input-base" value={formData.template} onChange={e => {
                   const val = e.target.value;
-                  setFormData({...formData, template: val, name: val !== 'Blank Sequence' ? val : formData.name});
+                  setFormData({...formData, template: val, name: val !== 'Blank Sequence' && val !== 'Generate with AI' ? val : formData.name});
                 }} style={{ background: 'var(--bg-body)' }}>
                   {TEMPLATES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
+              
+              {formData.template === 'Generate with AI' && (
+                <div style={{ padding: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="label" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>Target Persona</label>
+                    <input className="input-base" value={formData.persona || ''} onChange={e => setFormData({...formData, persona: e.target.value})} placeholder="e.g. VP of Engineering" style={{ background: '#ffffff' }} />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="label" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>Key Pain Point / Value Prop</label>
+                    <textarea className="input-base" rows={2} value={formData.painPoint || ''} onChange={e => setFormData({...formData, painPoint: e.target.value})} placeholder="e.g. Reducing cloud costs and improving deployment speeds" style={{ background: '#ffffff', resize: 'vertical' }} />
+                  </div>
+                </div>
+              )}
+
               <div className="form-group">
                 <label className="label" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>Primary Channel</label>
                 <select className="input-base" value={formData.channel} onChange={e => setFormData({...formData, channel: e.target.value})} style={{ background: 'var(--bg-body)' }}>
@@ -174,8 +225,10 @@ export default function Sequences() {
                 </select>
               </div>
               <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-                <button type="button" className="btn btn-ghost w-full" onClick={() => setIsAdding(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary w-full">Create Workflow</button>
+                <button type="button" className="btn btn-ghost w-full" onClick={() => setIsAdding(false)} disabled={isGenerating}>Cancel</button>
+                <button type="submit" className="btn btn-primary w-full" disabled={isGenerating}>
+                  {isGenerating ? 'Generating with AI...' : 'Create Workflow'}
+                </button>
               </div>
             </form>
           </div>

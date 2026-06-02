@@ -96,3 +96,27 @@ export async function generateSequenceStep(stepType, companyName, contactName, p
 Keep it under 80 words. Personalized and specific.`;
   return queryGemini(prompt);
 }
+
+// Generate full sequence using the structured B2B CRM prompt
+export async function generateFullSequence(persona, painPoint, planNameHint = '') {
+  const prompt = `Requirements:
+0. Voice: company/team perspective only — use "we/our/us", not "I/me/my".
+1. Goal for ALL four touchpoints: begin the conversation only — one simple low-friction call to action (e.g. open to a quick chat, interested to hear how we solve [pain point]). Do not try to hard-sell or book a demo immediately.
+2. Touchpoint 1 (waitDays 0): Warm intro focused on the specific pain point (${painPoint}) relevant to the prospect's industry (${persona}); spark interest; soft call to action.
+3. Touchpoint 2 (waitDays 3): Short follow-up; introduce a new angle or a brief customer success metric on why our solution helps; still only asking to start a conversation.
+4. Touchpoint 3 (waitDays 4): Brief, low-pressure nudge; reference the previous emails; ask if they are the right person to speak to or if they are open to connecting — no heavy new topics.
+5. Touchpoint 4 (waitDays 5): Polite final bump (break-up email); leave the door open for future communication; do not introduce complex features, pricing, or logistics.
+
+Each touchpoint needs: order (1-4), label, subject, body, waitDays (use values above).
+${planNameHint ? `Suggested plan name: ${planNameHint}` : "Include a short planName based on the product or target persona."}
+
+Return JSON only in this exact shape without any markdown formatting around it (just raw JSON text):
+{
+  "planName": "string",
+  "touchpoints": [
+    { "order": 1, "label": "Introduction", "subject": "...", "body": "...", "waitDays": 0 }
+  ]
+}`;
+
+  return queryGemini(prompt);
+}
