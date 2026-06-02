@@ -1,93 +1,391 @@
-/* COMPANIES */
-.companies-page { display: flex; flex-direction: column; gap: var(--space-5); height: 100%; }
+/* ============================================
+   HUNTLO — COMPANIES PAGE (Rich Grid CSS)
+   ============================================ */
 
-.page-header-row { display: flex; align-items: flex-start; justify-content: space-between; }
-.page-big-title { font-size: var(--text-2xl); font-weight: 700; color: var(--text-primary); }
-.page-big-sub { font-size: var(--text-sm); color: var(--text-secondary); margin-top: 3px; }
-.page-header-actions { display: flex; align-items: center; gap: var(--space-3); }
-
-.companies-layout { display: flex; gap: var(--space-5); flex: 1; overflow: hidden; }
-.companies-table-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-surface); }
-
-.apollo-grid-table {
-  --table-grid: 40px minmax(250px, 2.5fr) 1fr 1fr 120px;
+.companies-page {
   display: flex;
   flex-direction: column;
-  width: 100%;
+  height: 100%;
+  background: var(--bg-base);
+  overflow: hidden;
 }
 
-.companies-table-head {
+/* ── Layout ── */
+.companies-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.companies-table-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-surface);
+}
+
+/* ── Table Head ── */
+.co-table-head {
   display: grid;
-  grid-template-columns: var(--table-grid);
+  grid-template-columns: 40px minmax(220px,2.5fr) 140px 90px 110px 90px 120px 120px 100px;
   align-items: center;
-  height: 40px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--border-light);
+  height: 38px;
+  padding: 0;
+  border-bottom: 1px solid var(--bg-border);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
   color: var(--text-tertiary);
+  flex-shrink: 0;
   background: var(--bg-surface);
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 
-.companies-list { flex: 1; overflow-y: auto; background: var(--bg-surface); }
+/* ── Company Row ── */
+.companies-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
 
-.company-row {
+.co-row {
   display: grid;
-  grid-template-columns: var(--table-grid);
+  grid-template-columns: 40px minmax(220px,2.5fr) 140px 90px 110px 90px 120px 120px 100px;
   align-items: center;
-  height: 56px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--border-light);
+  min-height: 52px;
+  border-bottom: 1px solid var(--bg-border);
   cursor: pointer;
+  transition: background 0.12s;
   background: var(--bg-surface);
-  transition: background 0.15s;
+  position: relative;
 }
-.company-row:hover { background: var(--bg-hover); }
-.company-row.selected { background: var(--accent-blue-muted); }
 
-.c-cell {
+.co-row:hover, .co-row.hovered { background: var(--bg-hover); }
+.co-row.selected { background: var(--accent-blue-muted); }
+
+/* ── Col Helpers ── */
+.co-col {
   display: flex;
   align-items: center;
-  font-size: 13px;
-  color: var(--text-primary);
   overflow: hidden;
+  padding: 0 12px;
+  gap: 6px;
 }
 
-.c-cell-text {
-  white-space: nowrap;
+.co-col-check  { padding: 0 0 0 14px; }
+.co-col-name   { padding: 0 12px; gap: 10px; }
+.co-col-tags   { gap: 4px; flex-wrap: wrap; }
+.co-col-actions { justify-content: flex-end; padding-right: 12px; }
+
+/* ── Company Logo ── */
+.co-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.co-logo.lg {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  font-size: 18px;
+}
+
+/* ── Company name stack ── */
+.co-name-stack {
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
+  gap: 2px;
+}
+
+.co-name-text {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-/* Panel */
+.co-website {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  text-decoration: none;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.co-website:hover { color: var(--accent-blue-dim); }
+
+/* ── Data values ── */
+.co-val {
+  font-size: 13px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.co-empty {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.co-inline {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+}
+
+/* ── Engagement ── */
+.co-engagement {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.co-eng-bar {
+  flex: 1;
+  height: 5px;
+  background: var(--bg-border);
+  border-radius: 3px;
+  overflow: hidden;
+  max-width: 70px;
+}
+
+.co-eng-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.co-eng-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  min-width: 20px;
+}
+
+/* ── Hover Actions ── */
+.co-actions-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.co-actions-wrap.visible { opacity: 1; }
+
+.co-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--bg-border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.co-action-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue-dim);
+}
+
+/* ── Company Panel (Right) ── */
 .company-panel {
-  width: 360px;
+  width: 380px;
   flex-shrink: 0;
   background: var(--bg-surface);
-  border: 1px solid var(--bg-border);
-  border-radius: var(--radius-lg);
+  border-left: 1px solid var(--bg-border);
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-5);
   overflow-y: auto;
 }
-.panel-header { display: flex; align-items: center; gap: var(--space-3); }
-.panel-title { font-size: var(--text-xl); font-weight: 700; color: var(--text-primary); }
-.panel-sub { font-size: var(--text-xs); color: var(--text-secondary); margin-top: 2px; }
-.panel-tags { display: flex; gap: 6px; flex-wrap: wrap; }
-.panel-stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
-.panel-links { display: flex; flex-direction: column; gap: 6px; }
-.panel-link {
-  display: flex; align-items: center; gap: 6px;
-  font-size: var(--text-xs); color: var(--accent-blue);
+
+.cp-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--bg-border);
+  flex-shrink: 0;
+}
+
+.cp-header-info { flex: 1; overflow: hidden; }
+.cp-name { font-size: 16px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.3px; }
+.cp-sub  { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+.cp-website {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--accent-blue-dim);
+  text-decoration: none;
+  margin-top: 6px;
+}
+
+.cp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--bg-border);
+}
+
+/* ── Stats ── */
+.cp-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--bg-border);
+  border-bottom: 1px solid var(--bg-border);
+}
+
+.cp-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 18px;
+  background: var(--bg-surface);
+}
+
+.cp-stat-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+}
+
+.cp-stat-val {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -1px;
+}
+
+/* ── Panel Sections ── */
+.cp-section {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--bg-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cp-section-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-tertiary);
+}
+
+.cp-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--accent-blue-dim);
   text-decoration: none;
 }
-.panel-link:hover { text-decoration: underline; }
-.panel-section-label { font-size: var(--text-xs); color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
-.panel-hiring { font-size: var(--text-sm); color: var(--success); font-weight: 500; }
+
+.cp-link:hover { text-decoration: underline; }
+
+/* ── Panel contact row ── */
+.cp-contact-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--bg-border);
+  background: var(--bg-base);
+}
+
+.cp-contact-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.cp-contact-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.cp-contact-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.cp-contact-title {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ── AI box ── */
+.ai-generated-box {
+  margin: 16px 20px;
+  background: var(--bg-base);
+  border: 1px solid var(--bg-border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.ai-generated-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-blue-dim);
+  margin-bottom: 8px;
+}
+
+.ai-generated-text {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  line-height: 1.6;
+  font-family: var(--font-sans);
+}

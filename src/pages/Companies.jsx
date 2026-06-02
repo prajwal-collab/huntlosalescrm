@@ -1,119 +1,284 @@
 // ============================================
-// HUNTLO SALES OS — COMPANIES PAGE
+// HUNTLO SALES OS — COMPANIES PAGE (Rich Grid)
 // ============================================
-import { useState, useRef } from 'react';
-import { Search, ExternalLink, Building2, Users, TrendingUp, Sparkles, ChevronRight, Plus, X, Upload, Download, AlertCircle, Loader } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { useState } from 'react';
+import {
+  Search, ExternalLink, Building2, Users, Sparkles,
+  Plus, X, AlertCircle, Loader, Globe, TrendingUp,
+  SlidersHorizontal, ChevronDown, MapPin, BarChart2
+} from 'lucide-react';
 import { generateCompanyInsight } from '../lib/gemini';
 import useDataStore from '../store/useDataStore';
+import CsvImporterModal from '../components/CsvImporterModal';
 import './Companies.css';
 
 const TAG_COLORS = {
-  'Enterprise': 'badge-blue', 'High Intent': 'badge-green', 'Decision Maker': 'badge-purple',
-  'Champion': 'badge-cyan', 'Warm Lead': 'badge-yellow', 'Strategic': 'badge-blue',
+  'Enterprise': 'badge-blue', 'High Intent': 'badge-green',
+  'Decision Maker': 'badge-purple', 'Champion': 'badge-cyan',
+  'Warm Lead': 'badge-yellow', 'Strategic': 'badge-blue',
   'Trial Active': 'badge-green', 'Onboarding': 'badge-cyan',
 };
 
-function CompanyRow({ company, onSelect, selected, isSelected, toggleSelect }) {
+const LOGO_COLORS = [
+  '#3b82f6','#8b5cf6','#06b6d4','#f97316',
+  '#22c55e','#ec4899','#6366f1','#14b8a6','#f59e0b',
+];
+
+function getLogoColor(name) {
+  return LOGO_COLORS[(name?.charCodeAt(0) || 0) % LOGO_COLORS.length];
+}
+
+// ── Company Row ──────────────────────────────────────────────
+function CompanyRow({ company, contacts, onSelect, selected, isSelected, toggleSelect }) {
+  const [hovered, setHovered] = useState(false);
+  const logoColor = company.logoColor || getLogoColor(company.name);
+  const initial = (company.name || '?').charAt(0).toUpperCase();
+  const contactCount = contacts.filter(c => c.company_id === company.id).length;
+  const engScore = company.engagement_score || 0;
+  const arr = company.arr_estimate || 0;
+
   return (
-    <div className={`company-row ${selected ? 'selected' : ''}`} onClick={() => onSelect(company)}>
-      <div className="c-cell" onClick={(e) => e.stopPropagation()}>
-        <input 
-          type="checkbox" 
+    <div
+      className={`co-row${selected ? ' selected' : ''}${hovered ? ' hovered' : ''}`}
+      onClick={() => onSelect(company)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Checkbox */}
+      <div className="co-col co-col-check" onClick={e => { e.stopPropagation(); toggleSelect(company.id, e); }}>
+        <input
+          type="checkbox"
           checked={isSelected}
-          onChange={(e) => toggleSelect(company.id, e)}
-          style={{ width: 16, height: 16, cursor: 'pointer' }}
+          onChange={() => {}}
+          style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--accent-blue)' }}
         />
       </div>
 
-      <div className="c-cell" style={{ gap: 12 }}>
-        <div className="avatar avatar-md" style={{ background: company.logoColor + '22', color: company.logoColor, borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          {company.logo || company.name.charAt(0).toUpperCase()}
+      {/* Logo + Name + Website */}
+      <div className="co-col co-col-name">
+        <div className="co-logo" style={{ background: logoColor + '20', color: logoColor }}>
+          {company.logo || initial}
         </div>
-        <span className="c-cell-text" style={{ fontSize: 14, fontWeight: 500 }}>{company.name}</span>
-      </div>
-      
-      <div className="c-cell" style={{ gap: 12, color: 'var(--text-secondary)' }}>
-        <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-light)', borderRadius: 4, cursor: 'pointer' }}>
-           <span style={{ fontSize: 12 }}>▷</span>
+        <div className="co-name-stack">
+          <span className="co-name-text">{company.name}</span>
+          {company.website && (
+            <a
+              href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
+              target="_blank" rel="noopener noreferrer"
+              className="co-website"
+              onClick={e => e.stopPropagation()}
+            >
+              <Globe size={10} /> {company.website.replace(/^https?:\/\//, '').split('/')[0]}
+            </a>
+          )}
         </div>
-        <span style={{ cursor: 'pointer', fontSize: 14 }}>≡+</span>
-        <span style={{ cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>...</span>
       </div>
 
-      <div className="c-cell" style={{ gap: 12, color: 'var(--text-secondary)' }}>
-        <ExternalLink size={14} style={{ cursor: 'pointer' }} />
-        <Building2 size={14} style={{ cursor: 'pointer' }} />
+      {/* Industry */}
+      <div className="co-col">
+        <span className="co-val">{company.industry || <span className="co-empty">—</span>}</span>
       </div>
-      
-      <div className="c-cell">
-        <span className="badge badge-gray" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)' }}>
-          {company.size || '50-100'}
-        </span>
+
+      {/* Size */}
+      <div className="co-col">
+        {company.size ? (
+          <span className="badge badge-gray">{company.size}</span>
+        ) : <span className="co-empty">—</span>}
+      </div>
+
+      {/* Contacts */}
+      <div className="co-col">
+        <div className="co-inline">
+          <Users size={12} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+          <span className="co-val">{contactCount} {contactCount === 1 ? 'contact' : 'contacts'}</span>
+        </div>
+      </div>
+
+      {/* ARR */}
+      <div className="co-col">
+        {arr > 0 ? (
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#16a34a' }}>
+            ${(arr / 1000).toFixed(0)}k
+          </span>
+        ) : <span className="co-empty">—</span>}
+      </div>
+
+      {/* Engagement */}
+      <div className="co-col">
+        <div className="co-engagement">
+          <div className="co-eng-bar">
+            <div
+              className="co-eng-fill"
+              style={{
+                width: `${Math.min(engScore, 100)}%`,
+                background: engScore >= 70 ? '#22c55e' : engScore >= 40 ? '#f59e0b' : '#94a3b8'
+              }}
+            />
+          </div>
+          <span className="co-eng-val">{engScore}</span>
+        </div>
+      </div>
+
+      {/* Tags */}
+      <div className="co-col co-col-tags">
+        {(company.tags || []).length > 0
+          ? company.tags.slice(0, 2).map(t => (
+              <span key={t} className={`badge ${TAG_COLORS[t] || 'badge-gray'}`} style={{ fontSize: 10 }}>{t}</span>
+            ))
+          : <span className="co-empty">No tags</span>
+        }
+      </div>
+
+      {/* Hover Actions */}
+      <div className="co-col co-col-actions">
+        <div className={`co-actions-wrap${hovered ? ' visible' : ''}`}>
+          {company.website && (
+            <a
+              href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
+              target="_blank" rel="noopener noreferrer"
+              className="co-action-btn" title="Visit Website"
+              onClick={e => e.stopPropagation()}
+            >
+              <Globe size={13} />
+            </a>
+          )}
+          {company.linkedin && (
+            <a
+              href={company.linkedin.startsWith('http') ? company.linkedin : `https://${company.linkedin}`}
+              target="_blank" rel="noopener noreferrer"
+              className="co-action-btn" title="LinkedIn"
+              onClick={e => e.stopPropagation()}
+            >
+              <ExternalLink size={13} />
+            </a>
+          )}
+          <button className="co-action-btn" title="View Details" onClick={e => { e.stopPropagation(); onSelect(company); }}>
+            <BarChart2 size={13} />
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-function CompanyPanel({ company, onClose }) {
+// ── Company Panel ──────────────────────────────────────────────
+function CompanyPanel({ company, contacts, onClose }) {
   const [insight, setInsight] = useState('');
   const [loading, setLoading] = useState(false);
+  const logoColor = company.logoColor || getLogoColor(company.name);
+  const initial = (company.name || '?').charAt(0).toUpperCase();
+  const contactsForCompany = contacts.filter(c => c.company_id === company.id);
 
   const handleInsight = async () => {
     setLoading(true);
     try {
-      const res = await generateCompanyInsight(company.name, company.industry, company.engagementScore, company.activeDeals > 0 ? 'Active Deal' : 'No Deal');
+      const res = await generateCompanyInsight(company.name, company.industry, company.engagement_score, contactsForCompany.length > 0 ? 'Active Contacts' : 'No Contacts');
       setInsight(res);
     } finally { setLoading(false); }
   };
 
   return (
     <div className="company-panel animate-slide-right">
-      <div className="panel-header">
-        <div className="co-logo lg" style={{ background: company.logoColor + '22', color: company.logoColor }}>
-          {company.logo}
+      {/* Header */}
+      <div className="cp-header">
+        <div className="co-logo lg" style={{ background: logoColor + '20', color: logoColor, width: 44, height: 44, borderRadius: 10, fontSize: 18 }}>
+          {company.logo || initial}
         </div>
-        <div>
-          <h2 className="panel-title">{company.name}</h2>
-          <p className="panel-sub">{company.industry} · {company.size}</p>
+        <div className="cp-header-info">
+          <h2 className="cp-name">{company.name}</h2>
+          <p className="cp-sub">
+            {[company.industry, company.size].filter(Boolean).join(' · ')}
+          </p>
+          {company.website && (
+            <a
+              href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
+              target="_blank" rel="noopener noreferrer"
+              className="cp-website"
+            >
+              <Globe size={11} /> {company.website.replace(/^https?:\/\//, '').split('/')[0]}
+            </a>
+          )}
         </div>
-        <button className="drawer-close" onClick={onClose}>✕</button>
+        <button className="drawer-close" onClick={onClose}><X size={16} /></button>
       </div>
 
-      <div className="panel-tags">
-        {(company.tags || []).map(tag => (
-          <span key={tag} className={`badge ${TAG_COLORS[tag] || 'badge-gray'}`}>{tag}</span>
-        ))}
-      </div>
-
-      <div className="panel-stats">
-        <div className="ov-stat"><span className="ov-stat-label">ARR Estimate</span><span className="ov-stat-val">${((company.arr_estimate || 0) / 1000).toFixed(0)}k</span></div>
-        <div className="ov-stat"><span className="ov-stat-label">Engagement</span><span className="ov-stat-val" style={{ color: 'var(--success)' }}>{company.engagement_score || 0}</span></div>
-        <div className="ov-stat"><span className="ov-stat-label">Active Deals</span><span className="ov-stat-val">{company.activeDeals || 0}</span></div>
-        <div className="ov-stat"><span className="ov-stat-label">Contacts</span><span className="ov-stat-val">{company.contacts || 0}</span></div>
-      </div>
-
-      <div className="panel-links">
-        <a href={`https://${company.website}`} target="_blank" rel="noopener noreferrer" className="panel-link">
-          <ExternalLink size={13} /> {company.website}
-        </a>
-        <a href={`https://${company.linkedin}`} target="_blank" rel="noopener noreferrer" className="panel-link">
-          <ExternalLink size={13} /> LinkedIn
-        </a>
-      </div>
-
-      {company.notes && (
-        <div className="ov-notes">
-          <p className="ov-notes-label">Notes</p>
-          <p className="ov-notes-text">{company.notes}</p>
+      {/* Tags */}
+      {(company.tags || []).length > 0 && (
+        <div className="cp-tags">
+          {company.tags.map(t => <span key={t} className={`badge ${TAG_COLORS[t] || 'badge-gray'}`}>{t}</span>)}
         </div>
       )}
 
-      <div className="panel-section-label">Hiring Activity</div>
-      <div className="panel-hiring">{company.hiringActivity}</div>
+      {/* Stats */}
+      <div className="cp-stats">
+        <div className="cp-stat">
+          <span className="cp-stat-label">ARR Estimate</span>
+          <span className="cp-stat-val" style={{ color: '#16a34a' }}>
+            ${((company.arr_estimate || 0) / 1000).toFixed(0)}k
+          </span>
+        </div>
+        <div className="cp-stat">
+          <span className="cp-stat-label">Engagement</span>
+          <span className="cp-stat-val">{company.engagement_score || 0}</span>
+        </div>
+        <div className="cp-stat">
+          <span className="cp-stat-label">Contacts</span>
+          <span className="cp-stat-val">{contactsForCompany.length}</span>
+        </div>
+        <div className="cp-stat">
+          <span className="cp-stat-label">Size</span>
+          <span className="cp-stat-val">{company.size || '—'}</span>
+        </div>
+      </div>
 
-      <button className="btn btn-primary btn-md w-full" onClick={handleInsight} disabled={loading}>
-        <Sparkles size={13} /> {loading ? 'Analyzing...' : 'Generate AI Insight'}
+      {/* Contacts list */}
+      {contactsForCompany.length > 0 && (
+        <div className="cp-section">
+          <div className="cp-section-label">People ({contactsForCompany.length})</div>
+          {contactsForCompany.map(c => (
+            <div key={c.id} className="cp-contact-row">
+              <div className="cp-contact-avatar" style={{ background: getLogoColor(c.name) }}>
+                {(c.name || '?').charAt(0).toUpperCase()}
+              </div>
+              <div className="cp-contact-info">
+                <span className="cp-contact-name">{c.name}</span>
+                <span className="cp-contact-title">{c.designation || 'No title'}</span>
+              </div>
+              {c.email && <a href={`mailto:${c.email}`} className="co-action-btn" onClick={e => e.stopPropagation()}><ExternalLink size={12} /></a>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Links */}
+      <div className="cp-section">
+        <div className="cp-section-label">Links</div>
+        {company.website && (
+          <a href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
+            target="_blank" rel="noopener noreferrer" className="cp-link">
+            <Globe size={13} /> {company.website}
+          </a>
+        )}
+        {company.linkedin && (
+          <a href={company.linkedin.startsWith('http') ? company.linkedin : `https://${company.linkedin}`}
+            target="_blank" rel="noopener noreferrer" className="cp-link">
+            <ExternalLink size={13} /> LinkedIn Page
+          </a>
+        )}
+        {!company.website && !company.linkedin && <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>No links added</span>}
+      </div>
+
+      {/* Notes */}
+      {company.notes && (
+        <div className="cp-section">
+          <div className="cp-section-label">Notes</div>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{company.notes}</p>
+        </div>
+      )}
+
+      {/* AI Insight */}
+      <button className="btn btn-primary btn-sm w-full" onClick={handleInsight} disabled={loading} style={{ gap: 6 }}>
+        <Sparkles size={13} /> {loading ? 'Analyzing…' : 'Generate AI Insight'}
       </button>
 
       {insight && (
@@ -126,35 +291,28 @@ function CompanyPanel({ company, onClose }) {
   );
 }
 
-import CsvImporterModal from '../components/CsvImporterModal';
-
+// ── Main Page ────────────────────────────────────────────────
 export default function Companies() {
-  const { companies, createCompany, bulkCreateCompanies } = useDataStore();
+  const { companies, contacts, createCompany } = useDataStore();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isImporterOpen, setIsImporterOpen] = useState(false);
-  
-  // New company form state
-  const [formData, setFormData] = useState({ name: '', industry: '', size: '', website: '' });
+  const [formData, setFormData] = useState({ name: '', industry: '', size: '', website: '', linkedin: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-
   const [selectedIds, setSelectedIds] = useState([]);
   const [deleting, setDeleting] = useState(false);
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} companies?`)) return;
+    if (!window.confirm(`Delete ${selectedIds.length} companies?`)) return;
     setDeleting(true);
     try {
       await useDataStore.getState().bulkDeleteCompanies(selectedIds);
       setSelectedIds([]);
       setSelected(null);
-    } catch (err) {
-      alert('Failed to delete: ' + err.message);
-    } finally {
-      setDeleting(false);
-    }
+    } catch (err) { alert('Failed: ' + err.message); }
+    finally { setDeleting(false); }
   };
 
   const toggleSelect = (id, e) => {
@@ -163,162 +321,156 @@ export default function Companies() {
   };
 
   const filtered = companies.filter(c => {
-    const q = (search || '').toString().toLowerCase();
-    const nameStr = (c.name || '').toString().toLowerCase();
-    const indStr = (c.industry || '').toString().toLowerCase();
-    return nameStr.includes(q) || indStr.includes(q);
+    const q = (search || '').toLowerCase();
+    return (c.name || '').toLowerCase().includes(q) || (c.industry || '').toLowerCase().includes(q);
   });
 
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.name) return;
-    setSaving(true);
-    setError(null);
+    setSaving(true); setError(null);
     try {
-      await createCompany({
-        name: formData.name,
-        industry: formData.industry,
-        size: formData.size,
-        website: formData.website,
-        tags: [],
-        arr_estimate: 0,
-        engagement_score: 0
-      });
+      await createCompany({ ...formData, tags: [], arr_estimate: 0, engagement_score: 0 });
       setIsAdding(false);
-      setFormData({ name: '', industry: '', size: '', website: '' });
-    } catch (error) {
-      console.error(error);
-      setError(error.message || 'Failed to create company');
-    } finally {
-      setSaving(false);
-    }
+      setFormData({ name: '', industry: '', size: '', website: '', linkedin: '' });
+    } catch (err) { setError(err.message); }
+    finally { setSaving(false); }
   };
 
   return (
     <div className="companies-page">
       {/* Header */}
-      <div className="page-header-row" style={{ padding: '24px 24px 12px' }}>
-        <div>
-          <h1 className="page-big-title" style={{ fontSize: 22 }}>Companies</h1>
-          <p className="page-big-sub" style={{ fontSize: 13 }}>{companies.length} records</p>
+      <div className="cg-header">
+        <div className="cg-header-left">
+          <h1 className="cg-title">Companies</h1>
+          <span className="cg-count">{companies.length} records</span>
         </div>
-        <div className="page-header-actions">
+        <div className="cg-header-right">
           {selectedIds.length > 0 ? (
-            <button className="btn btn-primary btn-sm" style={{ backgroundColor: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleBulkDelete} disabled={deleting}>
-              {deleting ? 'Deleting...' : `Delete ${selectedIds.length} Selected`}
+            <button className="btn btn-sm" style={{ background: 'var(--danger)', color: '#fff', border: 'none' }}
+              onClick={handleBulkDelete} disabled={deleting}>
+              {deleting ? 'Deleting…' : `Delete ${selectedIds.length}`}
             </button>
           ) : (
             <>
               <button className="btn btn-ghost btn-sm" onClick={() => setIsImporterOpen(true)}>Import</button>
-              <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}><Plus size={13} /> Create company</button>
+              <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>
+                <Plus size={14} /> Add Company
+              </button>
             </>
           )}
         </div>
       </div>
 
-      <div className="apollo-sub-bar" style={{ padding: '0 24px 12px', borderBottom: 'none' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-secondary)', padding: '4px 8px' }}>
-             My saved companies v
-          </button>
-          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-secondary)', padding: '4px 8px' }}>
-             = Show Filters <span className="apollo-tab-count" style={{ background: 'transparent' }}>1</span>
-          </button>
-          <div className="search-box" style={{ width: 240, background: 'transparent', border: '1px solid var(--border-light)' }}>
-            <Search size={14} color="var(--text-tertiary)" />
-            <input placeholder="Search companies" value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
+      {/* Toolbar */}
+      <div className="cg-toolbar">
+        <div className="cg-search">
+          <Search size={14} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+          <input
+            placeholder="Search companies by name, industry…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && <X size={14} style={{ cursor: 'pointer', color: 'var(--text-tertiary)', flexShrink: 0 }} onClick={() => setSearch('')} />}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500 }}>
-          <button className="btn btn-ghost btn-sm" style={{ border: '1px solid var(--border-light)', padding: '4px 12px' }}>
-             Save as new view
-          </button>
-          <span style={{ cursor: 'pointer' }}>↑↓ Sort</span>
-          <span style={{ cursor: 'pointer' }}>⚙ View options</span>
-        </div>
+        <button className="btn btn-ghost btn-sm" style={{ gap: 5, fontSize: 12 }}>
+          <SlidersHorizontal size={13} /> Filter
+        </button>
+        <button className="btn btn-ghost btn-sm" style={{ gap: 5, fontSize: 12 }}>
+          <ChevronDown size={13} /> Sort
+        </button>
       </div>
 
+      {/* Layout */}
       <div className="companies-layout">
         <div className="companies-table-wrap">
-          <div className="companies-table-head" style={{ paddingLeft: 16, display: 'flex', alignItems: 'center', height: 40, borderBottom: '1px solid var(--border-light)', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
-            <div style={{ width: 32, display: 'flex', alignItems: 'center' }}>
-              <input 
-                type="checkbox" 
+          {/* Table Head */}
+          <div className="co-table-head">
+            <div className="co-col co-col-check">
+              <input type="checkbox"
                 checked={selectedIds.length === filtered.length && filtered.length > 0}
-                onChange={() => {
-                  if (selectedIds.length === filtered.length) setSelectedIds([]);
-                  else setSelectedIds(filtered.map(c => c.id));
-                }}
-                style={{ width: 16, height: 16, cursor: 'pointer' }}
+                onChange={() => selectedIds.length === filtered.length ? setSelectedIds([]) : setSelectedIds(filtered.map(c => c.id))}
+                style={{ width: 15, height: 15, accentColor: 'var(--accent-blue)' }}
               />
             </div>
-            <span className="th-cell" style={{ flex: 1 }}>Name</span>
-            <span className="th-cell" style={{ width: 140 }}>Actions</span>
-            <span className="th-cell" style={{ width: 140 }}>Links</span>
-            <span className="th-cell" style={{ width: 120 }}>Number of (Size)</span>
+            <div className="co-col co-col-name">Company</div>
+            <div className="co-col">Industry</div>
+            <div className="co-col">Size</div>
+            <div className="co-col">Contacts</div>
+            <div className="co-col">ARR</div>
+            <div className="co-col">Engagement</div>
+            <div className="co-col co-col-tags">Tags</div>
+            <div className="co-col co-col-actions">Actions</div>
           </div>
 
-          <div className="companies-list apollo-grid-table">
+          {/* Rows */}
+          <div className="companies-list">
             {filtered.map(c => (
-              <CompanyRow 
-                key={c.id} 
-                company={c} 
-                selected={selected?.id === c.id} 
+              <CompanyRow
+                key={c.id}
+                company={c}
+                contacts={contacts}
+                selected={selected?.id === c.id}
                 isSelected={selectedIds.includes(c.id)}
                 toggleSelect={toggleSelect}
-                onSelect={co => setSelected(co.id === selected?.id ? null : co)} 
+                onSelect={co => setSelected(co.id === selected?.id ? null : co)}
               />
             ))}
             {companies.length === 0 && (
-               <div className="empty-state" style={{ marginTop: 40 }}>
-                 <Building2 size={32} />
-                 <h3>No companies yet</h3>
-                 <p>Add your first target account to start tracking.</p>
-               </div>
+              <div className="empty-state" style={{ marginTop: 60 }}>
+                <Building2 size={32} />
+                <h3>No companies yet</h3>
+                <p>Import a CSV or add your first account.</p>
+                <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}><Plus size={13} /> Add Company</button>
+              </div>
+            )}
+            {companies.length > 0 && filtered.length === 0 && (
+              <div className="empty-state" style={{ marginTop: 60 }}>
+                <Search size={28} />
+                <h3>No results for "{search}"</h3>
+              </div>
             )}
           </div>
         </div>
 
+        {/* Right Panel */}
         {selected && !isAdding && (
-          <CompanyPanel company={selected} onClose={() => setSelected(null)} />
+          <CompanyPanel company={selected} contacts={contacts} onClose={() => setSelected(null)} />
         )}
 
         {isAdding && (
           <div className="company-panel animate-slide-right">
-            <div className="panel-header" style={{ marginBottom: 24 }}>
-              <h2 className="panel-title">Add Company</h2>
-              <button className="drawer-close" onClick={() => setIsAdding(false)}><X size={16}/></button>
+            <div className="cp-header" style={{ marginBottom: 20 }}>
+              <h2 className="cp-name">Add Company</h2>
+              <button className="drawer-close" onClick={() => setIsAdding(false)}><X size={16} /></button>
             </div>
-            <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {error && (
-                <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.08)', color: 'var(--danger)', fontSize: 13, display: 'flex', gap: 8 }}>
                   <AlertCircle size={14} /> {error}
                 </div>
               )}
+              {[
+                { label: 'Company Name *', key: 'name', type: 'text', required: true },
+                { label: 'Industry', key: 'industry', type: 'text' },
+                { label: 'Website', key: 'website', type: 'text', placeholder: 'https://...' },
+                { label: 'LinkedIn URL', key: 'linkedin', type: 'text' },
+              ].map(({ label, key, type, required, placeholder }) => (
+                <div key={key} className="form-group">
+                  <label className="form-label">{label}</label>
+                  <input className="form-input" type={type} required={required} placeholder={placeholder}
+                    value={formData[key]} onChange={e => setFormData({ ...formData, [key]: e.target.value })}
+                    autoFocus={key === 'name'} />
+                </div>
+              ))}
               <div className="form-group">
-                <label className="label">Company Name</label>
-                <input className="input-base" autoFocus required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-              </div>
-              <div className="form-group">
-                <label className="label">Industry</label>
-                <input className="input-base" value={formData.industry} onChange={e => setFormData({...formData, industry: e.target.value})} />
-              </div>
-              <div className="form-group">
-                <label className="label">Company Size</label>
-                <select className="input-base" value={formData.size} onChange={e => setFormData({...formData, size: e.target.value})}>
-                  <option value="">Select size</option>
-                  <option value="1-10">1-10</option>
-                  <option value="11-50">11-50</option>
-                  <option value="51-200">51-200</option>
-                  <option value="201-1000">201-1000</option>
-                  <option value="1000+">1000+</option>
+                <label className="form-label">Company Size</label>
+                <select className="form-input" value={formData.size} onChange={e => setFormData({ ...formData, size: e.target.value })}>
+                  <option value="">Select size…</option>
+                  {['1-10','11-50','51-200','201-1000','1000+'].map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
-              <div className="form-group">
-                <label className="label">Website</label>
-                <input className="input-base" type="url" placeholder="https://" value={formData.website} onChange={e => setFormData({...formData, website: e.target.value})} />
-              </div>
-              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }} disabled={saving}>
+              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 4 }} disabled={saving}>
                 {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Company'}
               </button>
             </form>
@@ -326,11 +478,7 @@ export default function Companies() {
         )}
       </div>
 
-      <CsvImporterModal 
-        isOpen={isImporterOpen} 
-        onClose={() => setIsImporterOpen(false)} 
-        type="companies" 
-      />
+      <CsvImporterModal isOpen={isImporterOpen} onClose={() => setIsImporterOpen(false)} type="companies" />
     </div>
   );
 }

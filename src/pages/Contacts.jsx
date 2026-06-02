@@ -1,156 +1,255 @@
 // ============================================
-// HUNTLO SALES OS — CONTACTS PAGE
+// HUNTLO SALES OS — CONTACTS PAGE (Rich Grid)
 // ============================================
-import { useState, useRef } from 'react';
-import { Search, Mail, Plus, ExternalLink, MessageSquare, X, Users, Upload, Download, AlertCircle, Loader } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { useState } from 'react';
+import {
+  Search, Mail, Plus, ExternalLink, MessageSquare, X,
+  Users, AlertCircle, Loader, Phone, ChevronDown,
+  SlidersHorizontal, Building2, Tag
+} from 'lucide-react';
 import useDataStore from '../store/useDataStore';
+import CsvImporterModal from '../components/CsvImporterModal';
 import './Contacts.css';
-
-const SENTIMENT_COLOR = {
-  'very positive': 'var(--success)', 'positive': '#86efac',
-  'neutral': 'var(--warning)', 'negative': 'var(--danger)',
-};
 
 const TAG_COLORS = {
   'Decision Maker': 'badge-purple', 'Champion': 'badge-cyan',
-  'Enterprise': 'badge-blue', 'High Intent': 'badge-green',
-  'Warm Lead': 'badge-yellow', 'Ghosted': 'badge-red',
-  'Strategic': 'badge-blue', 'Trial Active': 'badge-green',
+  'Enterprise': 'badge-blue',      'High Intent': 'badge-green',
+  'Warm Lead': 'badge-yellow',     'Ghosted': 'badge-red',
+  'Strategic': 'badge-blue',       'Trial Active': 'badge-green',
   'Onboarding': 'badge-cyan',
 };
 
-function ContactRow({ contact, onSelect, selected, isSelected, toggleSelect }) {
+const AVATAR_COLORS = [
+  '#3b82f6','#8b5cf6','#06b6d4','#f97316',
+  '#22c55e','#ec4899','#6366f1','#14b8a6','#f59e0b','#ef4444',
+];
+
+function getAvatarColor(name) {
+  if (!name) return AVATAR_COLORS[0];
+  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
+}
+
+// ── Row ─────────────────────────────────────────────────────
+function ContactRow({ contact, company, onSelect, selected, isSelected, toggleSelect }) {
+  const [hovered, setHovered] = useState(false);
+  const avatarColor = getAvatarColor(contact.name);
+  const initials = contact.name
+    ? contact.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+    : '?';
+
   return (
-    <div className={`contact-row ${selected ? 'selected' : ''}`} onClick={(e) => { e.stopPropagation(); onSelect(contact); }}>
-      <div className="c-cell" onClick={(e) => e.stopPropagation()}>
-        <input 
-          type="checkbox" 
+    <div
+      className={`cr-row${selected ? ' selected' : ''}${hovered ? ' hovered' : ''}`}
+      onClick={() => onSelect(contact)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Checkbox */}
+      <div className="cr-col cr-col-check" onClick={e => { e.stopPropagation(); toggleSelect(contact.id, e); }}>
+        <input
+          type="checkbox"
           checked={isSelected}
-          onChange={(e) => toggleSelect(contact.id, e)}
-          style={{ width: 16, height: 16, cursor: 'pointer' }}
+          onChange={() => {}}
+          style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--accent-blue)' }}
         />
       </div>
-      
-      <div className="c-cell" style={{ paddingRight: 16 }}>
-        <div className="cr-name-wrap">
-          <div className="avatar avatar-md" style={{ background: 'transparent', border: '1px solid var(--border-light)', borderRadius: 4, color: 'var(--text-secondary)', flexShrink: 0, width: 24, height: 24, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {contact.name ? contact.name.charAt(0).toUpperCase() : 'C'}
+
+      {/* Name + Avatar */}
+      <div className="cr-col cr-col-name">
+        <div className="cr-avatar" style={{ background: avatarColor }}>{initials}</div>
+        <div className="cr-name-stack">
+          <span className="cr-name-text">{contact.name || '—'}</span>
+          <span className="cr-desig-text">{contact.designation || 'No title'}</span>
+        </div>
+      </div>
+
+      {/* Company */}
+      <div className="cr-col">
+        <div className="cr-inline">
+          <Building2 size={12} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+          <span className="cr-val">{company || '—'}</span>
+        </div>
+      </div>
+
+      {/* Email */}
+      <div className="cr-col">
+        {contact.email ? (
+          <a href={`mailto:${contact.email}`} className="cr-link" onClick={e => e.stopPropagation()}>
+            <Mail size={12} />
+            <span className="cr-val">{contact.email}</span>
+          </a>
+        ) : <span className="cr-empty">No email</span>}
+      </div>
+
+      {/* Phone */}
+      <div className="cr-col">
+        {contact.whatsapp || contact.phone ? (
+          <div className="cr-inline">
+            <Phone size={12} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+            <span className="cr-val">{contact.whatsapp || contact.phone}</span>
           </div>
-          <span className="c-cell-text" style={{ fontSize: 13, fontWeight: 500 }}>{contact.name}</span>
+        ) : <span className="cr-empty">—</span>}
+      </div>
+
+      {/* Tags */}
+      <div className="cr-col cr-col-tags">
+        {(contact.tags || []).length > 0
+          ? contact.tags.slice(0, 2).map(t => (
+              <span key={t} className={`badge ${TAG_COLORS[t] || 'badge-gray'}`} style={{ fontSize: 10 }}>{t}</span>
+            ))
+          : <span className="cr-empty">No tags</span>
+        }
+      </div>
+
+      {/* Engagement */}
+      <div className="cr-col">
+        <div className="cr-engagement">
+          <div
+            className="cr-eng-bar"
+            style={{
+              width: `${Math.min(contact.engagement_score || 0, 100)}%`,
+              background: (contact.engagement_score || 0) >= 70 ? '#22c55e' :
+                          (contact.engagement_score || 0) >= 40 ? '#f59e0b' : '#94a3b8'
+            }}
+          />
+          <span className="cr-eng-val">{contact.engagement_score || 0}</span>
         </div>
       </div>
-      
-      <div className="c-cell" style={{ paddingRight: 16 }}>
-        <span className="badge badge-gray" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)' }}>Cold</span>
-      </div>
-      
-      <div className="c-cell" style={{ paddingRight: 16 }}>
-        <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>-</span>
-      </div>
-      
-      <div className="c-cell" style={{ paddingRight: 16 }}>
-        <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>-</span>
-      </div>
-      
-      <div className="c-cell cr-actions" style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: 1, transform: 'none' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--text-secondary)' }}>
-          <Mail size={14} style={{ cursor: 'pointer' }} />
-          <MessageSquare size={14} style={{ cursor: 'pointer' }} />
-          <Plus size={14} style={{ cursor: 'pointer' }} />
-          <span style={{ cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>...</span>
+
+      {/* Actions (hover) */}
+      <div className="cr-col cr-col-actions">
+        <div className={`cr-actions-wrap${hovered ? ' visible' : ''}`}>
+          {contact.email && (
+            <a href={`mailto:${contact.email}`} className="cr-action-btn" title="Send Email" onClick={e => e.stopPropagation()}>
+              <Mail size={13} />
+            </a>
+          )}
+          {(contact.whatsapp || contact.phone) && (
+            <a href={`tel:${contact.whatsapp || contact.phone}`} className="cr-action-btn" title="Call" onClick={e => e.stopPropagation()}>
+              <Phone size={13} />
+            </a>
+          )}
+          {contact.linkedin && (
+            <a href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`}
+              target="_blank" rel="noopener noreferrer" className="cr-action-btn" title="LinkedIn" onClick={e => e.stopPropagation()}>
+              <ExternalLink size={13} />
+            </a>
+          )}
+          <button className="cr-action-btn" title="View Details" onClick={e => { e.stopPropagation(); onSelect(contact); }}>
+            <MessageSquare size={13} />
+          </button>
         </div>
-        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-tertiary)', padding: '2px 8px' }} onClick={e => { e.stopPropagation(); onSelect(contact); }}>
-          ▷ Click to view
-        </button>
       </div>
     </div>
   );
 }
 
+// ── Detail Panel ──────────────────────────────────────────────
 function ContactDetail({ contact, onClose }) {
+  const avatarColor = getAvatarColor(contact.name);
+  const initials = contact.name
+    ? contact.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+    : '?';
+
   return (
     <div className="contact-detail animate-slide-right">
-      <div className="panel-header" style={{ marginBottom: 'var(--space-4)' }}>
-        <div className="avatar avatar-xl" style={{ background: contact.color || '#3b82f6', color: '#fff' }}>
-          {contact.name ? contact.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'CO'}
+      <div className="cd-header">
+        <div className="cd-avatar" style={{ background: avatarColor }}>{initials}</div>
+        <div className="cd-header-info">
+          <h2 className="cd-name">{contact.name}</h2>
+          <p className="cd-title">{contact.designation || 'No title'}</p>
+          {contact.company && contact.company !== 'Unknown' && (
+            <p className="cd-company"><Building2 size={11} /> {contact.company}</p>
+          )}
         </div>
-        <div>
-          <h2 className="panel-title">{contact.name}</h2>
-          <p className="panel-sub">{contact.designation}{contact.company && contact.company !== 'Unknown' ? ` · ${contact.company}` : ''}</p>
+        <button className="drawer-close" onClick={onClose}><X size={16} /></button>
+      </div>
+
+      <div className="cd-tags">
+        {(contact.tags || []).map(t => (
+          <span key={t} className={`badge ${TAG_COLORS[t] || 'badge-gray'}`}>{t}</span>
+        ))}
+      </div>
+
+      <div className="cd-quick-actions">
+        {contact.email && (
+          <a href={`mailto:${contact.email}`} className="cd-quick-btn">
+            <Mail size={14} /> Email
+          </a>
+        )}
+        {(contact.whatsapp || contact.phone) && (
+          <a href={`tel:${contact.whatsapp || contact.phone}`} className="cd-quick-btn">
+            <Phone size={14} /> Call
+          </a>
+        )}
+        {contact.linkedin && (
+          <a href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`}
+            target="_blank" rel="noopener noreferrer" className="cd-quick-btn">
+            <ExternalLink size={14} /> LinkedIn
+          </a>
+        )}
+      </div>
+
+      <div className="cd-section">
+        <div className="cd-section-label">Contact Info</div>
+        <div className="cd-field"><span className="cd-fl">Email</span><a href={`mailto:${contact.email}`} className="cd-fv link">{contact.email || '—'}</a></div>
+        <div className="cd-field"><span className="cd-fl">Phone</span><span className="cd-fv">{contact.whatsapp || contact.phone || '—'}</span></div>
+        <div className="cd-field"><span className="cd-fl">LinkedIn</span>{contact.linkedin ? <a href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`} target="_blank" rel="noopener noreferrer" className="cd-fv link">View profile</a> : <span className="cd-fv empty">—</span>}</div>
+      </div>
+
+      <div className="cd-section">
+        <div className="cd-section-label">Role & Engagement</div>
+        <div className="cd-field"><span className="cd-fl">Role</span><span className="cd-fv">{contact.role || '—'}</span></div>
+        <div className="cd-field"><span className="cd-fl">Timezone</span><span className="cd-fv">{contact.timezone || '—'}</span></div>
+        <div className="cd-field">
+          <span className="cd-fl">Engagement</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 60, height: 5, background: 'var(--bg-border)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${Math.min(contact.engagement_score || 0, 100)}%`, background: 'var(--accent-blue)', borderRadius: 3 }} />
+            </div>
+            <span className="cd-fv">{contact.engagement_score || 0}/100</span>
+          </div>
         </div>
-        <button className="drawer-close" onClick={onClose}>✕</button>
-      </div>
-
-      <div className="contact-detail-tags">
-        {(contact.tags || []).map(t => <span key={t} className={`badge ${TAG_COLORS[t] || 'badge-gray'}`}>{t}</span>)}
-      </div>
-
-      <div className="panel-stats">
-        <div className="ov-stat"><span className="ov-stat-label">Company</span><span className="ov-stat-val" style={{ fontWeight: 600 }}>{contact.company && contact.company !== 'Unknown' ? contact.company : '--'}</span></div>
-        <div className="ov-stat"><span className="ov-stat-label">Engagement</span><span className="ov-stat-val" style={{ color: 'var(--success)' }}>{contact.engagement_score || 0}</span></div>
-        <div className="ov-stat"><span className="ov-stat-label">Sentiment</span><span className="ov-stat-val" style={{ textTransform: 'capitalize', color: SENTIMENT_COLOR[contact.sentiment] }}>{contact.sentiment || 'Neutral'}</span></div>
-        <div className="ov-stat"><span className="ov-stat-label">Role</span><span className="ov-stat-val">{contact.role || '--'}</span></div>
-        <div className="ov-stat"><span className="ov-stat-label">Timezone</span><span className="ov-stat-val">{contact.timezone || '--'}</span></div>
-      </div>
-
-      <div className="contact-reach">
-        <a href={`mailto:${contact.email}`} className="reach-item">
-          <Mail size={14} /> {contact.email}
-        </a>
-        <a href={`https://${contact.linkedin}`} target="_blank" rel="noopener noreferrer" className="reach-item">
-          <ExternalLink size={14} /> LinkedIn Profile
-        </a>
-        <div className="reach-item">
-          <MessageSquare size={14} /> {contact.whatsapp}
+        <div className="cd-field">
+          <span className="cd-fl">Sentiment</span>
+          <span className="cd-fv" style={{ textTransform: 'capitalize', color: contact.sentiment === 'positive' || contact.sentiment === 'very positive' ? 'var(--success)' : contact.sentiment === 'negative' ? 'var(--danger)' : 'var(--text-primary)' }}>
+            {contact.sentiment || 'Neutral'}
+          </span>
         </div>
       </div>
 
       {contact.notes && (
-        <div className="ov-notes">
-          <p className="ov-notes-label">Intelligence</p>
-          <p className="ov-notes-text">{contact.notes}</p>
+        <div className="cd-section">
+          <div className="cd-section-label">Notes</div>
+          <p className="cd-notes">{contact.notes}</p>
         </div>
       )}
-
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button className="btn btn-primary btn-sm" onClick={() => alert(`Emailing ${contact.email}...`)}><Mail size={13} /> Send Email</button>
-        <button className="btn btn-ghost btn-sm" onClick={() => alert('WhatsApp integration triggered')}><MessageSquare size={13} /> WhatsApp</button>
-        <button className="btn btn-ghost btn-sm" onClick={() => window.open(contact.linkedin ? `https://${contact.linkedin}` : 'https://linkedin.com', '_blank')}><ExternalLink size={13} /> LinkedIn</button>
-      </div>
     </div>
   );
 }
 
-import CsvImporterModal from '../components/CsvImporterModal';
-
+// ── Main Page ─────────────────────────────────────────────────
 export default function Contacts() {
-  const { contacts, companies, createContact, bulkCreateContacts } = useDataStore();
+  const { contacts, companies, createContact } = useDataStore();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
-  const [filterRole, setFilterRole] = useState('all');
   const [isAdding, setIsAdding] = useState(false);
   const [isImporterOpen, setIsImporterOpen] = useState(false);
-
-  const [formData, setFormData] = useState({ name: '', email: '', designation: '', company_id: '', role: 'Decision Maker', linkedin: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', designation: '', company_id: '', linkedin: '', whatsapp: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-
   const [selectedIds, setSelectedIds] = useState([]);
   const [deleting, setDeleting] = useState(false);
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} contacts?`)) return;
+    if (!window.confirm(`Delete ${selectedIds.length} contacts?`)) return;
     setDeleting(true);
     try {
       await useDataStore.getState().bulkDeleteContacts(selectedIds);
       setSelectedIds([]);
       setSelected(null);
-    } catch (err) {
-      alert('Failed to delete: ' + err.message);
-    } finally {
-      setDeleting(false);
-    }
+    } catch (err) { alert('Failed: ' + err.message); }
+    finally { setDeleting(false); }
   };
 
   const toggleSelect = (id, e) => {
@@ -159,180 +258,173 @@ export default function Contacts() {
   };
 
   const filtered = contacts.filter(c => {
-    const q = (search || '').toString().toLowerCase();
-    const companyMatch = companies.find(comp => comp.id === c.company_id);
-    const coName = companyMatch ? (companyMatch.name || '') : '';
-    
-    const nameStr = (c.name || '').toString().toLowerCase();
-    const coNameStr = coName.toString().toLowerCase();
-    const desigStr = (c.designation || '').toString().toLowerCase();
-
-    const matchSearch = nameStr.includes(q) || coNameStr.includes(q) || desigStr.includes(q);
-    const matchRole = filterRole === 'all' || c.role === filterRole;
-    return matchSearch && matchRole;
+    const q = (search || '').toLowerCase();
+    const comp = companies.find(co => co.id === c.company_id);
+    return (
+      (c.name || '').toLowerCase().includes(q) ||
+      (c.email || '').toLowerCase().includes(q) ||
+      (c.designation || '').toLowerCase().includes(q) ||
+      (comp?.name || '').toLowerCase().includes(q)
+    );
   });
 
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.name) return;
-    setSaving(true);
-    setError(null);
+    setSaving(true); setError(null);
     try {
-      await createContact({
-        name: formData.name,
-        email: formData.email,
-        designation: formData.designation,
-        company_id: formData.company_id || null,
-        role: formData.role,
-        linkedin: formData.linkedin,
-        tags: [],
-        engagement_score: 0,
-        sentiment: 'neutral'
-      });
+      await createContact({ ...formData, company_id: formData.company_id || null, tags: [], engagement_score: 0, sentiment: 'neutral' });
       setIsAdding(false);
-      setFormData({ name: '', email: '', designation: '', company_id: '', role: 'Decision Maker', linkedin: '' });
-    } catch (error) {
-      console.error(error);
-      setError(error.message || 'Failed to create contact');
-    } finally {
-      setSaving(false);
-    }
+      setFormData({ name: '', email: '', designation: '', company_id: '', linkedin: '', whatsapp: '' });
+    } catch (err) { setError(err.message); }
+    finally { setSaving(false); }
   };
 
   return (
     <div className="contacts-page">
-      <div className="page-header-row" style={{ padding: '24px 24px 12px' }}>
-        <div>
-          <h1 className="page-big-title" style={{ fontSize: 22 }}>People</h1>
-          <p className="page-big-sub" style={{ fontSize: 13 }}>{contacts.length} records</p>
+      {/* Header */}
+      <div className="cg-header">
+        <div className="cg-header-left">
+          <h1 className="cg-title">People</h1>
+          <span className="cg-count">{contacts.length} records</span>
         </div>
-        <div className="page-header-actions">
+        <div className="cg-header-right">
           {selectedIds.length > 0 ? (
-            <button className="btn btn-primary btn-sm" style={{ backgroundColor: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleBulkDelete} disabled={deleting}>
-              {deleting ? 'Deleting...' : `Delete ${selectedIds.length} Selected`}
+            <button className="btn btn-sm" style={{ background: 'var(--danger)', color: '#fff', border: 'none' }}
+              onClick={handleBulkDelete} disabled={deleting}>
+              {deleting ? 'Deleting…' : `Delete ${selectedIds.length}`}
             </button>
           ) : (
             <>
               <button className="btn btn-ghost btn-sm" onClick={() => setIsImporterOpen(true)}>Import</button>
-              <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}><Plus size={13} /> Create person</button>
+              <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>
+                <Plus size={14} /> Add Person
+              </button>
             </>
           )}
         </div>
       </div>
 
-      <div className="apollo-sub-bar" style={{ padding: '0 24px 12px', borderBottom: 'none' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-secondary)', padding: '4px 8px' }}>
-             My saved people v
-          </button>
-          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-secondary)', padding: '4px 8px' }}>
-             = Show Filters <span className="apollo-tab-count" style={{ background: 'transparent' }}>1</span>
-          </button>
-          <div className="search-box" style={{ width: 240, background: 'transparent', border: '1px solid var(--border-light)' }}>
-            <Search size={14} color="var(--text-tertiary)" />
-            <input placeholder="Search people" value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
+      {/* Toolbar */}
+      <div className="cg-toolbar">
+        <div className="cg-search">
+          <Search size={14} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+          <input
+            placeholder="Search by name, email, company…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && <X size={14} style={{ cursor: 'pointer', color: 'var(--text-tertiary)', flexShrink: 0 }} onClick={() => setSearch('')} />}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500 }}>
-          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-secondary)', padding: '4px 8px' }}>
-             Create workflow v
-          </button>
-          <button className="btn btn-ghost btn-sm" style={{ border: '1px solid var(--border-light)', padding: '4px 12px' }}>
-             Save as new view
-          </button>
-          <span style={{ cursor: 'pointer' }}>↑↓ Sort</span>
-          <span style={{ cursor: 'pointer' }}>⚙ View options</span>
-        </div>
+        <button className="btn btn-ghost btn-sm" style={{ gap: 5, fontSize: 12 }}>
+          <SlidersHorizontal size={13} /> Filter
+        </button>
+        <button className="btn btn-ghost btn-sm" style={{ gap: 5, fontSize: 12 }}>
+          <ChevronDown size={13} /> Sort
+        </button>
       </div>
 
+      {/* Layout */}
       <div className="contacts-layout">
         <div className="contacts-table-wrap">
-          <div className="contacts-table-head">
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <input 
-                type="checkbox" 
+          {/* Table Head */}
+          <div className="cg-table-head">
+            <div className="cr-col cr-col-check">
+              <input type="checkbox"
                 checked={selectedIds.length === filtered.length && filtered.length > 0}
-                onChange={() => {
-                  if (selectedIds.length === filtered.length) setSelectedIds([]);
-                  else setSelectedIds(filtered.map(c => c.id));
-                }}
-                style={{ width: 16, height: 16, cursor: 'pointer' }}
+                onChange={() => selectedIds.length === filtered.length ? setSelectedIds([]) : setSelectedIds(filtered.map(c => c.id))}
+                style={{ width: 15, height: 15, accentColor: 'var(--accent-blue)' }}
               />
             </div>
-            <span>Name</span>
-            <span>Stage</span>
-            <span>Last activity date</span>
-            <span>Recommendations</span>
-            <span>Actions</span>
+            <div className="cr-col cr-col-name">Name</div>
+            <div className="cr-col">Company</div>
+            <div className="cr-col">Email</div>
+            <div className="cr-col">Phone</div>
+            <div className="cr-col cr-col-tags">Tags</div>
+            <div className="cr-col">Engagement</div>
+            <div className="cr-col cr-col-actions">Actions</div>
           </div>
-          
-          <div className="contacts-list apollo-grid-table">
+
+          {/* Rows */}
+          <div className="contacts-list">
             {filtered.map(c => {
-              const comp = companies.find(comp => comp.id === c.company_id);
+              const comp = companies.find(co => co.id === c.company_id);
               return (
-                <ContactRow 
-                  key={c.id} 
-                  contact={{...c, company: comp ? comp.name : 'Unknown'}} 
-                  selected={selected?.id === c.id} 
+                <ContactRow
+                  key={c.id}
+                  contact={c}
+                  company={comp?.name}
+                  selected={selected?.id === c.id}
                   isSelected={selectedIds.includes(c.id)}
                   toggleSelect={toggleSelect}
-                  onSelect={co => setSelected(co.id === selected?.id ? null : co)} 
+                  onSelect={co => setSelected(co.id === selected?.id ? null : co)}
                 />
               );
             })}
             {contacts.length === 0 && (
-             <div className="empty-state" style={{ marginTop: 40 }}>
-               <Users size={32} />
-               <h3>No contacts yet</h3>
-               <p>Add people to start building relationships.</p>
-             </div>
+              <div className="empty-state" style={{ marginTop: 60 }}>
+                <Users size={32} />
+                <h3>No contacts yet</h3>
+                <p>Import a CSV or add your first contact.</p>
+                <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}><Plus size={13} /> Add Person</button>
+              </div>
+            )}
+            {contacts.length > 0 && filtered.length === 0 && (
+              <div className="empty-state" style={{ marginTop: 60 }}>
+                <Search size={28} />
+                <h3>No results for "{search}"</h3>
+              </div>
             )}
           </div>
         </div>
-        
-        {selected && !isAdding && <ContactDetail contact={{...selected, company: companies.find(comp => comp.id === selected.company_id)?.name}} onClose={() => setSelected(null)} />}
-        
+
+        {/* Right Panel */}
+        {selected && !isAdding && (
+          <ContactDetail
+            contact={{ ...selected, company: companies.find(c => c.id === selected.company_id)?.name }}
+            onClose={() => setSelected(null)}
+          />
+        )}
+
         {isAdding && (
           <div className="contact-detail animate-slide-right">
-            <div className="panel-header" style={{ marginBottom: 24 }}>
-              <h2 className="panel-title">Add Contact</h2>
-              <button className="drawer-close" onClick={() => setIsAdding(false)}><X size={16}/></button>
+            <div className="cd-header" style={{ marginBottom: 20 }}>
+              <h2 className="cd-name">Add Contact</h2>
+              <button className="drawer-close" onClick={() => setIsAdding(false)}><X size={16} /></button>
             </div>
-            <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {error && (
-                <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.08)', color: 'var(--danger)', fontSize: 13, display: 'flex', gap: 8 }}>
                   <AlertCircle size={14} /> {error}
                 </div>
               )}
+              {[
+                { label: 'Full Name *', key: 'name', type: 'text', required: true },
+                { label: 'Email', key: 'email', type: 'email' },
+                { label: 'Job Title', key: 'designation', type: 'text' },
+                { label: 'Phone / WhatsApp', key: 'whatsapp', type: 'text' },
+                { label: 'LinkedIn URL', key: 'linkedin', type: 'text' },
+              ].map(({ label, key, type, required }) => (
+                <div key={key} className="form-group">
+                  <label className="form-label">{label}</label>
+                  <input
+                    className="form-input"
+                    type={type}
+                    required={required}
+                    value={formData[key]}
+                    onChange={e => setFormData({ ...formData, [key]: e.target.value })}
+                    autoFocus={key === 'name'}
+                  />
+                </div>
+              ))}
               <div className="form-group">
-                <label className="label">Full Name</label>
-                <input className="input-base" autoFocus required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-              </div>
-              <div className="form-group">
-                <label className="label">Email Address</label>
-                <input className="input-base" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
-              </div>
-              <div className="form-group">
-                <label className="label">Job Title</label>
-                <input className="input-base" value={formData.designation} onChange={e => setFormData({...formData, designation: e.target.value})} />
-              </div>
-              <div className="form-group">
-                <label className="label">Company</label>
-                <select className="input-base" value={formData.company_id} onChange={e => setFormData({...formData, company_id: e.target.value})}>
-                  <option value="">Select Company</option>
+                <label className="form-label">Company</label>
+                <select className="form-input" value={formData.company_id} onChange={e => setFormData({ ...formData, company_id: e.target.value })}>
+                  <option value="">Select Company…</option>
                   {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-              <div className="form-group">
-                <label className="label">Persona Role</label>
-                <select className="input-base" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
-                  <option value="Decision Maker">Decision Maker</option>
-                  <option value="Champion">Champion</option>
-                  <option value="Technical Evaluator">Technical Evaluator</option>
-                  <option value="Influencer">Influencer</option>
-                </select>
-              </div>
-              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }} disabled={saving}>
+              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 4 }} disabled={saving}>
                 {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Contact'}
               </button>
             </form>
@@ -340,11 +432,7 @@ export default function Contacts() {
         )}
       </div>
 
-      <CsvImporterModal 
-        isOpen={isImporterOpen} 
-        onClose={() => setIsImporterOpen(false)} 
-        type="contacts" 
-      />
+      <CsvImporterModal isOpen={isImporterOpen} onClose={() => setIsImporterOpen(false)} type="contacts" />
     </div>
   );
 }
