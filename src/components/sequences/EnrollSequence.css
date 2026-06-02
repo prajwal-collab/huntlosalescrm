@@ -1,0 +1,485 @@
+/* ============================================
+   HUNTLO — SEQUENCE ENROLLMENT
+   World-class email sequence → lead assignment
+   ============================================ */
+
+/* ── Enroll Modal Overlay ── */
+.enroll-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  backdrop-filter: blur(6px);
+}
+
+.enroll-modal {
+  background: var(--bg-surface);
+  border-radius: 16px;
+  border: 1px solid var(--bg-border);
+  box-shadow: 0 32px 80px rgba(0,0,0,0.2);
+  width: 580px;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalIn 0.2s ease;
+}
+
+@keyframes modalIn {
+  from { transform: scale(0.95) translateY(8px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.enroll-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--bg-border);
+  flex-shrink: 0;
+}
+
+.enroll-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+}
+
+.enroll-subtitle {
+  font-size: 12.5px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+/* ── Steps ── */
+.enroll-steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--bg-border);
+  flex-shrink: 0;
+}
+
+.enroll-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  padding: 6px 12px;
+  border-radius: 20px;
+}
+
+.enroll-step.active {
+  background: var(--accent-blue-muted);
+  color: var(--accent-blue-dim);
+  font-weight: 700;
+}
+
+.enroll-step.done {
+  color: #16a34a;
+}
+
+.enroll-step-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.enroll-step-divider {
+  flex: 1;
+  height: 1px;
+  background: var(--bg-border);
+  max-width: 32px;
+}
+
+.enroll-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Lead Chips Preview ── */
+.enroll-leads-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-base);
+  border: 1px solid var(--bg-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.enroll-leads-preview h4 {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+}
+
+.enroll-lead-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+}
+
+.enroll-lead-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.enroll-lead-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 1px;
+}
+
+.enroll-lead-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.enroll-lead-sub {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ── Sequence picker ── */
+.seq-picker-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
+}
+
+.seq-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.seq-picker-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1.5px solid var(--bg-border);
+  background: var(--bg-base);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.seq-picker-card:hover {
+  border-color: var(--accent-blue);
+  background: var(--accent-blue-muted);
+}
+
+.seq-picker-card.active {
+  border-color: var(--accent-blue);
+  background: var(--accent-blue-muted);
+}
+
+.seq-picker-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.seq-picker-info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.seq-picker-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.seq-picker-meta {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  display: flex;
+  gap: 8px;
+}
+
+.seq-picker-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 12px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+/* ── Send Config ── */
+.enroll-config {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.enroll-config-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+}
+
+.enroll-input, .enroll-select {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--bg-border);
+  background: var(--bg-base);
+  font-size: 13px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.enroll-input:focus, .enroll-select:focus { border-color: var(--accent-blue); }
+
+.enroll-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--bg-base);
+  border: 1px solid var(--bg-border);
+}
+
+.enroll-toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.enroll-toggle-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.enroll-toggle-desc {
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+}
+
+/* ── Toggle Switch ── */
+.toggle-switch {
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--bg-border);
+  position: relative;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle-switch.on { background: var(--accent-blue-dim); }
+
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.2s;
+}
+
+.toggle-switch.on::after { transform: translateX(16px); }
+
+/* ── Review Step ── */
+.enroll-review-card {
+  background: var(--bg-base);
+  border: 1px solid var(--bg-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.enroll-review-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--bg-border);
+  font-size: 13px;
+}
+
+.enroll-review-row:last-child { border-bottom: none; }
+.enroll-review-key { color: var(--text-tertiary); font-weight: 500; }
+.enroll-review-val { color: var(--text-primary); font-weight: 600; }
+
+/* ── Success State ── */
+.enroll-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.enroll-success-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(34,197,94,0.12);
+  border: 2px solid rgba(34,197,94,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+}
+
+.enroll-success-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.enroll-success-sub {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  max-width: 300px;
+}
+
+/* ── Footer ── */
+.enroll-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-top: 1px solid var(--bg-border);
+  flex-shrink: 0;
+}
+
+/* ── Enrolled Badge on Sequences Page ── */
+.seq-enrolled-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--bg-base);
+  border: 1px solid var(--bg-border);
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+
+.seq-enrolled-avatars {
+  display: flex;
+  align-items: center;
+}
+
+.seq-enrolled-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  margin-left: -6px;
+  flex-shrink: 0;
+}
+
+.seq-enrolled-avatar:first-child { margin-left: 0; }
+
+/* ── Copy Button ── */
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid var(--bg-border);
+  background: var(--bg-base);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.copy-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue-dim);
+}
+
+/* ── Contact email in company panel ── */
+.cp-contact-email {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}

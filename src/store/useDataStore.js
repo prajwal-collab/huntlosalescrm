@@ -333,6 +333,22 @@ const useDataStore = create((set, get) => ({
     set(state => ({ sequences: state.sequences.filter(s => s.id !== id) }));
   },
 
+  enrollLeadsInSequence: async ({ sequenceId, leadIds, config }) => {
+    // In a real app, this would write to a sequence_enrollments table
+    // For now, we update the local sequence's enrolledCount
+    set(state => {
+      const sequences = state.sequences.map(s => {
+        if (s.id === sequenceId) {
+          return { ...s, enrolledCount: (s.enrolledCount || 0) + leadIds.length };
+        }
+        return s;
+      });
+      return { sequences };
+    });
+    // Optional delay to simulate network
+    return new Promise(resolve => setTimeout(resolve, 800));
+  },
+
   // ── Email Settings ────────────────────────
   fetchEmailSettings: async () => {
     const { user } = useAuthStore.getState();

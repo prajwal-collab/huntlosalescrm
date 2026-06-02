@@ -5,11 +5,26 @@ import { useState } from 'react';
 import {
   Search, Mail, Plus, ExternalLink, MessageSquare, X,
   Users, AlertCircle, Loader, Phone, ChevronDown,
-  SlidersHorizontal, Building2, Tag
+  SlidersHorizontal, Building2, Copy, Check
 } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import CsvImporterModal from '../components/CsvImporterModal';
+import EnrollSequenceModal from '../components/sequences/EnrollSequenceModal';
 import './Contacts.css';
+
+// Reusable one-click copy button
+function CopyBtn({ text }) {
+  const [copied, setCopied] = useState(false);
+  if (!text) return null;
+  return (
+    <button
+      onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1800); }); }}
+      className="copy-btn" title={`Copy ${text}`}
+    >
+      {copied ? <Check size={11} style={{ color: '#16a34a' }} /> : <Copy size={11} />}
+    </button>
+  );
+}
 
 const TAG_COLORS = {
   'Decision Maker': 'badge-purple', 'Champion': 'badge-cyan',
@@ -192,9 +207,30 @@ function ContactDetail({ contact, onClose }) {
 
       <div className="cd-section">
         <div className="cd-section-label">Contact Info</div>
-        <div className="cd-field"><span className="cd-fl">Email</span><a href={`mailto:${contact.email}`} className="cd-fv link">{contact.email || '—'}</a></div>
-        <div className="cd-field"><span className="cd-fl">Phone</span><span className="cd-fv">{contact.whatsapp || contact.phone || '—'}</span></div>
-        <div className="cd-field"><span className="cd-fl">LinkedIn</span>{contact.linkedin ? <a href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`} target="_blank" rel="noopener noreferrer" className="cd-fv link">View profile</a> : <span className="cd-fv empty">—</span>}</div>
+        <div className="cd-field">
+          <span className="cd-fl">Email</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
+            <a href={`mailto:${contact.email}`} className="cd-fv link">{contact.email || '—'}</a>
+            <CopyBtn text={contact.email} />
+          </div>
+        </div>
+        <div className="cd-field">
+          <span className="cd-fl">Phone</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
+            <span className="cd-fv">{contact.whatsapp || contact.phone || '—'}</span>
+            <CopyBtn text={contact.whatsapp || contact.phone} />
+          </div>
+        </div>
+        <div className="cd-field">
+          <span className="cd-fl">LinkedIn</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
+            {contact.linkedin
+              ? <a href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`} target="_blank" rel="noopener noreferrer" className="cd-fv link">View profile</a>
+              : <span className="cd-fv empty">—</span>
+            }
+            <CopyBtn text={contact.linkedin} />
+          </div>
+        </div>
       </div>
 
       <div className="cd-section">
@@ -235,6 +271,7 @@ export default function Contacts() {
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isImporterOpen, setIsImporterOpen] = useState(false);
+  const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', designation: '', company_id: '', linkedin: '', whatsapp: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -290,10 +327,16 @@ export default function Contacts() {
         </div>
         <div className="cg-header-right">
           {selectedIds.length > 0 ? (
-            <button className="btn btn-sm" style={{ background: 'var(--danger)', color: '#fff', border: 'none' }}
-              onClick={handleBulkDelete} disabled={deleting}>
-              {deleting ? 'Deleting…' : `Delete ${selectedIds.length}`}
-            </button>
+            <>
+              <button className="btn btn-sm" style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none' }}
+                onClick={() => setIsEnrollModalOpen(true)}>
+                Enroll {selectedIds.length} in Sequence
+              </button>
+              <button className="btn btn-sm" style={{ background: 'var(--danger)', color: '#fff', border: 'none' }}
+                onClick={handleBulkDelete} disabled={deleting}>
+                {deleting ? 'Deleting…' : `Delete ${selectedIds.length}`}
+              </button>
+            </>
           ) : (
             <>
               <button className="btn btn-ghost btn-sm" onClick={() => setIsImporterOpen(true)}>Import</button>
@@ -433,6 +476,16 @@ export default function Contacts() {
       </div>
 
       <CsvImporterModal isOpen={isImporterOpen} onClose={() => setIsImporterOpen(false)} type="contacts" />
+      
+      {isEnrollModalOpen && (
+        <EnrollSequenceModal
+          leads={filtered.filter(c => selectedIds.includes(c.id))}
+          onClose={() => {
+            setIsEnrollModalOpen(false);
+            setSelectedIds([]);
+          }}
+        />
+      )}
     </div>
   );
 }

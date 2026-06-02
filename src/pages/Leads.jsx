@@ -12,6 +12,7 @@ import {
 import useDataStore from '../store/useDataStore';
 import LeadDrawer from '../components/leads/LeadDrawer';
 import NewLeadForm from '../components/leads/NewLeadForm';
+import EnrollSequenceModal from '../components/sequences/EnrollSequenceModal';
 import './Leads.css';
 
 // ── Signal score computation ────────────────────────────────
@@ -194,6 +195,7 @@ export default function Leads() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
   const [showNewForm, setShowNewForm] = useState(false);
+  const [showEnrollModal, setShowEnrollModal] = useState(false);
 
   // Enrich each lead with computed score
   const enriched = useMemo(() =>
@@ -315,6 +317,13 @@ export default function Leads() {
         <div className="bulk-bar">
           <span>{selectedIds.length} selected</span>
           <button
+            onClick={() => setShowEnrollModal(true)}
+            className="btn btn-sm"
+            style={{ background: 'var(--accent-blue)', color: '#fff', fontSize: 12, border: 'none', marginLeft: 8 }}
+          >
+            Enroll in Sequence
+          </button>
+          <button
             onClick={handleBulkDelete}
             className="btn btn-sm"
             style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 12 }}
@@ -404,6 +413,17 @@ export default function Leads() {
       {/* New Lead Modal */}
       {showNewForm && (
         <NewLeadForm onClose={() => setShowNewForm(false)} />
+      )}
+
+      {/* Enroll Sequence Modal */}
+      {showEnrollModal && (
+        <EnrollSequenceModal
+          leads={filtered.filter(l => selectedIds.includes(l.id))}
+          onClose={() => {
+            setShowEnrollModal(false);
+            setSelectedIds([]);
+          }}
+        />
       )}
     </div>
   );

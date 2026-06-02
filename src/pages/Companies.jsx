@@ -3,14 +3,30 @@
 // ============================================
 import { useState } from 'react';
 import {
-  Search, ExternalLink, Building2, Users, Sparkles,
-  Plus, X, AlertCircle, Loader, Globe, TrendingUp,
-  SlidersHorizontal, ChevronDown, MapPin, BarChart2
+  Search, ExternalLink, Building2, Users,
+  Plus, X, AlertCircle, Loader, Globe,
+  SlidersHorizontal, ChevronDown, BarChart2, Copy, Check
 } from 'lucide-react';
-import { generateCompanyInsight } from '../lib/gemini';
 import useDataStore from '../store/useDataStore';
 import CsvImporterModal from '../components/CsvImporterModal';
 import './Companies.css';
+
+function CopyBtn({ text }) {
+  const [copied, setCopied] = useState(false);
+  if (!text) return null;
+  const handleCopy = (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  };
+  return (
+    <button onClick={handleCopy} className="copy-btn" title={`Copy ${text}`}>
+      {copied ? <Check size={11} style={{ color: '#16a34a' }} /> : <Copy size={11} />}
+    </button>
+  );
+}
 
 const TAG_COLORS = {
   'Enterprise': 'badge-blue', 'High Intent': 'badge-green',
@@ -163,19 +179,9 @@ function CompanyRow({ company, contacts, onSelect, selected, isSelected, toggleS
 
 // ── Company Panel ──────────────────────────────────────────────
 function CompanyPanel({ company, contacts, onClose }) {
-  const [insight, setInsight] = useState('');
-  const [loading, setLoading] = useState(false);
   const logoColor = company.logoColor || getLogoColor(company.name);
   const initial = (company.name || '?').charAt(0).toUpperCase();
   const contactsForCompany = contacts.filter(c => c.company_id === company.id);
-
-  const handleInsight = async () => {
-    setLoading(true);
-    try {
-      const res = await generateCompanyInsight(company.name, company.industry, company.engagement_score, contactsForCompany.length > 0 ? 'Active Contacts' : 'No Contacts');
-      setInsight(res);
-    } finally { setLoading(false); }
-  };
 
   return (
     <div className="company-panel animate-slide-right">
@@ -243,6 +249,11 @@ function CompanyPanel({ company, contacts, onClose }) {
               <div className="cp-contact-info">
                 <span className="cp-contact-name">{c.name}</span>
                 <span className="cp-contact-title">{c.designation || 'No title'}</span>
+                {c.email && (
+                  <span className="cp-contact-email">
+                    {c.email} <CopyBtn text={c.email} />
+                  </span>
+                )}
               </div>
               {c.email && <a href={`mailto:${c.email}`} className="co-action-btn" onClick={e => e.stopPropagation()}><ExternalLink size={12} /></a>}
             </div>
@@ -276,17 +287,6 @@ function CompanyPanel({ company, contacts, onClose }) {
         </div>
       )}
 
-      {/* AI Insight */}
-      <button className="btn btn-primary btn-sm w-full" onClick={handleInsight} disabled={loading} style={{ gap: 6 }}>
-        <Sparkles size={13} /> {loading ? 'Analyzing…' : 'Generate AI Insight'}
-      </button>
-
-      {insight && (
-        <div className="ai-generated-box">
-          <div className="ai-generated-label"><Sparkles size={11} /> AI Insight</div>
-          <pre className="ai-generated-text">{insight}</pre>
-        </div>
-      )}
     </div>
   );
 }
