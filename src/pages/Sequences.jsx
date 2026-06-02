@@ -30,6 +30,7 @@ export default function Sequences() {
   const [selected, setSelected] = useState(sequences[0] || null);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({ name: '', channel: 'Email', template: 'Blank Sequence' });
+  const [error, setError] = useState(null);
 
   const TEMPLATES = [
     "Blank Sequence",
@@ -76,6 +77,7 @@ export default function Sequences() {
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.name) return;
+    setError(null);
     try {
       const nodesToUse = TEMPLATE_DATA[formData.template] || [];
       const newSeq = await createSequence({
@@ -86,13 +88,13 @@ export default function Sequences() {
         enrolled: 0,
         reply_rate: 0,
         nodes: nodesToUse
-
       });
       setIsAdding(false);
       setSelected(newSeq);
       setFormData({ name: '', channel: 'Email', template: 'Blank Sequence' });
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Failed to create sequence.');
     }
   };
 
@@ -186,6 +188,11 @@ export default function Sequences() {
               <button className="drawer-close" style={{ position: 'absolute', top: 24, right: 24 }} onClick={() => setIsAdding(false)}><X size={16}/></button>
             </div>
             <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 24px' }}>
+              {error && (
+                <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.08)', color: 'var(--danger)', fontSize: 13, display: 'flex', gap: 8 }}>
+                  <X size={14} /> {error}
+                </div>
+              )}
               <div className="form-group">
                 <label className="label">Sequence Name</label>
                 <input className="input-base" autoFocus required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Outbound Q3 Founders" />
