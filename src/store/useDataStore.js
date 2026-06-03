@@ -363,8 +363,42 @@ const useDataStore = create((set, get) => ({
   },
 
   enrollLeadsInSequence: async ({ sequenceId, leadIds, config }) => {
-    // In a real app, this would write to a sequence_enrollments table
-    // For now, we update the local sequence's enrolled
+    const state = get();
+    const sequence = state.sequences.find(s => s.id === sequenceId);
+    if (!sequence) throw new Error('Sequence not found');
+
+    const firstStep = sequence.nodes?.[0];
+
+    // Find the actual leads being enrolled
+    const enrolledLeads = state.leads.filter(l => leadIds.includes(l.id));
+
+    // Simulate sequence execution (Day 1 / Touchpoint 1) if it's an email step
+    if (firstStep && firstStep.type === 'email') {
+      try {
+        const { parseTemplate } = await import('../utils/personalization.js');
+        const { sendSequenceEmail } = await import('../lib/resend.js');
+        const { user } = useAuthStore.getState();
+
+        // Dispatch emails in parallel without blocking the UI completely
+        Promise.all(enrolledLeads.map(async (lead) => {
+          const leadEmail = lead.email || lead.contact_linkedin; // simple fallback
+          if (!leadEmail || !leadEmail.includes('@')) return;
+
+          const parsedSubject = parseTemplate(firstStep.subject, lead, user);
+          const parsedContent = parseTemplate(firstStep.content, lead, user);
+
+          await sendSequenceEmail({
+            toEmail: leadEmail,
+            subject: parsedSubject,
+            body: parsedContent,
+            fromName: user?.user_metadata?.full_name || 'Huntlo Sales',
+          });
+        })).catch(err => console.error('[Sequence Execution Error]:', err));
+      } catch (err) {
+        console.error('Failed to execute initial sequence step:', err);
+      }
+    }
+
     set(state => {
       const sequences = state.sequences.map(s => {
         if (s.id === sequenceId) {
@@ -374,7 +408,6 @@ const useDataStore = create((set, get) => ({
       });
       return { sequences };
     });
-    // Optional delay to simulate network
     return new Promise(resolve => setTimeout(resolve, 800));
   },
 

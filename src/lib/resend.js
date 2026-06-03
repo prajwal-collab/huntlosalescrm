@@ -95,4 +95,44 @@ export function generateInviteToken() {
     .join('');
 }
 
+// Send a plain text B2B sales sequence email
+export async function sendSequenceEmail({ toEmail, subject, body, fromName = 'Huntlo Sales', replyTo }) {
+  if (!isConfigured) {
+    console.warn(`[Resend] Demo Mode: Would send sequence email to ${toEmail}. Subject: ${subject}`);
+    await new Promise(r => setTimeout(r, 600));
+    return { success: true, demo: true, message: `Demo mode: Sent to ${toEmail}` };
+  }
+
+  // Convert plain text body with newlines to HTML paragraphs for standard B2B look
+  const htmlBody = body.split('\n').map(line => `<p style="margin: 0 0 16px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; color: #1f2937;">${line}</p>`).join('');
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: `${fromName} <onboarding@resend.dev>`,
+        to: [toEmail],
+        reply_to: replyTo,
+        subject: subject,
+        html: htmlBody,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || 'Failed to send sequence email');
+    }
+
+    const data = await res.json();
+    return { success: true, id: data.id };
+  } catch (err) {
+    console.error('[Resend Sequence Error]:', err);
+    return { success: false, error: err.message };
+  }
+}
+
 export { isConfigured as isResendConfigured };
