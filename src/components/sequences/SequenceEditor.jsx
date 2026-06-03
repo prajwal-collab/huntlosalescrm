@@ -46,7 +46,7 @@ function DualPaneCard({ node, index, updateNode, deleteNode, leads }) {
         </div>
         <div className="seq-card-header-right">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <ClockIcon size={14} /> Send email in {node.day === 0 ? '30 minutes' : `${node.day} days`}
+            <ClockIcon size={14} /> Send email {node.day === 0 ? 'immediately' : `in ${node.day} days`}
           </div>
           <div style={{ position: 'relative' }}>
             <MoreHorizontal size={16} style={{ cursor: 'pointer' }} onClick={() => setShowOptions(!showOptions)} />
@@ -179,7 +179,8 @@ export default function SequenceEditor({ sequence, onBack }) {
   const [nodes, setNodes] = useState(sequence.nodes || []);
   const [showAIPopup, setShowAIPopup] = useState(true);
   const [activeTab, setActiveTab] = useState('Editor');
-  const [isActive, setIsActive] = useState(false);
+  const [isActive, setIsActive] = useState(sequence.status === 'Active');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!sequence.nodes || sequence.nodes.length === 0) {
@@ -201,7 +202,7 @@ export default function SequenceEditor({ sequence, onBack }) {
   };
 
   const handleAddStep = () => {
-    const lastDay = nodes.length > 0 ? nodes[nodes.length - 1].day : 0;
+    const lastDay = nodes.length > 0 ? nodes[nodes.length - 1].day : -3;
     const newNode = {
       id: Date.now().toString(),
       type: 'email',
@@ -212,13 +213,20 @@ export default function SequenceEditor({ sequence, onBack }) {
     setNodes([...nodes, newNode]);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (nodesToSave = nodes, statusToSave = isActive ? 'Active' : 'Draft') => {
+    setIsSaving(true);
     try {
-      await updateSequence(sequence.id, { nodes, steps: nodes.length });
-      alert('Sequence saved successfully!');
+      await updateSequence(sequence.id, { nodes: nodesToSave, steps: nodesToSave.length, status: statusToSave });
     } catch (err) {
-      alert('Failed to save sequence');
+      console.error('Failed to save sequence', err);
     }
+    setTimeout(() => setIsSaving(false), 800);
+  };
+
+  const handleToggleActive = () => {
+    const newStatus = !isActive;
+    setIsActive(newStatus);
+    handleSave(nodes, newStatus ? 'Active' : 'Draft');
   };
 
   return (
@@ -236,7 +244,7 @@ export default function SequenceEditor({ sequence, onBack }) {
           <button className="btn-dark"><Share size={14} /> Share</button>
           <button className="btn-dark"><Zap size={14} /> Workflows 0 <ChevronUp size={12} style={{ transform: 'rotate(180deg)' }} /></button>
           <button className="btn-yellow">Add Contacts</button>
-          <div className="btn-dark" onClick={() => setIsActive(!isActive)}>
+          <div className="btn-dark" onClick={handleToggleActive}>
             <div className={`switch ${isActive ? 'on' : ''}`} style={{ transform: 'scale(0.8)', margin: '-2px 0' }}></div>
             Activate
           </div>
@@ -266,7 +274,9 @@ export default function SequenceEditor({ sequence, onBack }) {
           <button className="btn-dark"><span style={{ transform: 'rotate(90deg)' }}><Zap size={14} /></span> {nodes.length} steps &gt;&gt;</button>
           <div style={{ display: 'flex', gap: 12 }}>
             <button className="btn-dark"><span style={{ display: 'flex', gap: 2 }}>▶|◀</span> Collapse steps</button>
-            <button className="btn-white" onClick={handleSave}>Save changes</button>
+            <button className="btn-white" onClick={() => handleSave(nodes)} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save changes'}
+            </button>
           </div>
         </div>
 
