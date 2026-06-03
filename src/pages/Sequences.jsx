@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Search, Plus, Play, Pause, GitMerge, Mail, Globe, Clock, X, Save } from 'lucide-react';
+import { Search, Plus, Play, Pause, GitMerge, Mail, Globe, Clock, X, Save, Trash2, MoreVertical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useDataStore from '../store/useDataStore';
 import { generateFullSequence } from '../lib/gemini';
+import SequenceEditor from '../components/sequences/SequenceEditor';
 import './Sequences.css';
 
 const NODE_ICONS = {
@@ -28,7 +29,7 @@ function SequenceNode({ node, isLast }) {
 }
 
 export default function Sequences() {
-  const { sequences, createSequence } = useDataStore();
+  const { sequences, createSequence, deleteSequence } = useDataStore();
   const navigate = useNavigate();
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -128,6 +129,10 @@ export default function Sequences() {
     }
   };
 
+  if (selected) {
+    return <SequenceEditor sequence={selected} onBack={() => setSelected(null)} />;
+  }
+
   return (
     <div className="sequences-page">
       <div className="page-header-row">
@@ -151,10 +156,11 @@ export default function Sequences() {
                 key={seq.id} 
                 className={`seq-list-item ${selected?.id === seq.id ? 'selected' : ''}`}
                 onClick={() => setSelected(seq)}
+                style={{ position: 'relative' }}
               >
-                <div className="seq-list-top">
-                  <span className="seq-list-name">{seq.name}</span>
-                  {seq.status === 'active' ? <Play size={12} color="var(--success)" /> : <Pause size={12} color="var(--text-tertiary)" />}
+                <div className="seq-list-top" style={{ paddingRight: 24 }}>
+                  <span className="seq-list-name truncate" style={{ maxWidth: 200 }}>{seq.name}</span>
+                  {seq.status === 'active' || seq.status === 'Active' ? <Play size={12} color="var(--success)" /> : <Pause size={12} color="var(--text-tertiary)" />}
                 </div>
                 <div className="seq-list-meta">
                   <span>{seq.steps || 0} steps</span>
@@ -163,6 +169,19 @@ export default function Sequences() {
                   <span>•</span>
                   <span style={{ color: 'var(--accent-blue)' }}>{seq.reply_rate || 0}% reply</span>
                 </div>
+                <button 
+                  className="btn-icon" 
+                  style={{ position: 'absolute', top: 12, right: 8, background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm('Are you sure you want to permanently delete this campaign and cancel all pending enrollments?')) {
+                      deleteSequence(seq.id);
+                    }
+                  }}
+                  title="Delete Campaign"
+                >
+                  <Trash2 size={14} className="hover-danger" />
+                </button>
               </div>
             ))}
             {sequences.length === 0 && (

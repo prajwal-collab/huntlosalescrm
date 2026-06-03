@@ -214,6 +214,13 @@ export default function SequenceEditor({ sequence, onBack }) {
   };
 
   const handleSave = async (nodesToSave = nodes, statusToSave = isActive ? 'Active' : 'Draft') => {
+    if (statusToSave === 'Active') {
+      const confirmed = window.confirm(
+        `Warning: This campaign is currently Active${sequence.enrolled > 0 ? ` with ${sequence.enrolled} enrolled contacts` : ''}.\n\nAny edits you save will immediately update the template for future touchpoints. Do you want to proceed?`
+      );
+      if (!confirmed) return;
+    }
+    
     setIsSaving(true);
     try {
       await updateSequence(sequence.id, { nodes: nodesToSave, steps: nodesToSave.length, status: statusToSave });
