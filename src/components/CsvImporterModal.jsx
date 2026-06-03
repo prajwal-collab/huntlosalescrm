@@ -23,11 +23,29 @@ const COMPANY_FIELDS = [
 
 const LEAD_FIELDS = [
   { key: 'company_name', label: 'Company Name', required: true },
-  { key: 'contact_name', label: 'Contact Name' },
-  { key: 'email', label: 'Email Address' },
-  { key: 'designation', label: 'Job Title' },
-  { key: 'contact_linkedin', label: 'LinkedIn URL' },
+  { key: 'company_type', label: 'Company Type' },
+  { key: 'website', label: 'Website' },
+  { key: 'linkedin_url', label: 'Company LinkedIn' },
   { key: 'industry', label: 'Industry' },
+  { key: 'location', label: 'Location' },
+  { key: 'employee_size', label: 'Employee Size' },
+  { key: 'recruiter_team_size', label: 'Recruiter Team Size' },
+  { key: 'contact_name', label: 'Contact Name' },
+  { key: 'designation', label: 'Designation' },
+  { key: 'email', label: 'Email' },
+  { key: 'phone', label: 'Phone / WhatsApp' },
+  { key: 'contact_linkedin', label: 'Contact LinkedIn' },
+  { key: 'hiring_activity', label: 'Hiring Activity' },
+  { key: 'recruiter_hiring', label: 'Recruiter Hiring' },
+  { key: 'funding_activity', label: 'Funding Activity' },
+  { key: 'linkedin_activity', label: 'LinkedIn Activity' },
+  { key: 'job_posting_activity', label: 'Job Postings Active' },
+  { key: 'company_growth', label: 'Company Growth' },
+  { key: 'next_action', label: 'Next Action' },
+  { key: 'next_action_due', label: 'Due Date' },
+  { key: 'next_action_priority', label: 'Priority' },
+  { key: 'estimated_mrr', label: 'Est. MRR' },
+  { key: 'stage', label: 'Stage' }
 ];
 
 export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' }) {
@@ -126,18 +144,43 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
     // Transform CSV rows to CRM objects
     const mappedData = rows.map(row => {
       const obj = {};
+      
+      // Basic flat fields
       crmFields.forEach(field => {
         const csvHeader = mapping[field.key];
-        if (csvHeader && row[csvHeader]) {
+        if (csvHeader && row[csvHeader] && row[csvHeader].trim() !== '') {
           obj[field.key] = row[csvHeader];
-        } else {
-          obj[field.key] = null; // or default
         }
       });
-      // Add status/stages defaults
+      
+      if (type === 'leads') {
+        // Group signals into JSONB
+        obj.signals = {
+          hiring_activity: obj.hiring_activity === 'true' || obj.hiring_activity === 'yes',
+          recruiter_hiring: obj.recruiter_hiring === 'true' || obj.recruiter_hiring === 'yes',
+          funding_activity: obj.funding_activity === 'true' || obj.funding_activity === 'yes',
+          linkedin_activity: obj.linkedin_activity === 'true' || obj.linkedin_activity === 'yes',
+          job_posting_activity: obj.job_posting_activity === 'true' || obj.job_posting_activity === 'yes',
+          company_growth: obj.company_growth === 'true' || obj.company_growth === 'yes'
+        };
+        // Clean up raw flat signal keys so Supabase doesn't error on insert
+        delete obj.hiring_activity;
+        delete obj.recruiter_hiring;
+        delete obj.funding_activity;
+        delete obj.linkedin_activity;
+        delete obj.job_posting_activity;
+        delete obj.company_growth;
+        
+        // Ensure defaults for stage/MRR
+        if (!obj.stage) obj.stage = 'New Lead';
+        if (obj.estimated_mrr) obj.estimated_mrr = parseInt(obj.estimated_mrr) || 0;
+        if (obj.recruiter_team_size) obj.recruiter_team_size = parseInt(obj.recruiter_team_size) || 0;
+      }
+
+      // Add status/stages defaults for other types
       if (type === 'contacts') obj.status = 'New';
       if (type === 'companies') obj.status = 'Target';
-      if (type === 'leads') obj.stage = 'New Lead';
+      
       return obj;
     }).filter(obj => {
       if (type === 'leads') {
