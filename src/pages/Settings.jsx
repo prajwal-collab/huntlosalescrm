@@ -111,34 +111,7 @@ export default function Settings() {
               
               <EmailSettingsForm />
 
-              <div style={{ 
-                background: 'var(--bg-surface)', 
-                border: '1px solid var(--bg-border)', 
-                borderRadius: 'var(--radius-lg)', 
-                padding: 'var(--space-6)', 
-                maxWidth: 600,
-                marginBottom: 24
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 36, height: 36, background: '#ffffff', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--bg-border)' }}>
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google" style={{ width: 18 }} />
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>Google Workspace</h3>
-                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Sync meetings from Google Calendar and track emails from Gmail.</p>
-                    </div>
-                  </div>
-                  {useAuthStore.getState().session?.provider_token ? (
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button className="btn btn-ghost btn-sm" onClick={handleSyncGoogle}>Sync Now</button>
-                      <span className="badge badge-green">Connected</span>
-                    </div>
-                  ) : (
-                    <button className="btn btn-primary btn-sm" onClick={() => useAuthStore.getState().linkGoogle()}>Connect</button>
-                  )}
-                </div>
-              </div>
+
 
               <div style={{ 
                 background: 'var(--bg-surface)', 
