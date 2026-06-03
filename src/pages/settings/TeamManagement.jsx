@@ -57,7 +57,7 @@ export default function TeamManagement() {
       {inviteOpen && (
         <div className="invite-box" style={{ background: 'var(--bg-elevated)', padding: 16, borderRadius: 8, marginBottom: 24, border: '1px solid var(--accent-blue)' }}>
           <h3 className="text-sm font-semibold mb-3">Invite new member</h3>
-          <form className="flex gap-3" onSubmit={handleInvite}>
+          <form className="flex gap-3 items-center" onSubmit={handleInvite}>
             <input 
               type="email" 
               className="input-base" 
