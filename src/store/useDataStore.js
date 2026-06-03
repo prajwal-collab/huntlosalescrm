@@ -378,6 +378,20 @@ const useDataStore = create((set, get) => ({
         const { parseTemplate } = await import('../utils/personalization.js');
         const { sendSequenceEmail } = await import('../lib/resend.js');
         const { user } = useAuthStore.getState();
+        
+        // Fetch personal email settings for SDR
+        let emailSettings = null;
+        if (user) {
+          const { data } = await supabase
+            .from('user_email_settings')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+          emailSettings = data;
+        }
+
+        const senderName = emailSettings?.sender_name || user?.user_metadata?.full_name || 'Huntlo Sales';
+        const replyToEmail = emailSettings?.smtp_user || undefined;
 
         // Dispatch emails in parallel without blocking the UI completely
         Promise.all(enrolledLeads.map(async (lead) => {
@@ -391,7 +405,8 @@ const useDataStore = create((set, get) => ({
             toEmail: leadEmail,
             subject: parsedSubject,
             body: parsedContent,
-            fromName: user?.user_metadata?.full_name || 'Huntlo Sales',
+            fromName: senderName,
+            replyTo: replyToEmail,
           });
         })).catch(err => console.error('[Sequence Execution Error]:', err));
       } catch (err) {

@@ -56,9 +56,10 @@ function Steps({ current }) {
 
 // ── Main component ────────────────────────────────────────────
 export default function EnrollSequenceModal({ leads, onClose }) {
-  const { sequences, enrollLeadsInSequence } = useDataStore();
+  const { sequences, enrollLeadsInSequence, fetchEmailSettings } = useDataStore();
   const [step, setStep] = useState(0);
   const [selectedSeq, setSelectedSeq] = useState(null);
+  const [emailConfig, setEmailConfig] = useState(null);
   const [config, setConfig] = useState({
     startDate: new Date().toISOString().split('T')[0],
     sendTime: '09:00',
@@ -68,6 +69,15 @@ export default function EnrollSequenceModal({ leads, onClose }) {
   });
   const [enrolling, setEnrolling] = useState(false);
   const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    // Check if user has connected an email account
+    fetchEmailSettings().then(data => {
+      if (data && data.smtp_user) {
+        setEmailConfig(data);
+      }
+    });
+  }, [fetchEmailSettings]);
 
   const seqList = sequences || [];
   const chosenSeq = seqList.find(s => s.id === selectedSeq);
@@ -104,6 +114,7 @@ export default function EnrollSequenceModal({ leads, onClose }) {
             </div>
             <p className="enroll-success-sub">
               They've been added to <strong>{chosenSeq?.name}</strong> and will start receiving outreach on {config.startDate}.
+              {emailConfig && ` Sending from ${emailConfig.smtp_user}.`}
             </p>
             <button className="btn btn-primary btn-sm" style={{ marginTop: 8, gap: 6 }} onClick={onClose}>
               <Check size={14} /> Done
@@ -132,6 +143,15 @@ export default function EnrollSequenceModal({ leads, onClose }) {
           </div>
           <button className="drawer-close" onClick={onClose}><X size={16} /></button>
         </div>
+
+        {!emailConfig && (
+          <div style={{ padding: '12px 24px', background: 'rgba(239,68,68,0.1)', borderBottom: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <AlertCircle size={16} color="var(--danger)" />
+            <div style={{ fontSize: 13, color: 'var(--text-primary)' }}>
+              <strong>No email account connected!</strong> Go to <a href="/settings?tab=integrations" style={{ color: 'var(--accent-blue)', textDecoration: 'underline' }}>Settings &gt; Integrations</a> to connect your sender email.
+            </div>
+          </div>
+        )}
 
         {/* Steps */}
         <Steps current={step} />
