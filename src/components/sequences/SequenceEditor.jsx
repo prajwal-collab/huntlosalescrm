@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Mail, Star, Share, Zap, MoreHorizontal, ChevronUp, RefreshCw, Monitor, Smartphone, Check, X, Sparkles, Filter, Plus, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Mail, Star, Share, Zap, MoreHorizontal, ChevronUp, RefreshCw, Monitor, Smartphone, Check, X, Sparkles, Filter, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import useDataStore from '../../store/useDataStore';
 import { parseTemplate } from '../../utils/personalization';
 import './SequenceEditor.css';
@@ -13,6 +14,62 @@ function AIPopup({ onClose }) {
       <div className="ai-popup-actions">
         <button className="ai-popup-btn" onClick={onClose}>OK</button>
         <button className="ai-popup-btn" onClick={onClose}><X size={12} /></button>
+      </div>
+    </div>
+  );
+}
+
+// ── Add Contacts Modal ─────────────────────────
+function AddContactsModal({ onClose, onEnroll, leads }) {
+  const [selectedLeads, setSelectedLeads] = useState([]);
+  const [isEnrolling, setIsEnrolling] = useState(false);
+
+  const toggleLead = (id) => {
+    if (selectedLeads.includes(id)) {
+      setSelectedLeads(selectedLeads.filter(l => l !== id));
+    } else {
+      setSelectedLeads([...selectedLeads, id]);
+    }
+  };
+
+  const handleEnroll = async () => {
+    if (selectedLeads.length === 0) return;
+    setIsEnrolling(true);
+    await onEnroll(selectedLeads);
+    setIsEnrolling(false);
+    onClose();
+  };
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 }}>
+      <div style={{ background: '#1e1e1e', border: '1px solid #333', borderRadius: 8, padding: 24, width: 600, maxWidth: '90%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h3 style={{ margin: 0, fontSize: 18, color: '#fff' }}>Add Contacts to Sequence</h3>
+          <X size={20} color="#9ca3af" style={{ cursor: 'pointer' }} onClick={onClose} />
+        </div>
+        
+        <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #333', borderRadius: 4, marginBottom: 16 }}>
+          {leads.map(lead => (
+            <div key={lead.id} onClick={() => toggleLead(lead.id)} style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid #333', cursor: 'pointer', background: selectedLeads.includes(lead.id) ? 'rgba(234, 179, 8, 0.1)' : 'transparent' }}>
+              <input type="checkbox" checked={selectedLeads.includes(lead.id)} readOnly style={{ accentColor: '#eab308' }} />
+              <div>
+                <div style={{ color: '#fff', fontSize: 14 }}>{lead.name || lead.contact_name}</div>
+                <div style={{ color: '#9ca3af', fontSize: 12 }}>{lead.company_name} • {lead.email}</div>
+              </div>
+            </div>
+          ))}
+          {leads.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>No contacts found in CRM.</div>}
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ color: '#9ca3af', fontSize: 14 }}>{selectedLeads.length} contacts selected</span>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button className="btn-dark" onClick={onClose}>Cancel</button>
+            <button className="btn-yellow" disabled={selectedLeads.length === 0 || isEnrolling} onClick={handleEnroll}>
+              {isEnrolling ? 'Enrolling...' : 'Enroll Contacts'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -175,9 +232,12 @@ const SettingsIcon = ({ size, style }) => <svg style={style} width={size} height
 
 // ── Main Page Component ───────────────────────
 export default function SequenceEditor({ sequence, onBack }) {
-  const { updateSequence, leads } = useDataStore();
+  const { updateSequence, leads, fetchEmailSettings } = useDataStore();
+  const navigate = useNavigate();
   const [nodes, setNodes] = useState(sequence.nodes || []);
   const [showAIPopup, setShowAIPopup] = useState(true);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showAddContacts, setShowAddContacts] = useState(false);
   const [activeTab, setActiveTab] = useState('Editor');
   const [isActive, setIsActive] = useState(sequence.status === 'Active');
   const [isSaving, setIsSaving] = useState(false);
@@ -230,10 +290,32 @@ export default function SequenceEditor({ sequence, onBack }) {
     setTimeout(() => setIsSaving(false), 800);
   };
 
-  const handleToggleActive = () => {
+  const handleToggleActive = async () => {
+    if (!isActive) {
+      // Trying to activate, pre-flight check
+      const settings = await fetchEmailSettings();
+      if (!settings || !settings.smtp_user) {
+        setShowEmailModal(true);
+        return;
+      }
+    }
     const newStatus = !isActive;
     setIsActive(newStatus);
     handleSave(nodes, newStatus ? 'Active' : 'Draft');
+  };
+
+  const handleEnrollContacts = async (leadIds) => {
+    try {
+      // useDataStore function enrollLeadsInSequence is already implemented
+      await useDataStore.getState().enrollLeadsInSequence({
+        sequenceId: sequence.id,
+        leadIds: leadIds,
+        config: {}
+      });
+      // Optionally show a success toast here
+    } catch (err) {
+      console.error('Failed to enroll contacts:', err);
+    }
   };
 
   return (
@@ -250,7 +332,7 @@ export default function SequenceEditor({ sequence, onBack }) {
         <div className="seq-header-right">
           <button className="btn-dark"><Share size={14} /> Share</button>
           <button className="btn-dark"><Zap size={14} /> Workflows 0 <ChevronUp size={12} style={{ transform: 'rotate(180deg)' }} /></button>
-          <button className="btn-yellow">Add Contacts</button>
+          <button className="btn-yellow" onClick={() => setShowAddContacts(true)}>Add Contacts</button>
           <div className="btn-dark" onClick={handleToggleActive}>
             <div className={`switch ${isActive ? 'on' : ''}`} style={{ transform: 'scale(0.8)', margin: '-2px 0' }}></div>
             Activate
@@ -276,6 +358,8 @@ export default function SequenceEditor({ sequence, onBack }) {
 
       {/* Main Canvas Area */}
       <div className="seq-editor-canvas">
+        {activeTab === 'Editor' && (
+          <>
         
         <div className="seq-action-bar">
           <button className="btn-dark"><span style={{ transform: 'rotate(90deg)' }}><Zap size={14} /></span> {nodes.length} steps &gt;&gt;</button>
@@ -315,9 +399,83 @@ export default function SequenceEditor({ sequence, onBack }) {
             <Plus size={16} /> Add Step
           </button>
         </div>
+        </>
+        )}
+
+        {activeTab === 'Overview' && (
+          <div style={{ padding: 40, maxWidth: 1000, margin: '0 auto' }}>
+            <h2 style={{ color: '#fff', marginBottom: 24 }}>Campaign Overview</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+              <div className="seq-card" style={{ padding: 24 }}><div style={{ color: '#9ca3af', fontSize: 13 }}>Enrolled</div><div style={{ fontSize: 32, fontWeight: 600, color: '#fff', marginTop: 8 }}>{sequence.enrolled || 0}</div></div>
+              <div className="seq-card" style={{ padding: 24 }}><div style={{ color: '#9ca3af', fontSize: 13 }}>Active</div><div style={{ fontSize: 32, fontWeight: 600, color: '#fff', marginTop: 8 }}>{isActive ? sequence.enrolled || 0 : 0}</div></div>
+              <div className="seq-card" style={{ padding: 24 }}><div style={{ color: '#9ca3af', fontSize: 13 }}>Bounced</div><div style={{ fontSize: 32, fontWeight: 600, color: '#ef4444', marginTop: 8 }}>0%</div></div>
+              <div className="seq-card" style={{ padding: 24 }}><div style={{ color: '#9ca3af', fontSize: 13 }}>Reply Rate</div><div style={{ fontSize: 32, fontWeight: 600, color: '#22c55e', marginTop: 8 }}>{sequence.reply_rate || 0}%</div></div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'Contacts' && (
+          <div style={{ padding: 40, maxWidth: 1000, margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h2 style={{ color: '#fff' }}>Enrolled Contacts</h2>
+              <button className="btn-yellow" onClick={() => setShowAddContacts(true)}><Plus size={14} style={{ marginRight: 6 }}/> Add Contacts</button>
+            </div>
+            <div className="seq-card" style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>
+              No contacts enrolled in this sequence yet.
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'Settings' && (
+          <div style={{ padding: 40, maxWidth: 800, margin: '0 auto' }}>
+            <h2 style={{ color: '#fff', marginBottom: 24 }}>Sequence Settings</h2>
+            <div className="seq-card" style={{ padding: 24 }}>
+              <div className="editor-field" style={{ marginBottom: 24 }}>
+                <label>Sequence Name</label>
+                <input className="dark-input" value={sequence.name} readOnly />
+              </div>
+              <div className="editor-field" style={{ marginBottom: 24 }}>
+                <label>Sending Schedule</label>
+                <select className="dark-input">
+                  <option>Weekdays 9:00 AM - 5:00 PM</option>
+                  <option>Everyday 9:00 AM - 5:00 PM</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {showAIPopup && <AIPopup onClose={() => setShowAIPopup(false)} />}
+      
+      {showAddContacts && (
+        <AddContactsModal 
+          onClose={() => setShowAddContacts(false)} 
+          onEnroll={handleEnrollContacts} 
+          leads={leads} 
+        />
+      )}
+      
+      {showEmailModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 }}>
+          <div style={{ background: '#1e1e1e', border: '1px solid #333', borderRadius: 8, padding: 24, width: 400, maxWidth: '90%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ padding: 10, background: 'rgba(234, 179, 8, 0.1)', borderRadius: '50%' }}>
+                <AlertTriangle color="#eab308" size={24} />
+              </div>
+              <h3 style={{ margin: 0, fontSize: 18, color: '#fff' }}>Email Connection Required</h3>
+            </div>
+            <p style={{ color: '#9ca3af', fontSize: 14, lineHeight: 1.5, marginBottom: 24 }}>
+              You cannot launch an outbound campaign without connecting your mailbox. Please configure your Personal SMTP settings first.
+            </p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <button className="btn-dark" onClick={() => setShowEmailModal(false)}>Cancel</button>
+              <button className="btn-yellow" onClick={() => navigate('/settings')}>Go to Settings</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
