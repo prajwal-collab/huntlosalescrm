@@ -133,8 +133,9 @@ export default function Sidebar() {
             </div>
           )}
           {!sidebarCollapsed && (
-            <button className="sign-out-btn" onClick={(e) => { e.stopPropagation(); handleSignOut(); }} title="Sign out">
+            <button className="sign-out-btn" onClick={(e) => { e.stopPropagation(); handleSignOut(); }} title="Sign out" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)' }}>
               <LogOut size={14} />
+              <span style={{ fontSize: 12, fontWeight: 500 }}>Logout</span>
             </button>
           )}
         </div>

@@ -1,0 +1,6 @@
+Company Name,Company Type,Website,LinkedIn URL,Industry,Location,Employee Size,Recruiter Team Size,Contact Name,Designation,Email,Phone,Hiring Activity,Recruiter Hiring,Funding Activity,LinkedIn Activity,Job Postings Active,Company Growth,Next Action,Due Date,Priority,Est. MRR,Stage
+Acme Corp,SaaS,acme.com,linkedin.com/acme,Software,San Francisco,100-500,10,John Doe,VP of Sales,john.doe@acme.com,555-0100,true,false,true,true,true,true,Send outbound sequence,2026-06-10,High,5000,New
+Stark Industries,Manufacturing,stark.com,linkedin.com/stark,Defense,New York,1000+,50,Tony Stark,CEO,tony@stark.com,555-0101,true,true,false,true,false,false,Enroll in sequence,2026-06-12,Medium,15000,New
+Wayne Enterprises,Conglomerate,wayne.com,linkedin.com/wayne,Various,Gotham,1000+,40,Bruce Wayne,Director,bruce@wayne.com,555-0102,false,false,false,true,true,true,Enroll in sequence,2026-06-15,High,20000,New
+Oscorp,BioTech,oscorp.com,linkedin.com/oscorp,BioTech,New York,500-1000,20,Norman Osborn,Head of Talent,norman@oscorp.com,555-0103,true,true,true,true,true,true,Enroll in sequence,2026-06-20,High,10000,New
+Daily Bugle,Media,dailybugle.com,linkedin.com/db,Publishing,New York,50-200,5,J. Jonah Jameson,Editor in Chief,jjj@dailybugle.com,555-0104,false,false,false,true,true,false,Enroll in sequence,2026-06-22,Low,1000,New
