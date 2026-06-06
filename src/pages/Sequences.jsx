@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, Play, Pause, GitMerge, Mail, Globe, Clock, X, Save, Trash2, MoreVertical, BarChart2, Activity, Users } from 'lucide-react';
+import { Search, Plus, Play, Pause, GitMerge, Mail, Globe, Clock, X, Save, Trash2, MoreVertical, BarChart2, Activity, Users, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useDataStore from '../store/useDataStore';
 import { generateFullSequence } from '../lib/gemini';
