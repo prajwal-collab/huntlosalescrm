@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, Play, Pause, GitMerge, Mail, Globe, Clock, X, Save, Trash2, MoreVertical, BarChart2, Activity, Users, Zap } from 'lucide-react';
+import { Search, Plus, Play, Pause, GitMerge, Mail, Globe, Clock, X, Save, Trash2, MoreVertical, BarChart2, Activity, Users, Zap, Sparkles, FileText, LayoutTemplate, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useDataStore from '../store/useDataStore';
 import { generateFullSequence } from '../lib/gemini';
@@ -194,59 +194,116 @@ export default function Sequences() {
         </div>
 
         {isAdding && (
-          <div className="sequence-builder animate-slide-right" style={{ borderLeft: '1px solid var(--bg-border)', position: 'absolute', right: 0, top: 0, bottom: 0, width: 450, background: 'var(--bg-surface)', zIndex: 10, boxShadow: 'var(--shadow-lg)' }}>
-            <div className="seq-builder-header" style={{ marginBottom: 12, padding: 24, paddingBottom: 16, borderBottom: '1px solid var(--bg-border)' }}>
-              <div>
-                <h2 className="panel-title" style={{ fontSize: 18 }}>Create Sequence</h2>
-                <p className="page-big-sub" style={{ fontSize: 13, marginTop: 4 }}>Configure a new automated outreach workflow.</p>
-              </div>
-              <button className="drawer-close" style={{ position: 'absolute', top: 24, right: 24 }} onClick={() => setIsAdding(false)}><X size={16}/></button>
-            </div>
-            <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '24px' }}>
-              {error && (
-                <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.08)', color: 'var(--danger)', fontSize: 13, display: 'flex', gap: 8 }}>
-                  <X size={14} /> {error}
+          <div className="sequence-builder animate-slide-right" style={{ borderLeft: '1px solid var(--bg-border)', position: 'absolute', right: 0, top: 0, bottom: 0, width: 600, maxWidth: '100%', background: 'var(--bg-surface)', zIndex: 10, boxShadow: 'var(--shadow-xl)', display: 'flex', flexDirection: 'column' }}>
+            <div className="seq-builder-header" style={{ padding: '32px 40px 24px', borderBottom: '1px solid var(--bg-border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, letterSpacing: '-0.5px' }}>Create Workflow</h2>
+                  <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Configure a new automated outreach campaign.</p>
                 </div>
-              )}
-              <div className="form-group">
-                <label className="label" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>Sequence Name *</label>
-                <input className="input-base" autoFocus required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Outbound Q3 Founders" style={{ background: 'var(--bg-body)' }} />
+                <button style={{ background: 'var(--bg-hover)', border: 'none', width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-secondary)' }} onClick={() => setIsAdding(false)}><X size={18}/></button>
               </div>
-              <div className="form-group">
-                <label className="label" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>Template</label>
-                <select className="input-base" value={formData.template} onChange={e => {
-                  const val = e.target.value;
-                  setFormData({...formData, template: val, name: val !== 'Blank Sequence' && val !== 'Generate with AI' ? val : formData.name});
-                }} style={{ background: 'var(--bg-body)' }}>
-                  {TEMPLATES.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              
-              {formData.template === 'Generate with AI' && (
-                <div style={{ padding: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="label" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>Target Persona</label>
-                    <input className="input-base" value={formData.persona || ''} onChange={e => setFormData({...formData, persona: e.target.value})} placeholder="e.g. VP of Engineering" style={{ background: '#ffffff' }} />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="label" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>Key Pain Point / Value Prop</label>
-                    <textarea className="input-base" rows={2} value={formData.painPoint || ''} onChange={e => setFormData({...formData, painPoint: e.target.value})} placeholder="e.g. Reducing cloud costs and improving deployment speeds" style={{ background: '#ffffff', resize: 'vertical' }} />
-                  </div>
+            </div>
+
+            <form onSubmit={handleAdd} style={{ flex: 1, overflowY: 'auto', padding: '32px 40px', display: 'flex', flexDirection: 'column', gap: 32 }}>
+              {error && (
+                <div style={{ padding: 16, borderRadius: 8, background: 'var(--danger-glow)', color: 'var(--danger)', fontSize: 13, display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <X size={16} /> {error}
                 </div>
               )}
 
-              <div className="form-group">
-                <label className="label" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>Primary Channel</label>
-                <select className="input-base" value={formData.channel} onChange={e => setFormData({...formData, channel: e.target.value})} style={{ background: 'var(--bg-body)' }}>
-                  <option value="Multi-channel">Multi-channel</option>
-                  <option value="Email">Email Only</option>
-                  <option value="LinkedIn">LinkedIn Only</option>
-                </select>
+              {/* Template Selection */}
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', marginBottom: 16 }}>Select Framework</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  
+                  {/* AI Generator Card */}
+                  <div 
+                    onClick={() => setFormData({...formData, template: 'Generate with AI', name: 'Generate with AI'})}
+                    style={{ padding: 20, borderRadius: 12, border: formData.template === 'Generate with AI' ? '2px solid var(--accent-indigo)' : '1px solid var(--border-color)', background: formData.template === 'Generate with AI' ? '#f5f3ff' : 'var(--bg-surface)', cursor: 'pointer', transition: 'all 0.2s', position: 'relative', overflow: 'hidden' }}
+                  >
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--accent-indigo)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                      <Sparkles size={20} />
+                    </div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>AI Campaign Generator</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>Let Huntlo AI build a hyper-personalized workflow for your persona.</div>
+                  </div>
+
+                  {/* Blank Card */}
+                  <div 
+                    onClick={() => setFormData({...formData, template: 'Blank Sequence', name: ''})}
+                    style={{ padding: 20, borderRadius: 12, border: formData.template === 'Blank Sequence' ? '2px solid var(--accent-blue)' : '1px solid var(--border-color)', background: formData.template === 'Blank Sequence' ? 'var(--accent-blue-muted)' : 'var(--bg-surface)', cursor: 'pointer', transition: 'all 0.2s' }}
+                  >
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--bg-hover)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                      <FileText size={20} />
+                    </div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>Start from Scratch</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>Build your own custom multi-channel workflow step-by-step.</div>
+                  </div>
+
+                </div>
+
+                <div style={{ marginTop: 24 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 8 }}>Or choose a proven SaaS framework:</label>
+                  <select className="input-base" style={{ background: 'var(--bg-hover)', border: 'none', padding: '12px 16px', borderRadius: 8, fontSize: 14, color: 'var(--text-primary)', width: '100%', outline: 'none', cursor: 'pointer' }} value={formData.template} onChange={e => {
+                    const val = e.target.value;
+                    setFormData({...formData, template: val, name: val !== 'Blank Sequence' && val !== 'Generate with AI' ? val : formData.name});
+                  }}>
+                    <option value="" disabled>Select a proven framework...</option>
+                    {TEMPLATES.filter(t => t !== 'Blank Sequence' && t !== 'Generate with AI').map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-                <button type="button" className="btn btn-ghost w-full" onClick={() => setIsAdding(false)} disabled={isGenerating}>Cancel</button>
-                <button type="submit" className="btn btn-primary w-full" disabled={isGenerating}>
-                  {isGenerating ? 'Generating with AI...' : 'Create Workflow'}
+
+              {/* Dynamic Inputs */}
+              {formData.template === 'Generate with AI' ? (
+                <div style={{ padding: 24, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
+                      <Users size={14} color="var(--accent-indigo)" /> Target Persona
+                    </label>
+                    <input className="input-base" style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '12px 16px', borderRadius: 8, fontSize: 14 }} autoFocus required value={formData.persona || ''} onChange={e => setFormData({...formData, persona: e.target.value})} placeholder="e.g. VP of Engineering" />
+                  </div>
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
+                      <Activity size={14} color="var(--accent-indigo)" /> Key Pain Point / Value Prop
+                    </label>
+                    <textarea className="input-base" style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '12px 16px', borderRadius: 8, fontSize: 14, resize: 'vertical', minHeight: 80 }} required rows={3} value={formData.painPoint || ''} onChange={e => setFormData({...formData, painPoint: e.target.value})} placeholder="e.g. Reducing cloud costs and improving deployment speeds" />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', marginBottom: 12 }}>Sequence Name *</label>
+                  <input className="input-base" style={{ padding: '12px 16px', borderRadius: 8, fontSize: 14, background: 'var(--bg-surface)' }} autoFocus required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Outbound Q3 Founders" />
+                </div>
+              )}
+
+              {/* Channel Toggles */}
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', marginBottom: 12 }}>Primary Channel</label>
+                <div style={{ display: 'flex', gap: 12, background: 'var(--bg-hover)', padding: 4, borderRadius: 10 }}>
+                  {['Email', 'LinkedIn', 'Multi-channel'].map(channel => (
+                    <div 
+                      key={channel}
+                      onClick={() => setFormData({...formData, channel})}
+                      style={{ flex: 1, padding: '10px 0', textAlign: 'center', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s', background: formData.channel === channel ? 'var(--bg-surface)' : 'transparent', color: formData.channel === channel ? 'var(--text-primary)' : 'var(--text-secondary)', boxShadow: formData.channel === channel ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}
+                    >
+                      {channel === 'Email' ? 'Email Only' : channel}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 16, marginTop: 'auto', paddingTop: 24, borderTop: '1px solid var(--border-color)' }}>
+                <button type="button" style={{ flex: 1, padding: '14px 0', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }} onClick={() => setIsAdding(false)} disabled={isGenerating}>Cancel</button>
+                <button type="submit" style={{ flex: 2, padding: '14px 0', background: formData.template === 'Generate with AI' ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : 'var(--accent-blue)', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} disabled={isGenerating}>
+                  {isGenerating ? (
+                    <><RefreshCw size={16} className="spin" /> Generating Magic...</>
+                  ) : formData.template === 'Generate with AI' ? (
+                    <><Sparkles size={16} /> Generate AI Campaign</>
+                  ) : (
+                    'Create Workflow'
+                  )}
                 </button>
               </div>
             </form>
