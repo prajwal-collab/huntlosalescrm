@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Star, Share, Zap, MoreHorizontal, ChevronUp, RefreshCw, Monitor, Smartphone, Check, X, Sparkles, Filter, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Mail, Star, Share, Zap, MoreHorizontal, ChevronUp, ChevronRight, RefreshCw, Monitor, Smartphone, Check, X, Sparkles, Filter, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import useDataStore from '../../store/useDataStore';
 import { parseTemplate } from '../../utils/personalization';
 import './SequenceEditor.css';
@@ -404,12 +404,52 @@ export default function SequenceEditor({ sequence, onBack }) {
 
         {activeTab === 'Overview' && (
           <div style={{ padding: 40, maxWidth: 1000, margin: '0 auto' }}>
-            <h2 style={{ color: '#fff', marginBottom: 24 }}>Campaign Overview</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-              <div className="seq-card" style={{ padding: 24 }}><div style={{ color: '#9ca3af', fontSize: 13 }}>Enrolled</div><div style={{ fontSize: 32, fontWeight: 600, color: '#fff', marginTop: 8 }}>{sequence.enrolled || 0}</div></div>
-              <div className="seq-card" style={{ padding: 24 }}><div style={{ color: '#9ca3af', fontSize: 13 }}>Active</div><div style={{ fontSize: 32, fontWeight: 600, color: '#fff', marginTop: 8 }}>{isActive ? sequence.enrolled || 0 : 0}</div></div>
-              <div className="seq-card" style={{ padding: 24 }}><div style={{ color: '#9ca3af', fontSize: 13 }}>Bounced</div><div style={{ fontSize: 32, fontWeight: 600, color: '#ef4444', marginTop: 8 }}>0%</div></div>
-              <div className="seq-card" style={{ padding: 24 }}><div style={{ color: '#9ca3af', fontSize: 13 }}>Reply Rate</div><div style={{ fontSize: 32, fontWeight: 600, color: '#22c55e', marginTop: 8 }}>{sequence.reply_rate || 0}%</div></div>
+            <h2 style={{ color: 'var(--text-primary)', marginBottom: 32, fontSize: 24, fontWeight: 700 }}>Campaign Overview</h2>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 40, background: 'var(--bg-elevated)', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid var(--border-color)' }}>
+              
+              <div style={{ flex: 1, textAlign: 'center' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, fontWeight: 600 }}>Enrolled</div>
+                <div style={{ fontSize: 42, fontWeight: 800, color: 'var(--text-primary)' }}>{sequence.enrolled || 0}</div>
+              </div>
+              <ChevronRight size={32} color="var(--border-color)" />
+              
+              <div style={{ flex: 1, textAlign: 'center' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, fontWeight: 600 }}>Active</div>
+                <div style={{ fontSize: 42, fontWeight: 800, color: 'var(--text-primary)' }}>{isActive ? sequence.enrolled || 0 : 0}</div>
+              </div>
+              <ChevronRight size={32} color="var(--border-color)" />
+
+              <div style={{ flex: 1, textAlign: 'center' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, fontWeight: 600 }}>Bounced</div>
+                <div style={{ fontSize: 42, fontWeight: 800, color: 'var(--danger)' }}>0%</div>
+              </div>
+              <ChevronRight size={32} color="var(--border-color)" />
+
+              <div style={{ flex: 1, textAlign: 'center' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, fontWeight: 600 }}>Reply Rate</div>
+                <div style={{ fontSize: 42, fontWeight: 800, color: 'var(--success)' }}>{sequence.reply_rate || 0}%</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
+              <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: 24, border: '1px solid var(--border-color)' }}>
+                <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Recent Activity</h3>
+                <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-tertiary)' }}>
+                  {isActive ? 'Campaign is warming up. Activity will appear here soon.' : 'Activate the campaign to start logging activity.'}
+                </div>
+              </div>
+              <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: 24, border: '1px solid var(--border-color)' }}>
+                <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Sequence Health</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success)' }}></div>
+                  <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Deliverability: Excellent</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success)' }}></div>
+                  <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Spam Score: Safe</span>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -417,10 +457,10 @@ export default function SequenceEditor({ sequence, onBack }) {
         {activeTab === 'Contacts' && (
           <div style={{ padding: 40, maxWidth: 1000, margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <h2 style={{ color: '#fff' }}>Enrolled Contacts</h2>
+              <h2 style={{ color: 'var(--text-primary)', fontSize: 24, fontWeight: 700 }}>Enrolled Contacts</h2>
               <button className="btn-yellow" onClick={() => setShowAddContacts(true)}><Plus size={14} style={{ marginRight: 6 }}/> Add Contacts</button>
             </div>
-            <div className="seq-card" style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>
+            <div className="seq-card" style={{ padding: 40, textAlign: 'center', color: 'var(--text-tertiary)', background: 'var(--bg-elevated)', borderRadius: 12, border: '1px solid var(--border-color)' }}>
               No contacts enrolled in this sequence yet.
             </div>
           </div>
@@ -428,15 +468,15 @@ export default function SequenceEditor({ sequence, onBack }) {
 
         {activeTab === 'Settings' && (
           <div style={{ padding: 40, maxWidth: 800, margin: '0 auto' }}>
-            <h2 style={{ color: '#fff', marginBottom: 24 }}>Sequence Settings</h2>
-            <div className="seq-card" style={{ padding: 24 }}>
+            <h2 style={{ color: 'var(--text-primary)', fontSize: 24, fontWeight: 700, marginBottom: 24 }}>Sequence Settings</h2>
+            <div style={{ padding: 32, background: 'var(--bg-elevated)', borderRadius: 12, border: '1px solid var(--border-color)' }}>
               <div className="editor-field" style={{ marginBottom: 24 }}>
-                <label>Sequence Name</label>
-                <input className="dark-input" value={sequence.name} readOnly />
+                <label style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Sequence Name</label>
+                <input className="input-base" value={sequence.name} readOnly style={{ marginTop: 8 }} />
               </div>
               <div className="editor-field" style={{ marginBottom: 24 }}>
-                <label>Sending Schedule</label>
-                <select className="dark-input">
+                <label style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Sending Schedule</label>
+                <select className="input-base" style={{ marginTop: 8 }}>
                   <option>Weekdays 9:00 AM - 5:00 PM</option>
                   <option>Everyday 9:00 AM - 5:00 PM</option>
                 </select>
@@ -458,24 +498,79 @@ export default function SequenceEditor({ sequence, onBack }) {
       )}
       
       {showEmailModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 }}>
-          <div style={{ background: '#1e1e1e', border: '1px solid #333', borderRadius: 8, padding: 24, width: 400, maxWidth: '90%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <div style={{ padding: 10, background: 'rgba(234, 179, 8, 0.1)', borderRadius: '50%' }}>
-                <AlertTriangle color="#eab308" size={24} />
-              </div>
-              <h3 style={{ margin: 0, fontSize: 18, color: '#fff' }}>Email Connection Required</h3>
+        <InlineEmailConfigModal 
+          onClose={() => setShowEmailModal(false)} 
+          onSuccess={() => {
+            setShowEmailModal(false);
+            const newStatus = !isActive;
+            setIsActive(newStatus);
+            handleSave(nodes, newStatus ? 'Active' : 'Draft');
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Inline Email Config Modal ─────────────────────────
+function InlineEmailConfigModal({ onClose, onSuccess }) {
+  const { saveEmailSettings } = useDataStore();
+  const [formData, setFormData] = useState({ smtp_host: 'smtp.gmail.com', smtp_port: 587, smtp_user: '', smtp_pass: '' });
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!formData.smtp_user || !formData.smtp_pass) return;
+    setIsSaving(true);
+    try {
+      await saveEmailSettings(formData);
+      onSuccess();
+    } catch (err) {
+      console.error(err);
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+      <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', borderRadius: 16, padding: 32, width: 500, maxWidth: '90%', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+          <div style={{ padding: 12, background: 'rgba(234, 179, 8, 0.1)', borderRadius: '50%' }}>
+            <Mail color="#eab308" size={24} />
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>Connect Mailbox</h3>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Required to activate campaigns</div>
+          </div>
+        </div>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 32 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Email Address</label>
+            <input className="input-base" placeholder="you@company.com" value={formData.smtp_user} onChange={e => setFormData({...formData, smtp_user: e.target.value})} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>App Password</label>
+            <input className="input-base" type="password" placeholder="••••••••••••" value={formData.smtp_pass} onChange={e => setFormData({...formData, smtp_pass: e.target.value})} />
+          </div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>SMTP Host</label>
+              <input className="input-base" value={formData.smtp_host} onChange={e => setFormData({...formData, smtp_host: e.target.value})} />
             </div>
-            <p style={{ color: '#9ca3af', fontSize: 14, lineHeight: 1.5, marginBottom: 24 }}>
-              You cannot launch an outbound campaign without connecting your mailbox. Please configure your Personal SMTP settings first.
-            </p>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-              <button className="btn-dark" onClick={() => setShowEmailModal(false)}>Cancel</button>
-              <button className="btn-yellow" onClick={() => navigate('/settings')}>Go to Settings</button>
+            <div style={{ width: 100 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Port</label>
+              <input className="input-base" type="number" value={formData.smtp_port} onChange={e => setFormData({...formData, smtp_port: parseInt(e.target.value)})} />
             </div>
           </div>
         </div>
-      )}
+
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+          <button className="btn-white" onClick={onClose}>Cancel</button>
+          <button className="btn-yellow" disabled={isSaving || !formData.smtp_user || !formData.smtp_pass} onClick={handleSubmit} style={{ padding: '8px 20px' }}>
+            {isSaving ? 'Connecting...' : 'Connect & Activate'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

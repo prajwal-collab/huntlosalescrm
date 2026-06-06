@@ -110,10 +110,6 @@ export default function Sidebar() {
 
       {/* Bottom */}
       <div className="sidebar-bottom">
-        <button className="nav-item" onClick={toggleTheme} title="Toggle Light/Dark Mode">
-          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-          {!sidebarCollapsed && <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>}
-        </button>
         <button className="nav-item" onClick={() => navigate('/settings?tab=notifications')}>
           <Bell size={16} />
           {!sidebarCollapsed && <span>Notifications</span>}
