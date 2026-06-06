@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, Play, Pause, GitMerge, Mail, Globe, Clock, X, Save, Trash2, MoreVertical } from 'lucide-react';
+import { Search, Plus, Play, Pause, GitMerge, Mail, Globe, Clock, X, Save, Trash2, MoreVertical, BarChart2, Activity, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useDataStore from '../store/useDataStore';
 import { generateFullSequence } from '../lib/gemini';
@@ -252,6 +252,129 @@ export default function Sequences() {
             </form>
           </div>
         )}
+
+        {!isAdding && !selected && (
+          <SequenceHubDashboard sequences={sequences} onCreateClick={() => setIsAdding(true)} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Global Sequence Hub Dashboard ─────────────────────────
+function SequenceHubDashboard({ sequences, onCreateClick }) {
+  const activeCount = sequences.filter(s => s.status === 'active' || s.status === 'Active').length;
+  const totalEnrolled = sequences.reduce((acc, s) => acc + (s.enrolled || 0), 0);
+  const avgReplyRate = sequences.length > 0 
+    ? (sequences.reduce((acc, s) => acc + (s.reply_rate || 0), 0) / sequences.length).toFixed(1) 
+    : 0;
+
+  if (sequences.length === 0) {
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 60, background: 'var(--bg-body)' }}>
+        <div style={{ textAlign: 'center', maxWidth: 480 }}>
+          <div style={{ width: 80, height: 80, background: 'var(--bg-elevated)', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', border: '1px solid var(--border-color)' }}>
+            <Zap size={40} color="var(--accent-blue)" />
+          </div>
+          <h2 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 12, letterSpacing: '-0.5px' }}>Sequence Engine</h2>
+          <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 32 }}>
+            Your outbound automation control center. Build multi-channel campaigns, leverage AI for personalization, and track real-time deliverability across your entire pipeline.
+          </p>
+          <button className="btn btn-primary" onClick={onCreateClick} style={{ padding: '12px 24px', fontSize: 15, borderRadius: 8 }}>
+            <Plus size={16} /> Create Your First Workflow
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', padding: 40, background: 'var(--bg-body)' }}>
+      <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+        <h2 style={{ color: 'var(--text-primary)', marginBottom: 32, fontSize: 24, fontWeight: 700 }}>Global Sequence Hub</h2>
+        
+        {/* Global Metrics Ribbon */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 40 }}>
+          <div style={{ background: 'var(--bg-elevated)', padding: 24, borderRadius: 12, border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Zap size={16} color="var(--accent-blue)" />
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Active Campaigns</div>
+            </div>
+            <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--text-primary)' }}>{activeCount}</div>
+          </div>
+          <div style={{ background: 'var(--bg-elevated)', padding: 24, borderRadius: 12, border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Users size={16} color="var(--text-secondary)" />
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Total Enrolled</div>
+            </div>
+            <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--text-primary)' }}>{totalEnrolled}</div>
+          </div>
+          <div style={{ background: 'var(--bg-elevated)', padding: 24, borderRadius: 12, border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Mail size={16} color="var(--text-secondary)" />
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Emails Sent (Today)</div>
+            </div>
+            <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--text-primary)' }}>0</div>
+          </div>
+          <div style={{ background: 'var(--bg-elevated)', padding: 24, borderRadius: 12, border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Activity size={16} color="var(--success)" />
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Global Reply Rate</div>
+            </div>
+            <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--success)' }}>{avgReplyRate}%</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
+          {/* Recent Global Activity */}
+          <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: 24, border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Activity size={18} /> Global Activity Feed
+            </h3>
+            {activeCount === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-tertiary)' }}>
+                No activity yet. Activate a campaign to start logging events.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* Placeholder Activity Items */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, paddingBottom: 16, borderBottom: '1px solid var(--border-color)' }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success)', marginTop: 6 }}></div>
+                  <div>
+                    <div style={{ fontSize: 14, color: 'var(--text-primary)', marginBottom: 4 }}><strong>John Doe</strong> opened Step 1 email from <span style={{ color: 'var(--accent-blue)' }}>{sequences[0]?.name}</span></div>
+                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>2 minutes ago</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--warning)', marginTop: 6 }}></div>
+                  <div>
+                    <div style={{ fontSize: 14, color: 'var(--text-primary)', marginBottom: 4 }}><strong>Sarah Smith</strong> clicked a link in <span style={{ color: 'var(--accent-blue)' }}>{sequences[0]?.name}</span></div>
+                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>1 hour ago</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Actions / Getting Started */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ background: 'linear-gradient(135deg, #1b66f2 0%, #0d47a1 100%)', borderRadius: 12, padding: 24, color: '#fff', boxShadow: '0 10px 20px rgba(27,102,242,0.2)' }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <BarChart2 size={20} />
+                Scale Outbound
+              </h3>
+              <p style={{ fontSize: 13, lineHeight: 1.5, opacity: 0.9, marginBottom: 16 }}>
+                Create a new sequence to target a different persona or industry vertical.
+              </p>
+              <button 
+                onClick={onCreateClick}
+                style={{ background: '#fff', color: '#1b66f2', border: 'none', padding: '8px 16px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <Plus size={14} /> New Workflow
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
