@@ -42,27 +42,27 @@ function AddContactsModal({ onClose, onEnroll, leads }) {
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 }}>
-      <div style={{ background: '#1e1e1e', border: '1px solid #333', borderRadius: 8, padding: 24, width: 600, maxWidth: '90%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 12, padding: 24, width: 600, maxWidth: '90%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-xl)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ margin: 0, fontSize: 18, color: '#fff' }}>Add Contacts to Sequence</h3>
-          <X size={20} color="#9ca3af" style={{ cursor: 'pointer' }} onClick={onClose} />
+          <h3 style={{ margin: 0, fontSize: 18, color: 'var(--text-primary)', fontWeight: 600 }}>Add Contacts to Sequence</h3>
+          <X size={20} color="var(--text-secondary)" style={{ cursor: 'pointer' }} onClick={onClose} />
         </div>
         
-        <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #333', borderRadius: 4, marginBottom: 16 }}>
+        <div style={{ flex: 1, overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: 8, marginBottom: 16, background: 'var(--bg-body)' }}>
           {leads.map(lead => (
-            <div key={lead.id} onClick={() => toggleLead(lead.id)} style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid #333', cursor: 'pointer', background: selectedLeads.includes(lead.id) ? 'rgba(234, 179, 8, 0.1)' : 'transparent' }}>
-              <input type="checkbox" checked={selectedLeads.includes(lead.id)} readOnly style={{ accentColor: '#eab308' }} />
+            <div key={lead.id} onClick={() => toggleLead(lead.id)} style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-color)', cursor: 'pointer', background: selectedLeads.includes(lead.id) ? 'var(--warning-glow)' : 'transparent' }}>
+              <input type="checkbox" checked={selectedLeads.includes(lead.id)} readOnly style={{ accentColor: 'var(--warning)' }} />
               <div>
-                <div style={{ color: '#fff', fontSize: 14 }}>{lead.name || lead.contact_name}</div>
-                <div style={{ color: '#9ca3af', fontSize: 12 }}>{lead.company_name} • {lead.email}</div>
+                <div style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 500 }}>{lead.name || lead.contact_name}</div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{lead.company_name} • {lead.email}</div>
               </div>
             </div>
           ))}
-          {leads.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: '#9ca3af' }}>No contacts found in CRM.</div>}
+          {leads.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-secondary)' }}>No contacts found in CRM.</div>}
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ color: '#9ca3af', fontSize: 14 }}>{selectedLeads.length} contacts selected</span>
+          <span style={{ color: 'var(--text-secondary)', fontSize: 14 }}>{selectedLeads.length} contacts selected</span>
           <div style={{ display: 'flex', gap: 12 }}>
             <button className="btn-dark" onClick={onClose}>Cancel</button>
             <button className="btn-yellow" disabled={selectedLeads.length === 0 || isEnrolling} onClick={handleEnroll}>
@@ -108,7 +108,7 @@ function DualPaneCard({ node, index, updateNode, deleteNode, leads }) {
           <div style={{ position: 'relative' }}>
             <MoreHorizontal size={16} style={{ cursor: 'pointer' }} onClick={() => setShowOptions(!showOptions)} />
             {showOptions && (
-              <div style={{ position: 'absolute', right: 0, top: 24, background: '#1e1e1e', border: '1px solid #333', borderRadius: 4, padding: 4, zIndex: 10 }}>
+              <div style={{ position: 'absolute', right: 0, top: 24, background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 8, padding: 4, zIndex: 10, boxShadow: 'var(--shadow-md)' }}>
                 <button 
                   className="btn-dark" 
                   style={{ color: '#ef4444', border: 'none', width: '100%', justifyContent: 'flex-start' }}
@@ -132,8 +132,8 @@ function DualPaneCard({ node, index, updateNode, deleteNode, leads }) {
         </div>
         <div style={{ flex: 1 }} />
         <div className="btn-dark" style={{ border: 'none', background: 'transparent' }}>Check email <ChevronUp size={12} style={{ transform: 'rotate(180deg)' }} /></div>
-        <EyeIcon size={16} style={{ cursor: 'pointer', color: '#9ca3af' }} />
-        <SettingsIcon size={16} style={{ cursor: 'pointer', color: '#9ca3af' }} />
+        <EyeIcon size={16} style={{ cursor: 'pointer', color: 'var(--text-secondary)' }} />
+        <SettingsIcon size={16} style={{ cursor: 'pointer', color: 'var(--text-secondary)' }} />
       </div>
 
       <div className="seq-card-body">
@@ -184,15 +184,15 @@ function DualPaneCard({ node, index, updateNode, deleteNode, leads }) {
           
           <div className="preview-controls">
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 12, color: '#9ca3af' }}>Select contact</label>
+              <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>Select contact</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 <select className="dark-input" value={selectedLeadId} onChange={e => setSelectedLeadId(e.target.value)}>
                   {availableLeads.map(l => (
                     <option key={l.id} value={l.id}>{l.name || l.contact_name} ({l.company_name})</option>
                   ))}
                 </select>
-                <div style={{ padding: '8px', background: '#1e1e1e', borderRadius: 4, display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                  <Filter size={16} color="#9ca3af" />
+                <div style={{ padding: '8px', background: 'var(--bg-hover)', borderRadius: 6, display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <Filter size={16} color="var(--text-secondary)" />
                 </div>
               </div>
             </div>
@@ -324,7 +324,7 @@ export default function SequenceEditor({ sequence, onBack }) {
       <div className="seq-editor-header">
         <div className="seq-header-left">
           <button className="btn-dark" onClick={onBack} style={{ padding: '6px' }}><ArrowLeft size={16} /></button>
-          <div style={{ color: '#9ca3af', fontSize: 13, marginRight: 4 }}>Sequences &gt;</div>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginRight: 4, fontWeight: 500 }}>Sequences &gt;</div>
           <h2 className="seq-header-title">
             {sequence.name} <Star size={16} className="seq-header-title-icon" />
           </h2>
@@ -382,7 +382,7 @@ export default function SequenceEditor({ sequence, onBack }) {
                   type="number" 
                   value={node.day} 
                   onChange={e => handleUpdateNode(node.id, { day: parseInt(e.target.value) || 0 })}
-                  style={{ background: 'transparent', border: '1px solid #404040', color: '#fff', width: 40, textAlign: 'center', borderRadius: 4, outline: 'none' }}
+                  style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', width: 40, textAlign: 'center', borderRadius: 6, outline: 'none' }}
                 /> 
                 {node.day === 1 ? 'day' : 'days'}
                 <SettingsIcon size={12} style={{ marginLeft: 4 }} />
