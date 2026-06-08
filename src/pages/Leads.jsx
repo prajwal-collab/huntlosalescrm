@@ -76,7 +76,7 @@ const VIEWS = [
 ];
 
 // ── Lead Row ────────────────────────────────────────────────
-function LeadRow({ lead, isSelected, onSelect, onClick }) {
+function LeadRow({ lead, isSelected, onSelect, onClick, updateLead }) {
   const score = useMemo(() => computeSignalScore(lead), [lead]);
   const priority = getPriority(score);
   const signals = lead.signals || {};
@@ -85,6 +85,16 @@ function LeadRow({ lead, isSelected, onSelect, onClick }) {
   const initial = (lead.company_name || '?').charAt(0).toUpperCase();
   const isOverdue = lead.next_action_due && new Date(lead.next_action_due) < new Date();
   const scoreColor = score >= 70 ? '#dc2626' : score >= 35 ? '#d97706' : '#94a3b8';
+
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [noteValue, setNoteValue] = useState(lead.notes || '');
+
+  const handleNoteSave = () => {
+    setIsEditingNote(false);
+    if (noteValue !== (lead.notes || '')) {
+      updateLead(lead.id, { notes: noteValue });
+    }
+  };
 
   const activeSignals = [
     { key: 'hiring_activity',      emoji: '💼', tip: 'Hiring Activity' },
@@ -182,6 +192,25 @@ function LeadRow({ lead, isSelected, onSelect, onClick }) {
           </span>
         ) : (
           <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>—</span>
+        )}
+      </div>
+
+      {/* Notes / Remarks */}
+      <div className="lc" style={{ paddingRight: 16 }} onClick={(e) => e.stopPropagation()} onDoubleClick={() => setIsEditingNote(true)}>
+        {isEditingNote ? (
+          <input
+            autoFocus
+            type="text"
+            style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--accent-blue)', outline: 'none', fontSize: 12, background: 'var(--bg-base)', color: 'var(--text-primary)' }}
+            value={noteValue}
+            onChange={(e) => setNoteValue(e.target.value)}
+            onBlur={handleNoteSave}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleNoteSave(); }}
+          />
+        ) : (
+          <span style={{ fontSize: 12, color: noteValue ? 'var(--text-secondary)' : 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', cursor: 'pointer' }}>
+            {noteValue || 'Double-click to add note...'}
+          </span>
         )}
       </div>
     </div>
@@ -369,6 +398,7 @@ export default function Leads() {
             <span>Active Signals</span>
             <span>Next Action</span>
             <span>Est. MRR</span>
+            <span>Notes / Remarks</span>
           </div>
 
           {/* Rows */}
@@ -399,6 +429,7 @@ export default function Leads() {
                   isSelected={selectedIds.includes(lead.id)}
                   onSelect={toggleSelect}
                   onClick={handleLeadClick}
+                  updateLead={updateLead}
                 />
               ))
             )}
