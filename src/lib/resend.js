@@ -61,8 +61,8 @@ export async function sendTeamInvitation({ toEmail, toName, inviterName, role, i
   `;
 
   try {
-    // Use Vite proxy in development to bypass CORS, fallback to direct API in production (which may still have CORS issues without a backend)
-    const endpoint = import.meta.env.DEV ? '/api/resend/emails' : 'https://api.resend.com/emails';
+    // Use proxy endpoint both locally (Vite) and in production (Vercel rewrite) to completely bypass CORS.
+    const endpoint = '/api/resend/emails';
     
     const res = await fetch(endpoint, {
       method: 'POST',
@@ -110,7 +110,7 @@ export async function sendSequenceEmail({ toEmail, subject, body, fromName = 'Hu
   const htmlBody = body.split('\n').map(line => `<p style="margin: 0 0 16px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; color: #1f2937;">${line}</p>`).join('');
 
   try {
-    const endpoint = import.meta.env.DEV ? '/api/resend/emails' : 'https://api.resend.com/emails';
+    const endpoint = '/api/resend/emails';
     
     const res = await fetch(endpoint, {
       method: 'POST',
