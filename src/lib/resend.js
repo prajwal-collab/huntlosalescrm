@@ -61,7 +61,10 @@ export async function sendTeamInvitation({ toEmail, toName, inviterName, role, i
   `;
 
   try {
-    const res = await fetch('https://api.resend.com/emails', {
+    // Use Vite proxy in development to bypass CORS, fallback to direct API in production (which may still have CORS issues without a backend)
+    const endpoint = import.meta.env.DEV ? '/api/resend/emails' : 'https://api.resend.com/emails';
+    
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -107,7 +110,9 @@ export async function sendSequenceEmail({ toEmail, subject, body, fromName = 'Hu
   const htmlBody = body.split('\n').map(line => `<p style="margin: 0 0 16px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; color: #1f2937;">${line}</p>`).join('');
 
   try {
-    const res = await fetch('https://api.resend.com/emails', {
+    const endpoint = import.meta.env.DEV ? '/api/resend/emails' : 'https://api.resend.com/emails';
+    
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -116,9 +121,9 @@ export async function sendSequenceEmail({ toEmail, subject, body, fromName = 'Hu
       body: JSON.stringify({
         from: `${fromName} <onboarding@resend.dev>`,
         to: [toEmail],
-        reply_to: replyTo,
-        subject: subject,
-        html: htmlBody,
+        subject,
+        html: body,
+        ...(replyTo ? { reply_to: replyTo } : {})
       }),
     });
 
