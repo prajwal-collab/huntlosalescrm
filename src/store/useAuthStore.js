@@ -120,7 +120,6 @@ const useAuthStore = create(
             }
           });
           if (error) throw error;
-          // The page will redirect to Google
         } catch (err) {
           set({ error: err.message, loading: false });
           return { success: false, error: err.message };

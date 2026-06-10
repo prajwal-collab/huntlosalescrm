@@ -91,10 +91,13 @@ export default function ResetPassword() {
           )}
 
           <div className="form-group">
-            <label className="label">New Password</label>
+            <label className="label" htmlFor="new-password">New Password</label>
             <div className="password-wrapper">
               <Lock size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', zIndex: 1 }} />
               <input
+                id="new-password"
+                name="new-password"
+                autoComplete="new-password"
                 className="input-base"
                 type={showPw ? 'text' : 'password'}
                 placeholder="Enter new password"
@@ -110,10 +113,13 @@ export default function ResetPassword() {
           </div>
           
           <div className="form-group">
-            <label className="label">Confirm New Password</label>
+            <label className="label" htmlFor="confirm-password">Confirm New Password</label>
             <div className="password-wrapper">
               <Lock size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', zIndex: 1 }} />
               <input
+                id="confirm-password"
+                name="confirm-password"
+                autoComplete="new-password"
                 className="input-base"
                 type={showPw ? 'text' : 'password'}
                 placeholder="Confirm new password"
