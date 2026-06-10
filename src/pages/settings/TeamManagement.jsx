@@ -5,9 +5,11 @@ import { useState, useEffect } from 'react';
 import { Mail, Plus, Shield, Loader, CheckCircle } from 'lucide-react';
 import useAuthStore from '../../store/useAuthStore';
 import { sendTeamInvitation, generateInviteToken } from '../../lib/resend';
+import { useDialog } from '../../context/DialogContext';
 
 export default function TeamManagement() {
   const { team, inviteMember, removeMember, updateMemberRole, user, fetchTeam } = useAuthStore();
+  const { showSuccess, showError, showConfirm } = useDialog();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('Member');
@@ -36,10 +38,14 @@ export default function TeamManagement() {
     });
 
     if (result.success) {
-      await inviteMember({ email, role, token });
-      setStatus({ type: 'success', message: result.demo ? 'Demo: Invite added (no email sent).' : 'Invitation sent successfully!' });
-      setEmail('');
-      setTimeout(() => { setInviteOpen(false); setStatus(null); }, 2000);
+      try {
+        await inviteMember({ email, role, token });
+        setStatus({ type: 'success', message: result.demo ? 'Demo: Invite added (no email sent).' : 'Invitation sent successfully!' });
+        setEmail('');
+        setTimeout(() => { setInviteOpen(false); setStatus(null); }, 2000);
+      } catch (err) {
+        setStatus({ type: 'error', message: err.message || 'Failed to save invitation to CRM.' });
+      }
     } else {
       setStatus({ type: 'error', message: result.error || 'Failed to send invitation.' });
     }
@@ -105,13 +111,45 @@ export default function TeamManagement() {
               className="input-base" 
               style={{ width: 120, padding: '4px 8px', fontSize: 12 }} 
               value={member.role}
-              onChange={(e) => updateMemberRole(member.id, e.target.value)}
+              onChange={async (e) => {
+                const targetRole = e.target.value;
+                const confirmed = await showConfirm(
+                  'Change Member Role',
+                  `Are you sure you want to change this member's role to ${targetRole}?`
+                );
+                if (confirmed) {
+                  try {
+                    await updateMemberRole(member.id, targetRole);
+                    showSuccess('Role Updated', 'Member role has been changed successfully.');
+                  } catch (err) {
+                    showError('Failed to Update Role', err.message);
+                  }
+                }
+              }}
             >
               <option value="Admin">Admin</option>
               <option value="Member">Member</option>
               <option value="Viewer">Viewer</option>
             </select>
-            <button className="btn btn-ghost btn-sm text-danger" onClick={() => removeMember(member.id)}>Remove</button>
+            <button 
+              className="btn btn-ghost btn-sm text-danger" 
+              onClick={async () => {
+                const confirmed = await showConfirm(
+                  'Remove Team Member',
+                  `Are you sure you want to remove ${member.name || member.email} from this workspace?`
+                );
+                if (confirmed) {
+                  try {
+                    await removeMember(member.id);
+                    showSuccess('Member Removed', 'Team member has been removed successfully.');
+                  } catch (err) {
+                    showError('Failed to Remove Member', err.message);
+                  }
+                }
+              }}
+            >
+              Remove
+            </button>
           </div>
         ))}
       </div>

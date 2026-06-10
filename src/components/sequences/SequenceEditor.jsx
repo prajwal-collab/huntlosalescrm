@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail, Star, Share, Zap, MoreHorizontal, ChevronUp, ChevronRight, RefreshCw, Monitor, Smartphone, Check, X, Sparkles, Filter, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import useDataStore from '../../store/useDataStore';
 import { parseTemplate } from '../../utils/personalization';
+import { useDialog } from '../../context/DialogContext';
 import './SequenceEditor.css';
 
 // ── Floating AI Popup ─────────────────────────
@@ -233,6 +234,7 @@ const SettingsIcon = ({ size, style }) => <svg style={style} width={size} height
 // ── Main Page Component ───────────────────────
 export default function SequenceEditor({ sequence, onBack }) {
   const { updateSequence, leads, fetchEmailSettings } = useDataStore();
+  const { showConfirm } = useDialog();
   const navigate = useNavigate();
   const [nodes, setNodes] = useState(sequence.nodes || []);
   const [showAIPopup, setShowAIPopup] = useState(true);
@@ -275,7 +277,8 @@ export default function SequenceEditor({ sequence, onBack }) {
 
   const handleSave = async (nodesToSave = nodes, statusToSave = isActive ? 'Active' : 'Draft') => {
     if (statusToSave === 'Active') {
-      const confirmed = window.confirm(
+      const confirmed = await showConfirm(
+        'Update Active Campaign',
         `Warning: This campaign is currently Active${sequence.enrolled > 0 ? ` with ${sequence.enrolled} enrolled contacts` : ''}.\n\nAny edits you save will immediately update the template for future touchpoints. Do you want to proceed?`
       );
       if (!confirmed) return;

@@ -6,6 +6,7 @@ import { X, ExternalLink, Mail, Phone, Sparkles, Plus, CheckSquare, Calendar, Fi
 import { formatDistanceToNow, format } from 'date-fns';
 import usePipelineStore from '../../store/usePipelineStore';
 import { generateFollowUp, generateCompanyInsight } from '../../lib/gemini';
+import { useDialog } from '../../context/DialogContext';
 import './DealDrawer.css';
 
 const TABS = ['Overview', 'Activity', 'Contacts', 'Notes', 'Tasks', 'AI Insights'];
@@ -13,6 +14,7 @@ const ACTIVITY_ICONS = { email: '📧', call: '📞', meeting: '📅', note: '�
 
 export default function DealDrawer({ dealId, onClose }) {
   const { getSelectedDeal, updateDeal, addActivity } = usePipelineStore();
+  const { showAlert, showSuccess } = useDialog();
   const deal = getSelectedDeal();
   const [activeTab, setActiveTab] = useState('Overview');
   const [aiInsight, setAiInsight] = useState('');
@@ -119,10 +121,10 @@ export default function DealDrawer({ dealId, onClose }) {
                 <button className="btn btn-ghost btn-sm" onClick={handleGenerateFollowUp}>
                   <Mail size={13} /> {aiLoading ? 'Generating...' : 'Draft Follow-up'}
                 </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => alert('Meeting scheduling integration triggered.')}>
+                <button className="btn btn-ghost btn-sm" onClick={() => showAlert('Meeting Scheduler', 'Meeting scheduling integration triggered.')}>
                   <Calendar size={13} /> Schedule Meeting
                 </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => alert('Proposal generation triggered.')}>
+                <button className="btn btn-ghost btn-sm" onClick={() => showAlert('Send Proposal', 'Proposal generation triggered.')}>
                   <FileText size={13} /> Send Proposal
                 </button>
               </div>
@@ -177,7 +179,7 @@ export default function DealDrawer({ dealId, onClose }) {
                     <span className="contact-name">{c}</span>
                     <span className="contact-role">Contact</span>
                   </div>
-                  <button className="icon-btn" onClick={() => alert(`Drafting email to ${c}`)}><Mail size={13} /></button>
+                  <button className="icon-btn" onClick={() => showAlert('Draft Email', `Drafting email to ${c}`)}><Mail size={13} /></button>
                 </div>
               )) : <p className="text-secondary" style={{ padding: 'var(--space-4)' }}>No contacts linked</p>}
             </div>
@@ -192,7 +194,7 @@ export default function DealDrawer({ dealId, onClose }) {
                 placeholder="Add deal notes..."
                 style={{ resize: 'vertical' }}
               />
-              <button className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={() => alert('Notes saved successfully.')}>Save Notes</button>
+              <button className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={() => showSuccess('Notes Saved', 'Notes saved successfully.')}>Save Notes</button>
             </div>
           )}
 

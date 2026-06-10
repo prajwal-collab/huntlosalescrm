@@ -14,6 +14,7 @@ import LeadDrawer from '../components/leads/LeadDrawer';
 import NewLeadForm from '../components/leads/NewLeadForm';
 import EnrollSequenceModal from '../components/sequences/EnrollSequenceModal';
 import CsvImporterModal from '../components/CsvImporterModal';
+import { useDialog } from '../context/DialogContext';
 import './Leads.css';
 
 // ── Signal score computation ────────────────────────────────
@@ -220,6 +221,7 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead }) {
 // ── Main Page ───────────────────────────────────────────────
 export default function Leads() {
   const { leads, deleteLead, bulkDeleteLeads, updateLead } = useDataStore();
+  const { showConfirm } = useDialog();
   const [activeView, setActiveView] = useState('all');
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
@@ -262,7 +264,11 @@ export default function Leads() {
   };
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(`Delete ${selectedIds.length} leads?`)) return;
+    const confirmed = await showConfirm(
+      'Delete Selected Leads',
+      `Are you sure you want to permanently delete these ${selectedIds.length} leads? This action cannot be undone.`
+    );
+    if (!confirmed) return;
     await bulkDeleteLeads(selectedIds);
     setSelectedIds([]);
     if (selectedLead && selectedIds.includes(selectedLead.id)) setSelectedLead(null);

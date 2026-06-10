@@ -9,6 +9,7 @@ import TeamManagement from './settings/TeamManagement';
 import EmailSettingsForm from './settings/EmailSettingsForm';
 import { isGeminiConfigured } from '../lib/gemini';
 import { supabase } from '../lib/supabase';
+import { useDialog } from '../context/DialogContext';
 import './Settings.css';
 
 const TABS = [
@@ -53,6 +54,8 @@ export default function Settings() {
     checkGoogleConnection();
   }, [user]);
 
+  const { showSuccess, showError, showConfirm } = useDialog();
+
   const handleSyncGoogle = async () => {
     setSyncing(true);
     const token = useAuthStore.getState().session?.provider_token;
@@ -61,26 +64,31 @@ export default function Settings() {
         body: { providerToken: token || null }
       });
       if (error) throw error;
-      alert(data.message || 'Sync successful!');
+      showSuccess('Sync Successful', data.message || 'Meetings synced from Google Calendar.');
     } catch (err) {
-      alert('Error syncing: ' + err.message);
+      showError('Sync Failed', err.message);
     } finally {
       setSyncing(false);
     }
   };
 
   const handleDisconnectGoogle = async () => {
-    if (!confirm('Are you sure you want to disconnect Google Workspace? This will stop calendar sync and Gmail sequence execution.')) return;
-    try {
-      const { error } = await supabase
-        .from('user_google_credentials')
-        .delete()
-        .eq('user_id', user.id);
-      if (error) throw error;
-      setGoogleConnected(false);
-      alert('Google Workspace disconnected.');
-    } catch (err) {
-      alert('Error disconnecting: ' + err.message);
+    const confirmed = await showConfirm(
+      'Disconnect Google Workspace',
+      'Are you sure you want to disconnect Google Workspace? This will stop calendar sync and Gmail sequence execution.'
+    );
+    if (confirmed) {
+      try {
+        const { error } = await supabase
+          .from('user_google_credentials')
+          .delete()
+          .eq('user_id', user.id);
+        if (error) throw error;
+        setGoogleConnected(false);
+        showSuccess('Disconnected', 'Google Workspace disconnected successfully.');
+      } catch (err) {
+        showError('Disconnect Failed', err.message);
+      }
     }
   };
 
@@ -91,15 +99,14 @@ export default function Settings() {
   const handleSaveKey = (e) => {
     e.preventDefault();
     localStorage.setItem('huntlo_gemini_api_key', keyInput);
-    alert('Gemini API key saved successfully!');
-    // Reroute to force state refresh
+    showSuccess('Key Saved', 'Gemini API key saved successfully!');
     setSearchParams({ tab: 'integrations' });
   };
 
   const handleDisconnectKey = () => {
     localStorage.removeItem('huntlo_gemini_api_key');
     setKeyInput('');
-    alert('API key removed.');
+    showSuccess('Key Disconnected', 'API key removed.');
     setSearchParams({ tab: 'integrations' });
   };
 

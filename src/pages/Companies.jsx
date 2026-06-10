@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import CsvImporterModal from '../components/CsvImporterModal';
+import { useDialog } from '../context/DialogContext';
 import './Companies.css';
 
 function CopyBtn({ text }) {
@@ -294,6 +295,7 @@ function CompanyPanel({ company, contacts, onClose }) {
 // ── Main Page ────────────────────────────────────────────────
 export default function Companies() {
   const { companies, contacts, createCompany } = useDataStore();
+  const { showConfirm, showError } = useDialog();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -305,13 +307,19 @@ export default function Companies() {
   const [deleting, setDeleting] = useState(false);
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(`Delete ${selectedIds.length} companies?`)) return;
+    const confirmed = await showConfirm(
+      'Delete Selected Companies',
+      `Are you sure you want to permanently delete these ${selectedIds.length} companies? This action cannot be undone.`
+    );
+    if (!confirmed) return;
     setDeleting(true);
     try {
       await useDataStore.getState().bulkDeleteCompanies(selectedIds);
       setSelectedIds([]);
       setSelected(null);
-    } catch (err) { alert('Failed: ' + err.message); }
+    } catch (err) { 
+      await showError('Deletion Failed', err.message); 
+    }
     finally { setDeleting(false); }
   };
 

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import useDataStore from '../store/useDataStore';
 import { generateFullSequence } from '../lib/gemini';
 import SequenceEditor from '../components/sequences/SequenceEditor';
+import { useDialog } from '../context/DialogContext';
 import './Sequences.css';
 
 const NODE_ICONS = {
@@ -30,6 +31,7 @@ function SequenceNode({ node, isLast }) {
 
 export default function Sequences() {
   const { sequences, createSequence, deleteSequence } = useDataStore();
+  const { showConfirm } = useDialog();
   const navigate = useNavigate();
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -172,9 +174,13 @@ export default function Sequences() {
                 <button 
                   className="btn-icon" 
                   style={{ position: 'absolute', top: 12, right: 8, background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer' }}
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    if (window.confirm('Are you sure you want to permanently delete this campaign and cancel all pending enrollments?')) {
+                    const confirmed = await showConfirm(
+                      'Delete Campaign',
+                      'Are you sure you want to permanently delete this campaign and cancel all pending enrollments? This action cannot be undone.'
+                    );
+                    if (confirmed) {
                       deleteSequence(seq.id);
                     }
                   }}

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Calendar, Clock, Video, Users, ExternalLink, CalendarIcon, Search, Plus, Sparkles, X, AlertCircle, Loader } from 'lucide-react';
 import { format } from 'date-fns';
 import useDataStore from '../store/useDataStore';
+import { useDialog } from '../context/DialogContext';
 import './Meetings.css';
 
 function MeetingCard({ meeting, onSelect, selected }) {
@@ -42,6 +43,7 @@ function MeetingCard({ meeting, onSelect, selected }) {
 
 export default function Meetings() {
   const { meetings, deals, createMeeting } = useDataStore();
+  const { showAlert } = useDialog();
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({ title: '', deal_id: '', type: 'Discovery', date: '', duration: 30, platform: 'Google Meet', meeting_link: '' });
@@ -124,9 +126,9 @@ export default function Meetings() {
                   <pre className="ai-generated-text">{selected.aiSummary}</pre>
                </div>
              ) : (
-               <div className="md-section">
-                  <button className="btn btn-primary btn-sm w-full" onClick={() => alert('Gemini AI Summary generation initiated...')}><Sparkles size={13} /> Generate AI Summary</button>
-               </div>
+                <div className="md-section">
+                   <button className="btn btn-primary btn-sm w-full" onClick={() => showAlert('AI Summary', 'Gemini AI Summary generation initiated...')}><Sparkles size={13} /> Generate AI Summary</button>
+                </div>
              )}
 
              <div className="md-grid">

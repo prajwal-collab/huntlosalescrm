@@ -7,12 +7,34 @@ const RESEND_API_KEY = import.meta.env.VITE_RESEND_API_KEY;
 const APP_URL = import.meta.env.VITE_APP_URL || 'http://localhost:5173';
 const isConfigured = RESEND_API_KEY && RESEND_API_KEY !== 'your_resend_api_key';
 
-// Send team invitation email via Resend
+// Send team invitation email via Gmail API
 export async function sendTeamInvitation({ toEmail, toName, inviterName, role, inviteToken }) {
-  if (!isConfigured) {
-    console.warn('[Resend] Not configured. Simulating email send.');
-    await new Promise(r => setTimeout(r, 800));
-    return { success: true, demo: true, message: 'Demo mode: Email would be sent via Resend.' };
+  const session = useAuthStore.getState().session;
+  let token = session?.provider_token;
+  
+  if (!token) {
+    try {
+      const { supabase } = await import('./supabase');
+      const { user } = useAuthStore.getState();
+      if (user) {
+        const { data: creds } = await supabase
+          .from('user_google_credentials')
+          .select('access_token')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (creds) token = creds.access_token;
+      }
+    } catch (err) {
+      console.warn('Failed to query user_google_credentials for invite:', err);
+    }
+  }
+
+  // If still no token, return error
+  if (!token) {
+    return { 
+      success: false, 
+      error: 'Google Workspace is not connected. Please connect your Google account in Settings > Integrations first to send team invitations.' 
+    };
   }
 
   const inviteUrl = `${APP_URL}/accept-invite?token=${inviteToken}`;
@@ -62,32 +84,39 @@ export async function sendTeamInvitation({ toEmail, toName, inviterName, role, i
   `;
 
   try {
-    // Use proxy endpoint both locally (Vite) and in production (Vercel rewrite) to completely bypass CORS.
-    const endpoint = '/api/resend/emails';
+    const subject = `${inviterName} invited you to Huntlo Sales OS`;
+    const mime = [
+      `To: ${toEmail}`,
+      `Subject: ${subject}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=utf-8',
+      '',
+      htmlBody
+    ].join('\r\n');
     
-    const res = await fetch(endpoint, {
+    const raw = btoa(unescape(encodeURIComponent(mime)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+      
+    const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        from: 'Huntlo Sales OS <onboarding@resend.dev>',
-        to: [toEmail],
-        subject: `${inviterName} invited you to Huntlo Sales OS`,
-        html: htmlBody,
-      }),
+      body: JSON.stringify({ raw })
     });
 
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || 'Failed to send email');
+      const errText = await res.text();
+      throw new Error(`Gmail API error: ${errText}`);
     }
 
     const data = await res.json();
     return { success: true, id: data.id };
   } catch (err) {
-    console.error('[Resend] Error:', err);
+    console.error('[Gmail Invite Send Error]:', err);
     return { success: false, error: err.message };
   }
 }

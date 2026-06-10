@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { FileText, Plus, Search, Eye, Download, MoreVertical, Sparkles, X, Link as LinkIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import useDataStore from '../store/useDataStore';
+import { useDialog } from '../context/DialogContext';
 import './Documents.css';
 
 export default function Documents() {
   const { documents, companies, createDocument } = useDataStore();
+  const { showAlert } = useDialog();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -109,7 +111,7 @@ export default function Documents() {
               <p className="text-sm text-secondary mt-2">
                 This is a linked document for {(companies.find(c => c.id === selected.company_id))?.name || 'general reference'}. 
               </p>
-              <button className="btn btn-ghost btn-sm mt-3 w-full" onClick={() => alert('AI re-analysis triggered...')}>Regenerate Summary</button>
+              <button className="btn btn-ghost btn-sm mt-3 w-full" onClick={() => showAlert('AI Re-analysis', 'AI re-analysis triggered...')}>Regenerate Summary</button>
             </div>
           </div>
         )}

@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import usePipelineStore from '../store/usePipelineStore';
 import useDataStore from '../store/useDataStore';
 import { queryGemini } from '../lib/gemini';
+import { useDialog } from '../context/DialogContext';
 import './HomeOS.css';
 
 const AI_INSIGHTS = [];
@@ -27,6 +28,7 @@ function PriorityCard({ icon: Icon, label, count, urgency, color, onClick }) {
 
 export default function HomeOS() {
   const { deals, tasks, meetings } = useDataStore();
+  const { showAlert } = useDialog();
   const [aiQuery, setAiQuery] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -122,12 +124,12 @@ export default function HomeOS() {
       <section className="section">
         <h2 className="section-title">Today's Priorities</h2>
         <div className="priorities-grid">
-          <PriorityCard icon={AlertCircle} label="Overdue Tasks" count={overdueTasks.length} urgency="urgent" color="var(--danger)" onClick={() => alert('Viewing overdue tasks')} />
-          <PriorityCard icon={Calendar} label="Demos Today" count={todayMeetings.length} urgency="high" color="var(--accent-blue)" onClick={() => alert('Viewing today\'s demos')} />
-          <PriorityCard icon={Clock} label="Pending Tasks" count={pendingTasks.length} urgency="medium" color="var(--warning)" onClick={() => alert('Viewing pending tasks')} />
-          <PriorityCard icon={FileText} label="Proposals Out" count={deals.filter(d => d.stage === 'Proposal Sent').length} urgency="low" color="var(--accent-purple)" onClick={() => alert('Viewing active proposals')} />
-          <PriorityCard icon={TrendingUp} label="Stale Deals" count={staleDeals.length} urgency="warning" color="var(--orange)" onClick={() => alert('Viewing stale deals')} />
-          <PriorityCard icon={Zap} label="Hot Leads" count={hotDeals.length} urgency="positive" color="var(--success)" onClick={() => alert('Viewing hot leads')} />
+          <PriorityCard icon={AlertCircle} label="Overdue Tasks" count={overdueTasks.length} urgency="urgent" color="var(--danger)" onClick={() => showAlert('Tasks Info', 'Viewing overdue tasks details')} />
+          <PriorityCard icon={Calendar} label="Demos Today" count={todayMeetings.length} urgency="high" color="var(--accent-blue)" onClick={() => showAlert('Meetings Info', "Viewing today's demos details")} />
+          <PriorityCard icon={Clock} label="Pending Tasks" count={pendingTasks.length} urgency="medium" color="var(--warning)" onClick={() => showAlert('Tasks Info', 'Viewing pending tasks details')} />
+          <PriorityCard icon={FileText} label="Proposals Out" count={deals.filter(d => d.stage === 'Proposal Sent').length} urgency="low" color="var(--accent-purple)" onClick={() => showAlert('Deals Info', 'Viewing active proposals details')} />
+          <PriorityCard icon={TrendingUp} label="Stale Deals" count={staleDeals.length} urgency="warning" color="var(--orange)" onClick={() => showAlert('Deals Info', 'Viewing stale deals details')} />
+          <PriorityCard icon={Zap} label="Hot Leads" count={hotDeals.length} urgency="positive" color="var(--success)" onClick={() => showAlert('Leads Info', 'Viewing hot leads details')} />
         </div>
       </section>
 
@@ -140,7 +142,7 @@ export default function HomeOS() {
               <div key={i} className={`insight-card insight-${ins.type}`}>
                 <span className="insight-icon">{ins.icon}</span>
                 <span className="insight-text">{ins.text}</span>
-                <button className="insight-action" onClick={() => alert('Applying AI recommendation...')}>{ins.action} →</button>
+                <button className="insight-action" onClick={() => showAlert('AI Recommendation', 'Applying AI recommendation...')}>{ins.action} →</button>
               </div>
             )) : (
               <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '13px' }}>

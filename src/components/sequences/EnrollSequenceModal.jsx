@@ -5,12 +5,13 @@
 //   2. Pick sequence
 //   3. Configure & launch
 // ============================================
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   X, ChevronRight, ChevronLeft, Mail, Clock, Zap,
   Check, AlertCircle, Globe, Users, Calendar, Send
 } from 'lucide-react';
 import useDataStore from '../../store/useDataStore';
+import { useDialog } from '../../context/DialogContext';
 import './EnrollSequence.css';
 
 const AVATAR_COLORS = [
@@ -57,6 +58,7 @@ function Steps({ current }) {
 // ── Main component ────────────────────────────────────────────
 export default function EnrollSequenceModal({ leads, onClose }) {
   const { sequences, enrollLeadsInSequence, fetchEmailSettings } = useDataStore();
+  const { showError } = useDialog();
   const [step, setStep] = useState(0);
   const [selectedSeq, setSelectedSeq] = useState(null);
   const [emailConfig, setEmailConfig] = useState(null);
@@ -97,7 +99,7 @@ export default function EnrollSequenceModal({ leads, onClose }) {
       }
       setDone(true);
     } catch (err) {
-      alert('Enroll failed: ' + err.message);
+      await showError('Enrollment Failed', err.message);
     } finally {
       setEnrolling(false);
     }

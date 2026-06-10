@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import useDataStore from '../../store/useDataStore';
+import { useDialog } from '../../context/DialogContext';
 
 export default function EmailSettingsForm() {
+  const { showSuccess, showError } = useDialog();
   const { fetchEmailSettings, saveEmailSettings } = useDataStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -50,9 +52,9 @@ export default function EmailSettingsForm() {
     setSaving(true);
     try {
       await saveEmailSettings(formData);
-      alert('Email settings saved securely!');
+      showSuccess('Configuration Saved', 'SMTP email settings have been saved securely!');
     } catch (err) {
-      alert('Error saving settings: ' + err.message);
+      showError('Failed to Save Configuration', err.message);
     } finally {
       setSaving(false);
     }

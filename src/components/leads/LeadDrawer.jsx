@@ -9,6 +9,7 @@ import {
   Calendar, DollarSign, Target, Zap, TrendingUp,
   MessageCircle, Users, Building2
 } from 'lucide-react';
+import { useDialog } from '../../context/DialogContext';
 
 const STAGES = [
   'New Lead', 'Researching', 'Ready for Outreach', 'Outreach Started',
@@ -46,6 +47,7 @@ function Field({ label, value, children }) {
 }
 
 export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
+  const { showConfirm } = useDialog();
   const [tab, setTab] = useState('intelligence');
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -150,7 +152,13 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
                   style={{ fontSize: 12, gap: 4 }}>
                   <Edit3 size={13} /> Edit
                 </button>
-                <button onClick={() => { if (window.confirm('Delete this lead?')) onDelete(lead.id); }}
+                <button onClick={async () => {
+                  const confirmed = await showConfirm(
+                    'Delete Lead',
+                    `Are you sure you want to permanently delete this lead from ${form.company_name || 'CRM'}?`
+                  );
+                  if (confirmed) onDelete(lead.id);
+                }}
                   className="btn btn-ghost btn-sm"
                   style={{ fontSize: 12, color: 'var(--danger)' }}>
                   <Trash2 size={13} />

@@ -10,6 +10,7 @@ import {
 import useDataStore from '../store/useDataStore';
 import CsvImporterModal from '../components/CsvImporterModal';
 import EnrollSequenceModal from '../components/sequences/EnrollSequenceModal';
+import { useDialog } from '../context/DialogContext';
 import './Contacts.css';
 
 // Reusable one-click copy button
@@ -267,6 +268,7 @@ function ContactDetail({ contact, onClose }) {
 // ── Main Page ─────────────────────────────────────────────────
 export default function Contacts() {
   const { contacts, companies, createContact } = useDataStore();
+  const { showConfirm, showError } = useDialog();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -279,13 +281,19 @@ export default function Contacts() {
   const [deleting, setDeleting] = useState(false);
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(`Delete ${selectedIds.length} contacts?`)) return;
+    const confirmed = await showConfirm(
+      'Delete Selected Contacts',
+      `Are you sure you want to permanently delete these ${selectedIds.length} contacts? This action cannot be undone.`
+    );
+    if (!confirmed) return;
     setDeleting(true);
     try {
       await useDataStore.getState().bulkDeleteContacts(selectedIds);
       setSelectedIds([]);
       setSelected(null);
-    } catch (err) { alert('Failed: ' + err.message); }
+    } catch (err) { 
+      await showError('Deletion Failed', err.message); 
+    }
     finally { setDeleting(false); }
   };
 
