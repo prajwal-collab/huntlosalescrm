@@ -37,7 +37,8 @@ export async function sendTeamInvitation({ toEmail, toName, inviterName, role, i
     };
   }
 
-  const inviteUrl = `${APP_URL}/accept-invite?token=${inviteToken}`;
+  const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+  const inviteUrl = `${appUrl}/accept-invite?token=${inviteToken}`;
 
   const htmlBody = `
 <!DOCTYPE html>

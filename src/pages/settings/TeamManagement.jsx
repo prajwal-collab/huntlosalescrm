@@ -6,6 +6,7 @@ import { Mail, Plus, Shield, Loader, CheckCircle } from 'lucide-react';
 import useAuthStore from '../../store/useAuthStore';
 import { sendTeamInvitation, generateInviteToken } from '../../lib/resend';
 import { useDialog } from '../../context/DialogContext';
+import { supabase } from '../../lib/supabase';
 
 export default function TeamManagement() {
   const { team, inviteMember, removeMember, updateMemberRole, user, fetchTeam } = useAuthStore();
@@ -39,7 +40,7 @@ export default function TeamManagement() {
 
     try {
       await inviteMember({ email, role, token });
-      const appUrl = window.location.origin;
+      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
       const shareLink = `${appUrl}/accept-invite?token=${token}`;
 
       if (result.success) {
