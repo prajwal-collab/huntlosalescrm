@@ -3,7 +3,7 @@
 // ============================================
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { User, Key, Bell, Shield, Mail, Calendar, RefreshCw, Trash2 } from 'lucide-react';
+import { User, Key, Bell, Shield, Mail, Calendar, RefreshCw, Trash2, Eye, EyeOff, Lock } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import TeamManagement from './settings/TeamManagement';
 import EmailSettingsForm from './settings/EmailSettingsForm';
@@ -22,11 +22,23 @@ const TABS = [
 export default function Settings() {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = searchParams.get('tab') || 'profile';
-  const { user, linkGoogle } = useAuthStore();
+  const { user, linkGoogle, updateProfile } = useAuthStore();
   const [keyInput, setKeyInput] = useState(localStorage.getItem('huntlo_gemini_api_key') || '');
   const [googleConnected, setGoogleConnected] = useState(false);
   const [checkingGoogle, setCheckingGoogle] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (user?.user_metadata?.full_name) {
+      setFullName(user.user_metadata.full_name);
+    } else if (user?.email) {
+      setFullName(user.email.split('@')[0]);
+    }
+  }, [user]);
 
   useEffect(() => {
     async function checkGoogleConnection() {
@@ -110,6 +122,29 @@ export default function Settings() {
     setSearchParams({ tab: 'integrations' });
   };
 
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    if (!fullName.trim()) {
+      showError('Validation Error', 'Full Name cannot be empty.');
+      return;
+    }
+    if (password && password.length < 6) {
+      showError('Validation Error', 'Password must be at least 6 characters.');
+      return;
+    }
+
+    setSaving(true);
+    const result = await updateProfile({ fullName, password });
+    setSaving(false);
+
+    if (result.success) {
+      showSuccess('Profile Updated', 'Your profile details have been saved successfully.');
+      setPassword('');
+    } else {
+      showError('Update Failed', result.error || 'Failed to update profile.');
+    }
+  };
+
   return (
     <div className="settings-page">
       <div className="page-header-row">
@@ -139,16 +174,67 @@ export default function Settings() {
               <h2 className="panel-title">Your Profile</h2>
               <p className="panel-sub mb-6">Manage your personal information and preferences.</p>
               
-              <div className="form-group" style={{ maxWidth: 400, marginBottom: 20 }}>
-                <label className="label">Full Name</label>
-                <input className="input-base" defaultValue={user?.user_metadata?.full_name || 'Alex Reid'} />
-              </div>
-              <div className="form-group" style={{ maxWidth: 400, marginBottom: 24 }}>
-                <label className="label">Email Address</label>
-                <input className="input-base" defaultValue={user?.email} disabled />
-                <p className="text-xs" style={{ color: 'var(--text-tertiary)', marginTop: '4px' }}>Email cannot be changed here. Contact your workspace admin.</p>
-              </div>
-              <button className="btn btn-primary btn-md">Save Changes</button>
+              <form onSubmit={handleSaveProfile}>
+                <div className="form-group" style={{ maxWidth: 400, marginBottom: 20 }}>
+                  <label className="label" htmlFor="profile-full-name">Full Name</label>
+                  <input 
+                    id="profile-full-name"
+                    className="input-base" 
+                    value={fullName}
+                    onChange={e => setFullName(e.target.value)}
+                    placeholder="Enter your full name"
+                  />
+                </div>
+                
+                <div className="form-group" style={{ maxWidth: 400, marginBottom: 20 }}>
+                  <label className="label">Email Address</label>
+                  <input className="input-base" defaultValue={user?.email} disabled />
+                  <p className="text-xs" style={{ color: 'var(--text-tertiary)', marginTop: '4px' }}>Email cannot be changed here. Contact your workspace admin.</p>
+                </div>
+
+                <div className="form-group" style={{ maxWidth: 400, marginBottom: 24 }}>
+                  <label className="label" htmlFor="profile-new-password">New Password</label>
+                  <div className="password-wrapper" style={{ position: 'relative' }}>
+                    <Lock size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', zIndex: 1 }} />
+                    <input
+                      id="profile-new-password"
+                      name="new-password"
+                      autoComplete="new-password"
+                      className="input-base"
+                      type={showPw ? 'text' : 'password'}
+                      placeholder="Enter new password to change"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      style={{ paddingLeft: '36px', paddingRight: '38px', width: '100%' }}
+                    />
+                    <button 
+                      type="button" 
+                      className="password-toggle" 
+                      onClick={() => setShowPw(p => !p)}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-tertiary)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '4px'
+                      }}
+                    >
+                      {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                  <p className="text-xs" style={{ color: 'var(--text-tertiary)', marginTop: '4px' }}>Leave blank to keep your current password. Password must be at least 6 characters.</p>
+                </div>
+
+                <button type="submit" className="btn btn-primary btn-md" disabled={saving}>
+                  {saving ? 'Saving Changes...' : 'Save Changes'}
+                </button>
+              </form>
             </div>
           )}
 

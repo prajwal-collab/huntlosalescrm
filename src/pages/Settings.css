@@ -75,3 +75,25 @@
 .mt-3 { margin-top: 12px; }
 .text-xs { font-size: var(--text-xs); }
 .text-warning { color: var(--warning); }
+
+/* Password field */
+.password-wrapper {
+  position: relative;
+}
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: var(--transition-fast);
+  padding: 4px;
+}
+.password-toggle:hover {
+  color: var(--text-secondary);
+}

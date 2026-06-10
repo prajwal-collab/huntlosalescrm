@@ -152,6 +152,44 @@ const useAuthStore = create(
         return { success: true };
       },
 
+      // Update profile metadata and/or password
+      updateProfile: async ({ fullName, password }) => {
+        set({ loading: true, error: null });
+        try {
+          const updates = {};
+          if (password) {
+            updates.password = password;
+          }
+          if (fullName) {
+            updates.data = { full_name: fullName };
+          }
+
+          let updatedUser = get().user;
+
+          if (Object.keys(updates).length > 0) {
+            const { data, error } = await supabase.auth.updateUser(updates);
+            if (error) throw error;
+            updatedUser = data.user;
+          }
+
+          if (fullName && updatedUser) {
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .update({ full_name: fullName })
+              .eq('id', updatedUser.id);
+            if (profileError) {
+              console.warn('[AuthStore] Failed to update public.profiles:', profileError.message);
+            }
+          }
+
+          set({ user: updatedUser, loading: false });
+          return { success: true };
+        } catch (err) {
+          set({ error: err.message, loading: false });
+          return { success: false, error: err.message };
+        }
+      },
+
       // Team management
       fetchTeam: async () => {
         try {
