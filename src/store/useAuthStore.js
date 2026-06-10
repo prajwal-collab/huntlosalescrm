@@ -21,8 +21,29 @@ const useAuthStore = create(
           const { data: { session } } = await supabase.auth.getSession();
           set({ session, user: session?.user ?? null, loading: false });
 
+          if (session?.provider_token && session?.user) {
+            supabase.from('user_google_credentials').upsert({
+              user_id: session.user.id,
+              access_token: session.provider_token,
+              refresh_token: session.provider_refresh_token || null,
+              expires_at: new Date(Date.now() + (session.expires_in || 3600) * 1000).toISOString()
+            }).then(({ error }) => {
+              if (error) console.error('Failed to sync google credentials on init:', error);
+            });
+          }
+
           supabase.auth.onAuthStateChange((_event, session) => {
             set({ session, user: session?.user ?? null });
+            if (session?.provider_token && session?.user) {
+              supabase.from('user_google_credentials').upsert({
+                user_id: session.user.id,
+                access_token: session.provider_token,
+                refresh_token: session.provider_refresh_token || null,
+                expires_at: new Date(Date.now() + (session.expires_in || 3600) * 1000).toISOString()
+              }).then(({ error }) => {
+                if (error) console.error('Failed to sync google credentials on state change:', error);
+              });
+            }
           });
         } catch (err) {
           console.error('[Auth] Initialize error:', err);
@@ -52,7 +73,7 @@ const useAuthStore = create(
       },
 
       // Sign up new user
-      signUp: async (email, password, fullName) => {
+      signUp: async (email, password, fullName, metadata = {}) => {
         set({ error: null, loading: true });
         if (!isConfigured) {
           set({ error: 'Supabase is not configured. Please complete setup first.', loading: false });
@@ -62,7 +83,12 @@ const useAuthStore = create(
           const { data, error } = await supabase.auth.signUp({
             email,
             password,
-            options: { data: { full_name: fullName } },
+            options: { 
+              data: { 
+                full_name: fullName,
+                ...metadata
+              } 
+            },
           });
           if (error) throw error;
           set({ loading: false });
@@ -86,7 +112,7 @@ const useAuthStore = create(
             provider: 'google',
             options: {
               redirectTo: `${appUrl}/settings?tab=integrations`,
-              scopes: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/gmail.readonly',
+              scopes: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.send',
               queryParams: {
                 access_type: 'offline',
                 prompt: 'consent',
@@ -133,29 +159,29 @@ const useAuthStore = create(
         if (!error && data) set({ team: data });
       },
 
-      inviteMember: (invite) => {
-        const newMember = {
-          id: `u${Date.now()}`,
-          name: invite.name || invite.email.split('@')[0],
+      inviteMember: async (invite) => {
+        const { data, error } = await supabase.from('invitations').insert({
           email: invite.email,
           role: invite.role,
-          initials: (invite.name || invite.email).slice(0, 2).toUpperCase(),
-          color: ['#3b82f6', '#8b5cf6', '#22c55e', '#f59e0b', '#ec4899'][Math.floor(Math.random() * 5)],
-          status: 'invited',
-          joinedAt: '',
-        };
-        set(state => ({ team: [...state.team, newMember] }));
-        return newMember;
+          token: invite.token,
+        }).select().single();
+        if (error) throw error;
+        await get().fetchTeam();
+        return data;
       },
 
-      removeMember: (memberId) => {
-        set(state => ({ team: state.team.filter(m => m.id !== memberId) }));
+      removeMember: async (memberId) => {
+        // Try deleting from profiles or invitations (one of them will match the ID)
+        await supabase.from('profiles').delete().eq('id', memberId);
+        await supabase.from('invitations').delete().eq('id', memberId);
+        await get().fetchTeam();
       },
 
-      updateMemberRole: (memberId, role) => {
-        set(state => ({
-          team: state.team.map(m => m.id === memberId ? { ...m, role } : m)
-        }));
+      updateMemberRole: async (memberId, role) => {
+        // Try updating profiles or invitations
+        await supabase.from('profiles').update({ role }).eq('id', memberId);
+        await supabase.from('invitations').update({ role }).eq('id', memberId);
+        await get().fetchTeam();
       },
 
       clearError: () => set({ error: null }),

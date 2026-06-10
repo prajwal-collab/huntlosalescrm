@@ -58,7 +58,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
   const [results, setResults] = useState({ success: 0, failed: 0 });
   const fileInputRef = useRef(null);
 
-  const { bulkCreateContacts, bulkCreateCompanies, bulkCreateLeads } = useDataStore();
+  const { bulkCreateContacts, bulkCreateCompanies, bulkCreateLeads, contacts, companies, leads } = useDataStore();
   const crmFields = type === 'contacts' ? CONTACT_FIELDS : type === 'leads' ? LEAD_FIELDS : COMPANY_FIELDS;
 
   // Reset state when modal opens
@@ -199,16 +199,57 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
       return;
     }
 
+    // Duplicate detection
+    let dedupedData = mappedData;
+    let skippedCount = 0;
+    if (type === 'contacts') {
+      const existingEmails = new Set(contacts.map(c => (c.email || '').toLowerCase()));
+      dedupedData = mappedData.filter(row => {
+        if (row.email && existingEmails.has(row.email.toLowerCase())) {
+          skippedCount++;
+          return false;
+        }
+        return true;
+      });
+    } else if (type === 'companies') {
+      const existingNames = new Set(companies.map(c => (c.name || '').toLowerCase()));
+      const existingDomains = new Set(companies.map(c => (c.website || '').toLowerCase()).filter(Boolean));
+      dedupedData = mappedData.filter(row => {
+        const nameDupe = row.name && existingNames.has(row.name.toLowerCase());
+        const domainDupe = row.domain && existingDomains.has(row.domain.toLowerCase());
+        if (nameDupe || domainDupe) {
+          skippedCount++;
+          return false;
+        }
+        return true;
+      });
+    } else if (type === 'leads') {
+      const existingLeadNames = new Set(leads.map(l => (l.company_name || '').toLowerCase()));
+      dedupedData = mappedData.filter(row => {
+        if (row.company_name && existingLeadNames.has(row.company_name.toLowerCase())) {
+          skippedCount++;
+          return false;
+        }
+        return true;
+      });
+    }
+
+    if (dedupedData.length === 0) {
+      setError(`All ${mappedData.length} row(s) are duplicates already in your CRM. Nothing was imported.`);
+      setStep('map');
+      return;
+    }
+
     try {
       // Chunking if massive, but let's assume < 1000 for standard UI
       if (type === 'contacts') {
-        await bulkCreateContacts(mappedData);
+        await bulkCreateContacts(dedupedData);
       } else if (type === 'leads') {
-        await bulkCreateLeads(mappedData);
+        await bulkCreateLeads(dedupedData);
       } else {
-        await bulkCreateCompanies(mappedData);
+        await bulkCreateCompanies(dedupedData);
       }
-      setResults({ success: mappedData.length, failed: 0 });
+      setResults({ success: dedupedData.length, failed: 0, skipped: skippedCount });
       setStep('done');
     } catch (err) {
       console.error(err);
@@ -316,9 +357,16 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
             <div className="csv-success-zone">
               <CheckCircle size={48} color="var(--success)" />
               <h3>Import Complete!</h3>
-              <p>Successfully imported {results.success} {type}.</p>
+              <p>
+                <strong style={{ color: 'var(--success)' }}>{results.success}</strong> record{results.success !== 1 ? 's' : ''} imported successfully.
+              </p>
+              {results.skipped > 0 && (
+                <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', marginTop: 6 }}>
+                  <strong>{results.skipped}</strong> duplicate{results.skipped !== 1 ? 's' : ''} skipped (already exist in your CRM).
+                </p>
+              )}
               <button className="btn btn-primary mt-4" onClick={onClose}>
-                View My {type === 'contacts' ? 'Contacts' : 'Accounts'}
+                View My {type === 'contacts' ? 'Contacts' : type === 'leads' ? 'Leads' : 'Accounts'}
               </button>
             </div>
           )}

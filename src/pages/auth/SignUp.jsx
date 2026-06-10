@@ -1,8 +1,8 @@
 // ============================================
 // HUNTLO SALES OS — SIGN UP PAGE
 // ============================================
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Sparkles, Eye, EyeOff, Loader, CheckCircle } from 'lucide-react';
 import useAuthStore from '../../store/useAuthStore';
 import logoImg from '../../assets/logo.png';
@@ -11,10 +11,25 @@ import './Auth.css';
 export default function SignUp() {
   const { signUp, error, loading, clearError } = useAuthStore();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ fullName: '', email: '', password: '', confirmPassword: '' });
+  const [searchParams] = useSearchParams();
+  
+  const invitedEmail = searchParams.get('email') || '';
+  const invitedOrgId = searchParams.get('org_id') || '';
+  const invitedRole = searchParams.get('role') || '';
+  const inviteToken = searchParams.get('token') || '';
+  const orgName = searchParams.get('org_name') || '';
+  const isInvited = !!inviteToken;
+
+  const [form, setForm] = useState({ fullName: '', email: invitedEmail, password: '', confirmPassword: '' });
   const [showPw, setShowPw] = useState(false);
   const [success, setSuccess] = useState(false);
   const [validationError, setValidationError] = useState('');
+
+  useEffect(() => {
+    if (invitedEmail) {
+      setForm(f => ({ ...f, email: invitedEmail }));
+    }
+  }, [invitedEmail]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,7 +45,13 @@ export default function SignUp() {
       return;
     }
 
-    const result = await signUp(form.email, form.password, form.fullName);
+    const metadata = isInvited ? {
+      organization_id: invitedOrgId,
+      role: invitedRole,
+      invite_token: inviteToken
+    } : {};
+
+    const result = await signUp(form.email, form.password, form.fullName, metadata);
     if (result.success) {
       if (result.needsConfirmation) {
         setSuccess(true);
@@ -70,8 +91,12 @@ export default function SignUp() {
           <div className="auth-logo-text">Huntlo<span> OS</span></div>
         </div>
 
-        <h1 className="auth-heading">Create your workspace</h1>
-        <p className="auth-sub">Start running sales operations at enterprise speed</p>
+        <h1 className="auth-heading">
+          {isInvited ? `Join ${orgName}` : 'Create your workspace'}
+        </h1>
+        <p className="auth-sub">
+          {isInvited ? `Join as an onboarding ${invitedRole} of the team` : 'Start running sales operations at enterprise speed'}
+        </p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           {(error || validationError) && (
@@ -103,6 +128,8 @@ export default function SignUp() {
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
               required
               autoComplete="email"
+              disabled={isInvited}
+              style={isInvited ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
             />
           </div>
 
@@ -146,7 +173,7 @@ export default function SignUp() {
             className="btn btn-primary btn-lg w-full"
             disabled={loading}
           >
-            {loading ? <><Loader size={14} className="cc-spinner" /> Creating workspace...</> : 'Create workspace →'}
+            {loading ? <><Loader size={14} className="cc-spinner" /> Joining workspace...</> : isInvited ? 'Accept Invite & Join →' : 'Create workspace →'}
           </button>
         </form>
 

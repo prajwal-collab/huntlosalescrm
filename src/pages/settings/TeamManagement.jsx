@@ -1,18 +1,22 @@
 // ============================================
 // HUNTLO SALES OS — TEAM MANAGEMENT COMPONENT
 // ============================================
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Mail, Plus, Shield, Loader, CheckCircle } from 'lucide-react';
 import useAuthStore from '../../store/useAuthStore';
 import { sendTeamInvitation, generateInviteToken } from '../../lib/resend';
 
 export default function TeamManagement() {
-  const { team, inviteMember, removeMember, updateMemberRole, user } = useAuthStore();
+  const { team, inviteMember, removeMember, updateMemberRole, user, fetchTeam } = useAuthStore();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('Member');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    fetchTeam();
+  }, [fetchTeam]);
 
   const handleInvite = async (e) => {
     e.preventDefault();
@@ -32,7 +36,7 @@ export default function TeamManagement() {
     });
 
     if (result.success) {
-      inviteMember({ email, role });
+      await inviteMember({ email, role, token });
       setStatus({ type: 'success', message: result.demo ? 'Demo: Invite added (no email sent).' : 'Invitation sent successfully!' });
       setEmail('');
       setTimeout(() => { setInviteOpen(false); setStatus(null); }, 2000);

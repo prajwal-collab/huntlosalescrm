@@ -312,16 +312,63 @@ const useDataStore = create((set, get) => ({
 
   // ── Meetings ──────────────────────────────
   createMeeting: async (meeting) => {
-    const { user } = useAuthStore.getState();
-    const newMeeting = { ...meeting, owner_id: user?.id };
+    const { user, session } = useAuthStore.getState();
+    let meetingData = { ...meeting, owner_id: user?.id };
+
+    // Try to create a Google Calendar event if the user has linked Google
+    const googleToken = session?.provider_token;
+    if (googleToken) {
+      try {
+        const { createGoogleCalendarEvent } = await import('../lib/googleCalendar.js');
+
+        // Try to find the contact email via the deal
+        let contactEmail = null;
+        if (meeting.deal_id) {
+          const storeState = get();
+          const deal = storeState.deals.find(d => d.id === meeting.deal_id);
+          if (deal?.company_id) {
+            const { data: contacts } = await supabase
+              .from('contacts')
+              .select('email')
+              .eq('company_id', deal.company_id)
+              .not('email', 'is', null)
+              .limit(1);
+            if (contacts?.length > 0) contactEmail = contacts[0].email;
+          }
+        }
+
+        const calResult = await createGoogleCalendarEvent({
+          token: googleToken,
+          title: meeting.title,
+          description: meeting.notes || '',
+          startDateTime: meeting.date,
+          durationMinutes: Number(meeting.duration) || 30,
+          contactEmail,
+          platform: meeting.platform,
+        });
+
+        // Override the meeting link with the auto-generated Meet link
+        if (calResult.meeting_link) {
+          meetingData.meeting_link = calResult.meeting_link;
+        }
+        if (calResult.htmlLink) {
+          meetingData.notes = (meetingData.notes || '') + `\nGoogle Calendar Event: ${calResult.htmlLink}`;
+        }
+        console.log('[Meetings] Google Calendar event created:', calResult.id);
+      } catch (calErr) {
+        // Non-fatal — just log the error and continue saving to Supabase
+        console.warn('[Meetings] Google Calendar creation failed (non-fatal):', calErr.message);
+      }
+    }
+
     try {
-      const { data, error } = await supabase.from('meetings').insert(newMeeting).select().single();
+      const { data, error } = await supabase.from('meetings').insert(meetingData).select().single();
       if (error) throw error;
       set(state => ({ meetings: [data, ...state.meetings] }));
       return data;
     } catch (err) {
       console.warn('Supabase insert failed, falling back to local state:', err.message);
-      const fallbackData = { ...newMeeting, id: Date.now().toString(), created_at: new Date().toISOString() };
+      const fallbackData = { ...meetingData, id: Date.now().toString(), created_at: new Date().toISOString() };
       set(state => ({ meetings: [fallbackData, ...state.meetings] }));
       return fallbackData;
     }

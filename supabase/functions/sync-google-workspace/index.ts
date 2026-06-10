@@ -12,15 +12,6 @@ serve(async (req) => {
   }
 
   try {
-    const { providerToken } = await req.json();
-
-    if (!providerToken) {
-      return new Response(JSON.stringify({ error: 'providerToken is required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Authorization header is required' }), {
@@ -39,6 +30,74 @@ serve(async (req) => {
     if (!user) {
       return new Response(JSON.stringify({ error: 'User not authenticated' }), {
         status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const getSdrGoogleToken = async (userId: string) => {
+      const { data, error } = await supabase
+        .from('user_google_credentials')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      if (error || !data) return null;
+      
+      const expiresAt = new Date(data.expires_at).getTime();
+      const now = Date.now();
+      // Refresh token if expiring in less than 5 minutes
+      if (expiresAt - now < 5 * 60 * 1000 && data.refresh_token) {
+        try {
+          const clientId = Deno.env.get('GOOGLE_CLIENT_ID') || '';
+          const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET') || '';
+          
+          const refreshRes = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: clientId,
+              client_secret: clientSecret,
+              refresh_token: data.refresh_token,
+              grant_type: 'refresh_token',
+            }),
+          });
+          
+          if (refreshRes.ok) {
+            const tokenData = await refreshRes.json();
+            const newAccessToken = tokenData.access_token;
+            const newExpiresAt = new Date(Date.now() + (tokenData.expires_in || 3600) * 1000).toISOString();
+            
+            await supabase
+              .from('user_google_credentials')
+              .update({ access_token: newAccessToken, expires_at: newExpiresAt })
+              .eq('user_id', userId);
+            
+            return newAccessToken;
+          } else {
+            console.error('Failed to refresh Google token:', await refreshRes.text());
+          }
+        } catch (refreshErr) {
+          console.error('Error refreshing Google token:', refreshErr);
+        }
+      }
+      
+      return data.access_token;
+    };
+
+    let providerToken: string | null = null;
+    try {
+      const body = await req.json();
+      providerToken = body.providerToken || null;
+    } catch (_) {
+      // Body may be empty or not valid JSON
+    }
+
+    if (!providerToken) {
+      providerToken = await getSdrGoogleToken(user.id);
+    }
+
+    if (!providerToken) {
+      return new Response(JSON.stringify({ error: 'No Google account linked. Please connect your Google account in Settings first.' }), {
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

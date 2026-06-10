@@ -84,19 +84,21 @@ create table public.leads (
   -- ── META ──────────────────────────────────────
   owner_id uuid,
   notes text,
-  tags text[] default '{}'
+  tags text[] default '{}',
+  organization_id uuid references public.organizations(id) on delete cascade
 );
 
 -- Enable RLS
 alter table public.leads enable row level security;
 
 -- Policy: users can see all leads in their org (using authenticated)
-create policy "Authenticated can CRUD leads"
+create policy "Tenant isolation check"
   on public.leads
   for all
   to authenticated
-  using (true)
-  with check (true);
+  using (organization_id = get_user_organization_id());
+
+create trigger set_leads_org_id before insert on public.leads for each row execute procedure set_organization_id();
 
 -- Auto-update updated_at
 create or replace function public.handle_updated_at()

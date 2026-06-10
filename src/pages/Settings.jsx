@@ -1,9 +1,9 @@
 // ============================================
 // HUNTLO SALES OS — SETTINGS PAGE
 // ============================================
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { User, Key, Bell, Shield } from 'lucide-react';
+import { User, Key, Bell, Shield, Mail, Calendar, RefreshCw, Trash2 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import TeamManagement from './settings/TeamManagement';
 import EmailSettingsForm from './settings/EmailSettingsForm';
@@ -21,21 +21,66 @@ const TABS = [
 export default function Settings() {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = searchParams.get('tab') || 'profile';
-  const { user } = useAuthStore();
+  const { user, linkGoogle } = useAuthStore();
   const [keyInput, setKeyInput] = useState(localStorage.getItem('huntlo_gemini_api_key') || '');
-  
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [checkingGoogle, setCheckingGoogle] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    async function checkGoogleConnection() {
+      if (!user) {
+        setCheckingGoogle(false);
+        return;
+      }
+      try {
+        const { data, error } = await supabase
+          .from('user_google_credentials')
+          .select('user_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (data) {
+          setGoogleConnected(true);
+        } else {
+          setGoogleConnected(false);
+        }
+      } catch (err) {
+        console.error('Error checking Google credentials:', err);
+      } finally {
+        setCheckingGoogle(false);
+      }
+    }
+    checkGoogleConnection();
+  }, [user]);
+
   const handleSyncGoogle = async () => {
+    setSyncing(true);
     const token = useAuthStore.getState().session?.provider_token;
-    if (!token) return alert('No Google provider token found. Try reconnecting.');
-    
     try {
       const { data, error } = await supabase.functions.invoke('sync-google-workspace', {
-        body: { providerToken: token }
+        body: { providerToken: token || null }
       });
       if (error) throw error;
-      alert(data.message);
+      alert(data.message || 'Sync successful!');
     } catch (err) {
       alert('Error syncing: ' + err.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleDisconnectGoogle = async () => {
+    if (!confirm('Are you sure you want to disconnect Google Workspace? This will stop calendar sync and Gmail sequence execution.')) return;
+    try {
+      const { error } = await supabase
+        .from('user_google_credentials')
+        .delete()
+        .eq('user_id', user.id);
+      if (error) throw error;
+      setGoogleConnected(false);
+      alert('Google Workspace disconnected.');
+    } catch (err) {
+      alert('Error disconnecting: ' + err.message);
     }
   };
 
@@ -110,6 +155,72 @@ export default function Settings() {
               <p className="panel-sub mb-6">Manage external APIs, channels, and AI configuration keys.</p>
               
               <EmailSettingsForm />
+
+              {/* Google Workspace Connection Card */}
+              <div style={{ 
+                background: 'var(--bg-surface)', 
+                border: '1px solid var(--bg-border)', 
+                borderRadius: 'var(--radius-lg)', 
+                padding: 'var(--space-6)', 
+                maxWidth: 600,
+                marginBottom: 24
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 32 }}>📧</span>
+                    <div>
+                      <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>Google Workspace</h3>
+                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
+                        Connect Gmail and Google Calendar to sync meetings and send sales sequences.
+                      </p>
+                    </div>
+                  </div>
+                  {checkingGoogle ? (
+                    <span className="badge badge-gray" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <RefreshCw size={10} className="cc-spinner" /> Checking...
+                    </span>
+                  ) : googleConnected ? (
+                    <span className="badge badge-green">Connected</span>
+                  ) : (
+                    <span className="badge badge-yellow">Disconnected</span>
+                  )}
+                </div>
+
+                {!checkingGoogle && (
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    {googleConnected ? (
+                      <>
+                        <button 
+                          onClick={handleSyncGoogle} 
+                          className="btn btn-primary btn-sm" 
+                          disabled={syncing}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                        >
+                          {syncing ? <RefreshCw size={13} className="cc-spinner" /> : <Calendar size={13} />}
+                          {syncing ? 'Syncing...' : 'Sync Calendar'}
+                        </button>
+                        <button 
+                          onClick={handleDisconnectGoogle} 
+                          className="btn btn-ghost btn-sm text-danger"
+                          style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                        >
+                          <Trash2 size={13} />
+                          Disconnect
+                        </button>
+                      </>
+                    ) : (
+                      <button 
+                        onClick={linkGoogle} 
+                        className="btn btn-primary btn-sm"
+                        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                      >
+                        <Mail size={13} />
+                        Connect Google Workspace
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
 
 
 

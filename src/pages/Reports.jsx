@@ -53,7 +53,7 @@ export default function Reports() {
       let wonRevenue = 0;
       deals.forEach(d => {
         if (d.owner_id === member.id && d.stage === 'Closed Won') {
-          wonRevenue += Number(d.value) || 0;
+          wonRevenue += Number(d.arr) || 0;
         }
       });
       return { ...member, addedAccounts, addedContacts, setMeetings, wonRevenue };
@@ -64,19 +64,26 @@ export default function Reports() {
     let totalRevenue = 0;
     let pipelineValue = 0;
     deals.forEach(d => {
-      const val = Number(d.value) || 0;
+      const val = Number(d.arr) || 0;
       if (d.stage === 'Closed Won') totalRevenue += val;
       else if (d.stage !== 'Closed Lost') pipelineValue += val;
     });
-    const totalDemos = meetings.filter(m => m.type === 'Demo').length;
-    const wonDealsCount = deals.filter(d => d.stage === 'Closed Won').length;
-    const winRate = totalDemos > 0 ? Math.round((wonDealsCount / totalDemos) * 100) : 0;
+    const lostDeals = deals.filter(d => d.stage === 'Closed Lost').length;
+    const wonDeals = deals.filter(d => d.stage === 'Closed Won').length;
+    const totalClosed = wonDeals + lostDeals;
+    const winRate = totalClosed > 0 ? Math.round((wonDeals / totalClosed) * 100) : 0;
+    const tasksCompleted30d = tasks.filter(t => {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 30);
+      return t.status === 'completed' && new Date(t.due || t.created_at) >= cutoff;
+    }).length;
     return {
       revenue: `$${(totalRevenue / 1000).toFixed(1)}k`,
       pipeline: `$${(pipelineValue / 1000).toFixed(1)}k`,
-      winRate: `${winRate}%`
+      winRate: `${winRate}%`,
+      tasksCompleted30d
     };
-  }, [deals, meetings]);
+  }, [deals, meetings, tasks]);
 
   const revenueData = useMemo(() => {
     const data = [];
@@ -86,7 +93,7 @@ export default function Reports() {
       deals.forEach(deal => {
         const dealDate = new Date(deal.created_at || new Date());
         if (isSameMonth(dealDate, d)) {
-          const val = (Number(deal.value) || 0) / 1000;
+          const val = (Number(deal.arr) || 0) / 1000;
           if (deal.stage === 'Closed Won') won += val;
           else if (deal.stage !== 'Closed Lost') pipeline += val;
         }
@@ -131,7 +138,7 @@ export default function Reports() {
       tasks.forEach(t => { 
         if (isSameWeek(new Date(t.due || t.created_at), d)) {
           total++;
-          if (t.completed) completed++;
+          if (t.status === 'completed') completed++;
         }
       });
       data.push({ week: `W${5 - i}`, completed, missed: total - completed });
@@ -179,10 +186,10 @@ export default function Reports() {
         <>
           {widgets.stats && (
             <div className="rep-stats-grid">
-              <StatCard label="Total Revenue" value={metrics.revenue} trend="Calculated from Won Deals" isPositive={true} />
-              <StatCard label="Pipeline Value" value={metrics.pipeline} trend="Active Deals" isPositive={true} />
-              <StatCard label="Demo Win Rate" value={metrics.winRate} trend="Won vs Demos" isPositive={true} />
-              <StatCard label="Avg Sales Cycle" value="42 days" trend="Estimate" isPositive={true} />
+              <StatCard label="Total Pipeline Value" value={metrics.pipeline} trend="All Active Deals" isPositive={true} />
+              <StatCard label="Total Revenue Won" value={metrics.revenue} trend="Closed Won ARR" isPositive={true} />
+              <StatCard label="Win / Loss Ratio" value={metrics.winRate} trend="Won vs. Total Closed" isPositive={parseInt(metrics.winRate) >= 50} />
+              <StatCard label="Tasks Done (30d)" value={metrics.tasksCompleted30d} trend="Last 30 days" isPositive={true} />
             </div>
           )}
 

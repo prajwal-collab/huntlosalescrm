@@ -1,6 +1,7 @@
 // ============================================
 // HUNTLO SALES OS — RESEND EMAIL CLIENT
 // ============================================
+import useAuthStore from '../store/useAuthStore';
 
 const RESEND_API_KEY = import.meta.env.VITE_RESEND_API_KEY;
 const APP_URL = import.meta.env.VITE_APP_URL || 'http://localhost:5173';
@@ -100,6 +101,45 @@ export function generateInviteToken() {
 
 // Send a plain text B2B sales sequence email
 export async function sendSequenceEmail({ toEmail, subject, body, fromName = 'Huntlo Sales', replyTo }) {
+  const session = useAuthStore.getState().session;
+  const token = session?.provider_token;
+  
+  if (token) {
+    try {
+      const mime = [
+        `To: ${toEmail}`,
+        `Subject: ${subject}`,
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=utf-8',
+        '',
+        body.split('\n').map(line => `<p style="margin: 0 0 16px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; color: #1f2937;">${line}</p>`).join('')
+      ].join('\r\n');
+      
+      const raw = btoa(unescape(encodeURIComponent(mime)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+        
+      const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ raw })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        return { success: true, id: data.id, gmail: true };
+      } else {
+        console.warn('Gmail API send failed, trying Resend...', await res.text());
+      }
+    } catch (err) {
+      console.warn('Gmail API send failed, trying Resend...', err);
+    }
+  }
+
   if (!isConfigured) {
     console.warn(`[Resend] Demo Mode: Would send sequence email to ${toEmail}. Subject: ${subject}`);
     await new Promise(r => setTimeout(r, 600));
@@ -122,7 +162,7 @@ export async function sendSequenceEmail({ toEmail, subject, body, fromName = 'Hu
         from: `${fromName} <onboarding@resend.dev>`,
         to: [toEmail],
         subject,
-        html: body,
+        html: htmlBody,
         ...(replyTo ? { reply_to: replyTo } : {})
       }),
     });

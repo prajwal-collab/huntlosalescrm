@@ -15,6 +15,7 @@ import SignIn from './pages/auth/SignIn';
 import SignUp from './pages/auth/SignUp';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
+import AcceptInvite from './pages/auth/AcceptInvite';
 
 // Pages
 import HomeOS from './pages/HomeOS';
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/accept-invite" element={<AcceptInvite />} />
 
         {/* Protected Routes */}
         <Route element={<AuthGuard />}>

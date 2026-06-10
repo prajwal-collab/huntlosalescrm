@@ -45,6 +45,55 @@ serve(async (req) => {
       return config;
     };
 
+    const getSdrGoogleToken = async (userId: string) => {
+      const { data, error } = await supabase
+        .from('user_google_credentials')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      if (error || !data) return null;
+      
+      const expiresAt = new Date(data.expires_at).getTime();
+      const now = Date.now();
+      // Refresh token if expiring in less than 5 minutes
+      if (expiresAt - now < 5 * 60 * 1000 && data.refresh_token) {
+        try {
+          const clientId = Deno.env.get('GOOGLE_CLIENT_ID') || '';
+          const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET') || '';
+          
+          const refreshRes = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: clientId,
+              client_secret: clientSecret,
+              refresh_token: data.refresh_token,
+              grant_type: 'refresh_token',
+            }),
+          });
+          
+          if (refreshRes.ok) {
+            const tokenData = await refreshRes.json();
+            const newAccessToken = tokenData.access_token;
+            const newExpiresAt = new Date(Date.now() + (tokenData.expires_in || 3600) * 1000).toISOString();
+            
+            await supabase
+              .from('user_google_credentials')
+              .update({ access_token: newAccessToken, expires_at: newExpiresAt })
+              .eq('user_id', userId);
+            
+            return newAccessToken;
+          } else {
+            console.error('Failed to refresh Google token:', await refreshRes.text());
+          }
+        } catch (refreshErr) {
+          console.error('Error refreshing Google token:', refreshErr);
+        }
+      }
+      
+      return data.access_token;
+    };
+
     // 3. Fetch Enrollments due for sending
     // We only fetch 'active' enrollments where next_step_due is in the past.
     const { data: dueEnrollments, error: enrollError } = await supabase
@@ -106,22 +155,63 @@ serve(async (req) => {
       body += `\n\n--\nTo unsubscribe from these emails, click here: ${unsubscribeUrl}`;
 
       try {
-        // 5. Send Email via SMTP
-        const sdrConfig = await getSdrTransporter(sequence.user_id);
-        if (!sdrConfig) {
-          console.warn(`Skipping email to ${contact.email} - No SMTP settings for SDR ${sequence.user_id}`);
-          continue; // Skip this enrollment until they configure SMTP
+        let sent = false;
+        const googleToken = await getSdrGoogleToken(sequence.user_id);
+        
+        if (googleToken) {
+          try {
+            const mime = [
+              `To: ${contact.email}`,
+              `Subject: ${subject}`,
+              'MIME-Version: 1.0',
+              'Content-Type: text/html; charset=utf-8',
+              '',
+              body.replace(/\n/g, '<br>')
+            ].join('\r\n');
+            
+            const encodedMime = btoa(unescape(encodeURIComponent(mime)))
+              .replace(/\+/g, '-')
+              .replace(/\//g, '_')
+              .replace(/=+$/, '');
+            
+            const gmailRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${googleToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ raw: encodedMime })
+            });
+            
+            if (gmailRes.ok) {
+              emailsSent++;
+              sent = true;
+            } else {
+              console.error(`Gmail API send failed for ${contact.email}:`, await gmailRes.text());
+            }
+          } catch (gmailErr) {
+            console.error(`Gmail API error for ${contact.email}:`, gmailErr);
+          }
         }
+        
+        if (!sent) {
+          // 5. Send Email via SMTP
+          const sdrConfig = await getSdrTransporter(sequence.user_id);
+          if (!sdrConfig) {
+            console.warn(`Skipping email to ${contact.email} - No SMTP or Google credentials settings for SDR ${sequence.user_id}`);
+            continue; // Skip this enrollment until they configure SMTP or Google
+          }
 
-        await sdrConfig.transporter.sendMail({
-          from: `"${sdrConfig.senderName}" <${sdrConfig.smtpUser}>`,
-          to: contact.email,
-          subject: subject,
-          text: body, // Fallback plain text
-          html: body.replace(/\n/g, '<br>'),
-        });
+          await sdrConfig.transporter.sendMail({
+            from: `"${sdrConfig.senderName}" <${sdrConfig.smtpUser}>`,
+            to: contact.email,
+            subject: subject,
+            text: body, // Fallback plain text
+            html: body.replace(/\n/g, '<br>'),
+          });
 
-        emailsSent++;
+          emailsSent++;
+        }
 
         // 6. Update Enrollment to next step
         const nextStepOrder = enrollment.current_step + 1;
