@@ -19,6 +19,10 @@ export default function TeamManagement() {
 
   useEffect(() => {
     fetchTeam();
+    const interval = setInterval(() => {
+      fetchTeam();
+    }, 5000);
+    return () => clearInterval(interval);
   }, [fetchTeam]);
 
   const handleInvite = async (e) => {
