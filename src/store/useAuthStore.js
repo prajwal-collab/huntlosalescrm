@@ -241,25 +241,47 @@ const useAuthStore = create(
 
       removeMember: async (memberId) => {
         try {
-          await supabase.from('profiles').delete().eq('id', memberId);
-          await supabase.from('invitations').delete().eq('id', memberId);
+          const { data: profileData, error: profileErr } = await supabase.from('profiles').delete().eq('id', memberId).select();
+          if (profileErr) throw profileErr;
+
+          const { data: inviteData, error: inviteErr } = await supabase.from('invitations').delete().eq('id', memberId).select();
+          if (inviteErr) throw inviteErr;
+
+          const affectedProfiles = profileData ? profileData.length : 0;
+          const affectedInvites = inviteData ? inviteData.length : 0;
+          if (affectedProfiles === 0 && affectedInvites === 0) {
+            throw new Error('Member not found or permission denied (RLS policy violation).');
+          }
+
           await get().fetchTeam();
         } catch (err) {
           console.warn('[AuthStore] removeMember database call failed, falling back to local state:', err.message);
           set(state => ({ team: state.team.filter(m => m.id !== memberId) }));
+          throw err;
         }
       },
 
       updateMemberRole: async (memberId, role) => {
         try {
-          await supabase.from('profiles').update({ role }).eq('id', memberId);
-          await supabase.from('invitations').update({ role }).eq('id', memberId);
+          const { data: profileData, error: profileErr } = await supabase.from('profiles').update({ role }).eq('id', memberId).select();
+          if (profileErr) throw profileErr;
+
+          const { data: inviteData, error: inviteErr } = await supabase.from('invitations').update({ role }).eq('id', memberId).select();
+          if (inviteErr) throw inviteErr;
+
+          const affectedProfiles = profileData ? profileData.length : 0;
+          const affectedInvites = inviteData ? inviteData.length : 0;
+          if (affectedProfiles === 0 && affectedInvites === 0) {
+            throw new Error('Member not found or permission denied (RLS policy violation).');
+          }
+
           await get().fetchTeam();
         } catch (err) {
           console.warn('[AuthStore] updateMemberRole database call failed, falling back to local state:', err.message);
           set(state => ({
             team: state.team.map(m => m.id === memberId ? { ...m, role } : m)
           }));
+          throw err;
         }
       },
 

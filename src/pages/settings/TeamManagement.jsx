@@ -37,19 +37,31 @@ export default function TeamManagement() {
       inviteToken: token
     });
 
-    if (result.success) {
-      try {
-        await inviteMember({ email, role, token });
-        setStatus({ type: 'success', message: result.demo ? 'Demo: Invite added (no email sent).' : 'Invitation sent successfully!' });
+    try {
+      await inviteMember({ email, role, token });
+      const appUrl = window.location.origin;
+      const shareLink = `${appUrl}/accept-invite?token=${token}`;
+
+      if (result.success) {
+        showSuccess(
+          'Invitation Sent',
+          `An invitation has been sent to ${email}.${result.demo ? ' (Demo mode: no real email sent)' : ''}`
+        );
         setEmail('');
-        setTimeout(() => { setInviteOpen(false); setStatus(null); }, 2000);
-      } catch (err) {
-        setStatus({ type: 'error', message: err.message || 'Failed to save invitation to CRM.' });
+        setInviteOpen(false);
+      } else {
+        await showSuccess(
+          'Invitation Created',
+          `The invitation has been successfully created in the database, but we couldn't send the automated email (${result.error || 'Email service not configured'}).\n\nShare this registration link manually:\n\n${shareLink}`
+        );
+        setEmail('');
+        setInviteOpen(false);
       }
-    } else {
-      setStatus({ type: 'error', message: result.error || 'Failed to send invitation.' });
+    } catch (err) {
+      showError('Failed to Create Invite', err.message || 'Could not save invitation to database.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

@@ -55,6 +55,22 @@ CREATE POLICY "Public profiles are viewable by everyone in organization."
 CREATE POLICY "Users can update their own profile." 
   ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
+CREATE POLICY "Admins can update profiles in their organization"
+  ON public.profiles FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'Admin' AND organization_id = public.profiles.organization_id
+    )
+  );
+
+CREATE POLICY "Admins can delete profiles in their organization"
+  ON public.profiles FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'Admin' AND organization_id = public.profiles.organization_id
+    )
+  );
+
 -- 3. Create Companies Table (tenant-linked, supports soft deletes)
 CREATE TABLE public.companies (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
