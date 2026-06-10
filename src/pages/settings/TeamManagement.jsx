@@ -150,7 +150,8 @@ export default function TeamManagement() {
             </select>
             {member.status === 'invited' && (
               <button 
-                className="btn btn-ghost btn-sm text-primary" 
+                className="btn btn-ghost btn-sm" 
+                style={{ color: 'var(--accent-blue)' }}
                 onClick={async () => {
                   try {
                     const { data, error } = await supabase
