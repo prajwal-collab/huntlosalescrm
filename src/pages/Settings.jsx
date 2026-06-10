@@ -313,6 +313,24 @@ export default function Settings() {
                     )}
                   </div>
                 )}
+                
+                <div style={{ 
+                  marginTop: 20, 
+                  padding: '12px 16px', 
+                  background: 'var(--bg-elevated)', 
+                  borderLeft: '3px solid var(--accent-blue)', 
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
+                  lineHeight: '1.6'
+                }}>
+                  <h4 style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8, fontSize: '13px' }}>💡 How to Connect (For SDRs):</h4>
+                  <ol style={{ margin: 0, paddingLeft: 16 }}>
+                    <li style={{ marginBottom: 4 }}>Click the <strong>Connect Google Workspace</strong> button above and sign in with your corporate Google Account.</li>
+                    <li style={{ marginBottom: 4 }}>Ensure you grant permissions for both <strong>Calendar</strong> (to sync meetings) and <strong>Gmail</strong> (to send automation sequences).</li>
+                    <li><em>Note:</em> SMTP settings are already configured globally by your administrator. No further action is required on SMTP.</li>
+                  </ol>
+                </div>
               </div>
 
 
