@@ -144,6 +144,54 @@ export default function TeamManagement() {
               <option value="Member">Member</option>
               <option value="Viewer">Viewer</option>
             </select>
+            {member.status === 'invited' && (
+              <button 
+                className="btn btn-ghost btn-sm text-primary" 
+                onClick={async () => {
+                  try {
+                    const { data, error } = await supabase
+                      .from('invitations')
+                      .select('token')
+                      .eq('id', member.id)
+                      .maybeSingle();
+
+                    let token = data?.token;
+                    if (!token) {
+                      token = member.token || Math.random().toString(36).substring(2);
+                    }
+
+                    const inviterName = user?.user_metadata?.full_name || user?.email || 'A team member';
+                    
+                    const result = await sendTeamInvitation({
+                      toEmail: member.email,
+                      toName: member.name || member.email.split('@')[0],
+                      inviterName,
+                      role: member.role,
+                      inviteToken: token
+                    });
+
+                    const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+                    const shareLink = `${appUrl}/accept-invite?token=${token}`;
+
+                    if (result.success) {
+                      showSuccess(
+                        'Invitation Resent',
+                        `Invitation email has been resent to ${member.email}.${result.demo ? ' (Demo mode: no real email sent)' : ''}`
+                      );
+                    } else {
+                      await showSuccess(
+                        'Copy Invitation Link',
+                        `We couldn't send the email automatically (${result.error || 'Email service not configured'}).\n\nShare this registration link manually:\n\n${shareLink}`
+                      );
+                    }
+                  } catch (err) {
+                    showError('Failed to Resend', err.message || 'Could not fetch invitation token.');
+                  }
+                }}
+              >
+                Resend
+              </button>
+            )}
             <button 
               className="btn btn-ghost btn-sm text-danger" 
               onClick={async () => {
