@@ -58,16 +58,16 @@ CREATE POLICY "Users can update their own profile."
 CREATE POLICY "Admins can update profiles in their organization"
   ON public.profiles FOR UPDATE USING (
     EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role = 'Admin' AND organization_id = public.profiles.organization_id
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = auth.uid() AND p.role = 'Admin' AND p.organization_id = public.profiles.organization_id
     )
   );
 
 CREATE POLICY "Admins can delete profiles in their organization"
   ON public.profiles FOR DELETE USING (
     EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role = 'Admin' AND organization_id = public.profiles.organization_id
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = auth.uid() AND p.role = 'Admin' AND p.organization_id = public.profiles.organization_id
     )
   );
 
