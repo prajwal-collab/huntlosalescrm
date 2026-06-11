@@ -111,7 +111,7 @@ export default function TeamManagement() {
         </div>
       )}
 
-      <div className="team-list" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="team-list scrollable" style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: '400px' }}>
         {team.map(member => (
           <div key={member.id} className="team-member-row" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '12px 16px', background: 'var(--bg-elevated)', borderRadius: 8, border: '1px solid var(--bg-border)' }}>
             <div className="avatar avatar-md" style={{ background: member.color, color: '#fff' }}>

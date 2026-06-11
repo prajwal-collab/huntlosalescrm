@@ -143,6 +143,11 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--bg-border); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
 
+/* === SMOOTH SCROLLING === */
+html { scroll-behavior: smooth; }
+.scrollable { overflow-y: auto; max-height: 400px; scroll-behavior: smooth; }
+
+
 /* === SELECTION === */
 ::selection { background: var(--accent-blue-glow); color: var(--text-primary); }
 
@@ -467,6 +472,8 @@ html.dark-mode .btn-ghost {
   top: 2px; right: 2px;
   border: 1.5px solid var(--bg-surface);
 }
+.smooth-scroll { scroll-behavior: smooth; }
+.scrollable { overflow-y: auto; }
 
 /* === SEARCH BOX === */
 .search-box {
