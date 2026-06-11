@@ -192,24 +192,34 @@ const useAuthStore = create(
 
       // Team management
       fetchTeam: async () => {
-        try {
-          const { data, error } = await supabase.from('team_members').select('*');
-          if (error) throw error;
-          if (data) set({ team: data });
-        } catch (err) {
-          console.warn('[AuthStore] Failed to fetch team from Supabase, maintaining local state:', err.message);
-          const currentTeam = get().team;
-          if (!currentTeam || currentTeam.length === 0) {
-            set({
-              team: [
+          try {
+            const [teamRes, invitesRes] = await Promise.all([
+              supabase.from('team_members').select('*'),
+              supabase.from('invitations').select('*')
+            ]);
+
+            if (teamRes.error) throw teamRes.error;
+            if (invitesRes.error) throw invitesRes.error;
+
+            let team = [
+              ...(teamRes.data || []).map(m => ({ ...m, type: 'member' })),
+              ...(invitesRes.data || []).map(i => ({ ...i, type: 'invite', name: i.email.split('@')[0], status: 'invited' }))
+            ];
+
+            // Fallback to mock data if no team members fetched
+            if (team.length === 0) {
+              team = [
                 { id: 'u1', name: 'Alex Reid', email: 'alex.reid@earlyjobs.in', role: 'Admin', status: 'active', initials: 'AR', color: '#3b82f6' },
                 { id: 'u2', name: 'Sarah Connor', email: 'sarah@earlyjobs.in', role: 'Member', status: 'active', initials: 'SC', color: '#8b5cf6' },
                 { id: 'u3', name: 'John Doe', email: 'john@earlyjobs.in', role: 'Member', status: 'invited', initials: 'JD', color: '#f59e0b' }
-              ]
-            });
+              ];
+            }
+
+            set({ team });
+          } catch (err) {
+            console.warn('[AuthStore] Failed to fetch team from Supabase, maintaining local state:', err.message);
           }
-        }
-      },
+        },
 
       inviteMember: async (invite) => {
         const token = invite.token || Math.random().toString(36).substring(2);
