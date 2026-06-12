@@ -352,3 +352,29 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- 12. RPC for verifying invitation token safely
+CREATE OR REPLACE FUNCTION verify_invitation_token(p_token TEXT)
+RETURNS TABLE (
+  id UUID,
+  organization_id UUID,
+  email TEXT,
+  role TEXT,
+  token TEXT,
+  created_at TIMESTAMP WITH TIME ZONE,
+  accepted_at TIMESTAMP WITH TIME ZONE,
+  organization_name TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    i.id, i.organization_id, i.email, i.role, i.token, i.created_at, i.accepted_at,
+    o.name AS organization_name
+  FROM public.invitations i
+  LEFT JOIN public.organizations o ON i.organization_id = o.id
+  WHERE i.token = p_token;
+END;
+$$;

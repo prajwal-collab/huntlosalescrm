@@ -27,9 +27,7 @@ export default function AcceptInvite() {
 
       try {
         const { data, error } = await supabase
-          .from('invitations')
-          .select('*, organizations(name)')
-          .eq('token', token)
+          .rpc('verify_invitation_token', { p_token: token })
           .single();
 
         if (error || !data) {
@@ -55,7 +53,7 @@ export default function AcceptInvite() {
     const email = encodeURIComponent(invite.email);
     const orgId = encodeURIComponent(invite.organization_id);
     const role = encodeURIComponent(invite.role);
-    const orgName = encodeURIComponent(invite.organizations?.name || 'Workspace');
+    const orgName = encodeURIComponent(invite.organization_name || 'Workspace');
     const inviteToken = encodeURIComponent(token);
 
     navigate(`/signup?email=${email}&org_id=${orgId}&role=${role}&token=${inviteToken}&org_name=${orgName}`);
@@ -120,7 +118,7 @@ export default function AcceptInvite() {
             </div>
             <div>
               <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Workspace</div>
-              <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>{invite?.organizations?.name}</div>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>{invite?.organization_name}</div>
             </div>
           </div>
 
