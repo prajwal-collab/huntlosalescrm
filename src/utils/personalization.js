@@ -11,6 +11,7 @@ export function parseTemplate(templateString, leadData, senderData = {}) {
 
   // Extract variables
   const firstName = leadData.name ? leadData.name.split(' ')[0] : fallback(leadData.contact_name?.split(' ')[0]);
+  // eslint-disable-next-line no-unused-vars
   const lastName = leadData.name ? leadData.name.split(' ').slice(1).join(' ') : fallback(leadData.contact_name?.split(' ').slice(1).join(' '));
   const company = fallback(leadData.company_name);
   const title = fallback(leadData.designation);

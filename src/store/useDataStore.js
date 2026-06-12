@@ -139,6 +139,7 @@ const useDataStore = create((set, get) => ({
   bulkCreateCompanies: async (companiesList) => {
     const listWithoutOwner = companiesList.map(c => {
       // Remove any fields that don't belong in the table
+      // eslint-disable-next-line no-unused-vars
       const { company: _c, title: _t, phone: _p, employees: _e, revenue: _r, status: _s, ...rest } = c;
       return {
         name: c.name,
@@ -458,6 +459,7 @@ const useDataStore = create((set, get) => ({
     set(state => ({ sequences: state.sequences.filter(s => s.id !== id) }));
   },
 
+  // eslint-disable-next-line no-unused-vars
   enrollLeadsInSequence: async ({ sequenceId, leadIds, config }) => {
     const state = get();
     const sequence = state.sequences.find(s => s.id === sequenceId);

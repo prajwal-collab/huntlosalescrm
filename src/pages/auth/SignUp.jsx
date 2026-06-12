@@ -27,6 +27,7 @@ export default function SignUp() {
 
   useEffect(() => {
     if (invitedEmail) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(f => ({ ...f, email: invitedEmail }));
     }
   }, [invitedEmail]);

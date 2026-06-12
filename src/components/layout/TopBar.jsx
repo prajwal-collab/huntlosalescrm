@@ -1,7 +1,7 @@
 // ============================================
 // HUNTLO SALES OS — TOP BAR
 // ============================================
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Bell, Plus, Command } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import useUIStore from '../../store/useUIStore';
@@ -30,6 +30,17 @@ export default function TopBar({ onNewDeal }) {
   const [showNotifications, setShowNotifications] = useState(false);
 
   const title = PAGE_TITLES[location.pathname] || 'Huntlo OS';
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        openCommandCenter();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [openCommandCenter]);
 
   return (
     <header className="topbar">

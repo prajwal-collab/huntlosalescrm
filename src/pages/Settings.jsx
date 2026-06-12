@@ -34,6 +34,7 @@ export default function Settings() {
 
   useEffect(() => {
     if (user?.user_metadata?.full_name) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFullName(user.user_metadata.full_name);
     } else if (user?.email) {
       setFullName(user.email.split('@')[0]);
