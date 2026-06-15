@@ -10,6 +10,7 @@ import {
   Users, SlidersHorizontal, CheckCircle2
 } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
+import useAuthStore from '../store/useAuthStore';
 import LeadDrawer from '../components/leads/LeadDrawer';
 import NewLeadForm from '../components/leads/NewLeadForm';
 import EnrollSequenceModal from '../components/sequences/EnrollSequenceModal';
@@ -77,7 +78,7 @@ const VIEWS = [
 ];
 
 // ── Lead Row ────────────────────────────────────────────────
-function LeadRow({ lead, isSelected, onSelect, onClick, updateLead }) {
+function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team }) {
   const score = useMemo(() => computeSignalScore(lead), [lead]);
   const priority = getPriority(score);
   const signals = lead.signals || {};
@@ -127,6 +128,24 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead }) {
         <div className="lead-company-info">
           <span className="lead-company-name">{lead.company_name || '—'}</span>
           <span className="lead-contact-name">{lead.contact_name || lead.designation || 'No contact'}</span>
+        </div>
+      </div>
+
+      {/* Owner */}
+      <div className="lc">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {(() => {
+            const owner = team?.find(t => t.id === lead.owner_id);
+            if (!owner) return <span style={{ color: 'var(--text-tertiary)' }}>Unassigned</span>;
+            return (
+              <>
+                <div className="avatar" style={{ width: 18, height: 18, fontSize: 9, background: owner.color || '#3b82f6', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {owner.initials}
+                </div>
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{owner.name}</span>
+              </>
+            );
+          })()}
         </div>
       </div>
 
@@ -221,6 +240,7 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead }) {
 // ── Main Page ───────────────────────────────────────────────
 export default function Leads() {
   const { leads, deleteLead, bulkDeleteLeads, updateLead } = useDataStore();
+  const { team } = useAuthStore();
   const { showConfirm } = useDialog();
   const [activeView, setActiveView] = useState('all');
   const [search, setSearch] = useState('');
@@ -398,6 +418,7 @@ export default function Leads() {
               />
             </div>
             <span>Company / Contact</span>
+            <span>Owner</span>
             <span>Stage</span>
             <span>Signal Score</span>
             <span>Priority</span>
@@ -436,6 +457,7 @@ export default function Leads() {
                   onSelect={toggleSelect}
                   onClick={handleLeadClick}
                   updateLead={updateLead}
+                  team={team}
                 />
               ))
             )}

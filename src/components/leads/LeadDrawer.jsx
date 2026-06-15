@@ -10,6 +10,7 @@ import {
   MessageCircle, Users, Building2
 } from 'lucide-react';
 import { useDialog } from '../../context/DialogContext';
+import useAuthStore from '../../store/useAuthStore';
 
 const STAGES = [
   'New Lead', 'Researching', 'Ready for Outreach', 'Outreach Started',
@@ -48,6 +49,7 @@ function Field({ label, value, children }) {
 
 export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
   const { showConfirm } = useDialog();
+  const { team } = useAuthStore();
   const [tab, setTab] = useState('intelligence');
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -307,7 +309,30 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
 
             {/* Company Info */}
             <div className="d-section">
-              <div className="d-section-label">Company Info</div>
+              <div className="d-section-label">Coordination & Details</div>
+              <Field label="Owner">
+                {editMode ? (
+                  <select className="d-select" value={form.owner_id || ''} onChange={e => set('owner_id', e.target.value)}>
+                    <option value="">Unassigned</option>
+                    {team.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
+                ) : (
+                  <span className="d-field-value" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {(() => {
+                      const owner = team.find(t => t.id === form.owner_id);
+                      if (!owner) return <span style={{ color: 'var(--text-tertiary)' }}>Unassigned</span>;
+                      return (
+                        <>
+                          <div className="avatar" style={{ width: 16, height: 16, fontSize: 8, background: owner.color || '#3b82f6', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {owner.initials}
+                          </div>
+                          {owner.name}
+                        </>
+                      );
+                    })()}
+                  </span>
+                )}
+              </Field>
               <Field label="Industry" value={form.industry} />
               <Field label="Company Type" value={form.company_type} />
               <Field label="Employee Size" value={form.employee_size} />
