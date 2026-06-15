@@ -385,6 +385,47 @@ ALTER TABLE public.contacts ADD CONSTRAINT unique_contact_per_org UNIQUE (organi
 
 
 -- ============================================================
+-- HUNTLO — LEADS TABLE SCHEMA
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.leads (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
+  owner_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  company_name TEXT NOT NULL,
+  website TEXT,
+  linkedin_url TEXT,
+  industry TEXT,
+  company_type TEXT,
+  employee_size TEXT,
+  recruiter_team_size TEXT,
+  location TEXT,
+  contact_name TEXT,
+  designation TEXT,
+  email TEXT,
+  phone TEXT,
+  contact_linkedin TEXT,
+  stage TEXT DEFAULT 'New Lead',
+  source TEXT,
+  signals JSONB DEFAULT '{}'::jsonb,
+  next_action TEXT,
+  next_action_owner TEXT,
+  next_action_due TIMESTAMP WITH TIME ZONE,
+  next_action_priority TEXT,
+  estimated_mrr NUMERIC,
+  buying_potential TEXT,
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
+);
+
+ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Tenant isolation check" ON public.leads FOR ALL TO authenticated
+  USING (organization_id = get_user_organization_id() AND deleted_at IS NULL);
+
+ALTER TABLE public.leads ADD CONSTRAINT unique_lead_email_per_org UNIQUE (organization_id, email);
+
+-- ============================================================
 -- HUNTLO — WEBHOOK SYSTEM SCHEMA
 -- Run this in the Supabase SQL editor
 -- ============================================================

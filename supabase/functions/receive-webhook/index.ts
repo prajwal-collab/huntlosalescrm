@@ -80,8 +80,27 @@ serve(async (req) => {
         let leadId = null;
 
         // Extract RB2B-style fields
-        const companyData = payload.company || payload.organization;
-        const personData = payload.person || payload.contact || payload.user;
+        let companyData = payload.company || payload.organization;
+        let personData = payload.person || payload.contact || payload.user;
+
+        // SLACK HACK: If payload is formatted for Slack, parse the raw text for lead info
+        if (!personData && (payload.text || payload.blocks || payload.attachments)) {
+          const rawText = JSON.stringify(payload);
+          
+          // Extract Email
+          const emailMatch = rawText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+          const extractedEmail = emailMatch ? emailMatch[0] : null;
+          
+          if (extractedEmail) {
+            personData = { email: extractedEmail, name: 'Slack Visitor' };
+            
+            // Guess company from domain if missing
+            if (!companyData) {
+              const domain = extractedEmail.split('@')[1];
+              companyData = { name: domain, domain: domain };
+            }
+          }
+        }
 
         // Upsert Company
         if (companyData && companyData.name) {
