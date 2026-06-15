@@ -4,9 +4,10 @@
 import { useState, useEffect } from 'react';
 import { Mail, Plus, Shield, Loader, CheckCircle } from 'lucide-react';
 import useAuthStore from '../../store/useAuthStore';
-import { sendTeamInvitation, generateInviteToken } from '../../lib/resend';
+import { sendTeamInvitation } from '../../lib/resend';
 import { useDialog } from '../../context/DialogContext';
 import { supabase } from '../../lib/supabase';
+import InviteModal from '../../components/auth/InviteModal';
 
 export default function TeamManagement() {
   const { team, inviteMember, removeMember, updateMemberRole, user, fetchTeam } = useAuthStore();
@@ -25,49 +26,7 @@ export default function TeamManagement() {
     return () => clearInterval(interval);
   }, [fetchTeam]);
 
-  const handleInvite = async (e) => {
-    e.preventDefault();
-    if (!email) return;
-    setLoading(true);
-    setStatus(null);
-
-    const token = generateInviteToken();
-    const inviterName = user?.user_metadata?.full_name || user?.email || 'A team member';
-
-    const result = await sendTeamInvitation({
-      toEmail: email,
-      toName: email.split('@')[0],
-      inviterName,
-      role,
-      inviteToken: token
-    });
-
-    try {
-      await inviteMember({ email, role, token });
-      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-      const shareLink = `${appUrl}/accept-invite?token=${token}`;
-
-      if (result.success) {
-        showSuccess(
-          'Invitation Sent',
-          `An invitation has been sent to ${email}.${result.demo ? ' (Demo mode: no real email sent)' : ''}`
-        );
-        setEmail('');
-        setInviteOpen(false);
-      } else {
-        await showSuccess(
-          'Invitation Created',
-          `The invitation has been successfully created in the database, but we couldn't send the automated email (${result.error || 'Email service not configured'}).\n\nShare this registration link manually:\n\n${shareLink}`
-        );
-        setEmail('');
-        setInviteOpen(false);
-      }
-    } catch (err) {
-      showError('Failed to Create Invite', err.message || 'Could not save invitation to database.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // handleInvite moved to InviteModal
 
   return (
     <div className="settings-panel animate-fade-in">
@@ -81,35 +40,7 @@ export default function TeamManagement() {
         </button>
       </div>
 
-      {inviteOpen && (
-        <div className="invite-box" style={{ background: 'var(--bg-elevated)', padding: 16, borderRadius: 8, marginBottom: 24, border: '1px solid var(--accent-blue)' }}>
-          <h3 className="text-sm font-semibold mb-3">Invite new member</h3>
-          <form className="flex gap-3 items-center" onSubmit={handleInvite}>
-            <input 
-              type="email" 
-              className="input-base" 
-              placeholder="colleague@company.com" 
-              value={email} 
-              onChange={e => setEmail(e.target.value)} 
-              required 
-            />
-            <select className="input-base" style={{ width: 140 }} value={role} onChange={e => setRole(e.target.value)}>
-              <option value="Admin">Admin</option>
-              <option value="Member">Member</option>
-              <option value="Viewer">Viewer</option>
-            </select>
-            <button className="btn btn-primary" type="submit" disabled={loading}>
-              {loading ? <Loader size={14} className="cc-spinner" /> : <><Mail size={13} /> Send Invite</>}
-            </button>
-            <button className="btn btn-ghost" type="button" onClick={() => setInviteOpen(false)}>Cancel</button>
-          </form>
-          {status && (
-            <div className={`mt-3 p-2 rounded text-sm ${status.type === 'success' ? 'bg-success-glow text-success border-success' : 'bg-danger-glow text-danger border-danger'}`} style={{ border: '1px solid' }}>
-              {status.message}
-            </div>
-          )}
-        </div>
-      )}
+      <InviteModal isOpen={inviteOpen} onClose={() => { setInviteOpen(false); fetchTeam(); }} />
 
       <div className="team-list scrollable" style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: '400px' }}>
         {team.map(member => (

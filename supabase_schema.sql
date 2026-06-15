@@ -378,3 +378,7 @@ BEGIN
   WHERE i.token = p_token;
 END;
 $$;
+
+-- 13. Data Deduplication Constraints
+ALTER TABLE public.companies ADD CONSTRAINT unique_company_per_org UNIQUE (organization_id, name);
+ALTER TABLE public.contacts ADD CONSTRAINT unique_contact_per_org UNIQUE (organization_id, email);

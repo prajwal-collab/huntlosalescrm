@@ -58,12 +58,15 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
   const [results, setResults] = useState({ success: 0, failed: 0 });
   const fileInputRef = useRef(null);
 
+  const [importType, setImportType] = useState(type);
+
   const { bulkCreateContacts, bulkCreateCompanies, bulkCreateLeads, contacts, companies, leads } = useDataStore();
-  const crmFields = type === 'contacts' ? CONTACT_FIELDS : type === 'leads' ? LEAD_FIELDS : COMPANY_FIELDS;
+  const crmFields = importType === 'contacts' ? CONTACT_FIELDS : importType === 'leads' ? LEAD_FIELDS : COMPANY_FIELDS;
 
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
+      setImportType(type);
       setStep('upload');
       setFile(null);
       setHeaders([]);
@@ -72,7 +75,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
       setError(null);
       setResults({ success: 0, failed: 0 });
     }
-  }, [isOpen]);
+  }, [isOpen, type]);
 
   if (!isOpen) return null;
 
@@ -125,13 +128,13 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
       return;
     }
 
-    if (type === 'contacts') {
+    if (importType === 'contacts') {
       if (!mapping['email'] && !mapping['phone']) {
         setError('Please map either Email Address OR Phone Number. At least one is required.');
         return;
       }
     }
-    if (type === 'leads') {
+    if (importType === 'leads') {
       if (!mapping['company_name']) {
         setError('Company Name is required for Leads.');
         return;
@@ -153,7 +156,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
         }
       });
       
-      if (type === 'leads') {
+      if (importType === 'leads') {
         // Group signals into JSONB
         obj.signals = {
           hiring_activity: obj.hiring_activity === 'true' || obj.hiring_activity === 'yes',
@@ -176,18 +179,14 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
         if (obj.estimated_mrr) obj.estimated_mrr = parseInt(obj.estimated_mrr) || 0;
         if (obj.recruiter_team_size) obj.recruiter_team_size = parseInt(obj.recruiter_team_size) || 0;
       }
-
-      // Add status/stages defaults for other types
-      if (type === 'contacts') obj.status = 'New';
-      if (type === 'companies') obj.status = 'Target';
       
       return obj;
     }).filter(obj => {
-      if (type === 'leads') {
+      if (importType === 'leads') {
         return obj.company_name && obj.company_name.trim() !== '';
       }
       if (!obj.name || obj.name.trim() === '') return false;
-      if (type === 'contacts') {
+      if (importType === 'contacts') {
         return (obj.email && obj.email.trim() !== '') || (obj.phone && obj.phone.trim() !== '');
       }
       return true;
@@ -202,7 +201,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
     // Duplicate detection
     let dedupedData = mappedData;
     let skippedCount = 0;
-    if (type === 'contacts') {
+    if (importType === 'contacts') {
       const existingEmails = new Set(contacts.map(c => (c.email || '').toLowerCase()));
       dedupedData = mappedData.filter(row => {
         if (row.email && existingEmails.has(row.email.toLowerCase())) {
@@ -211,7 +210,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
         }
         return true;
       });
-    } else if (type === 'companies') {
+    } else if (importType === 'companies') {
       const existingNames = new Set(companies.map(c => (c.name || '').toLowerCase()));
       const existingDomains = new Set(companies.map(c => (c.website || '').toLowerCase()).filter(Boolean));
       dedupedData = mappedData.filter(row => {
@@ -223,7 +222,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
         }
         return true;
       });
-    } else if (type === 'leads') {
+    } else if (importType === 'leads') {
       const existingLeadNames = new Set(leads.map(l => (l.company_name || '').toLowerCase()));
       dedupedData = mappedData.filter(row => {
         if (row.company_name && existingLeadNames.has(row.company_name.toLowerCase())) {
@@ -242,9 +241,9 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
 
     try {
       // Chunking if massive, but let's assume < 1000 for standard UI
-      if (type === 'contacts') {
+      if (importType === 'contacts') {
         await bulkCreateContacts(dedupedData);
-      } else if (type === 'leads') {
+      } else if (importType === 'leads') {
         await bulkCreateLeads(dedupedData);
       } else {
         await bulkCreateCompanies(dedupedData);
@@ -264,7 +263,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `huntlo_${type}_template.csv`;
+    a.download = `huntlo_${importType}_template.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -273,9 +272,17 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
     <div className="csv-modal-overlay">
       <div className="csv-modal-content">
         <div className="csv-modal-header">
-          <h2>Import {type === 'contacts' ? 'Contacts' : type === 'leads' ? 'Leads' : 'Accounts'}</h2>
+          <h2>Import Records</h2>
           <button className="btn-close" onClick={onClose}><X size={20} /></button>
         </div>
+        
+        {step === 'upload' && (
+          <div className="csv-tabs">
+            <button className={`csv-tab ${importType === 'contacts' ? 'active' : ''}`} onClick={() => setImportType('contacts')}>Contacts</button>
+            <button className={`csv-tab ${importType === 'companies' ? 'active' : ''}`} onClick={() => setImportType('companies')}>Accounts</button>
+            <button className={`csv-tab ${importType === 'leads' ? 'active' : ''}`} onClick={() => setImportType('leads')}>Leads</button>
+          </div>
+        )}
 
         <div className="csv-modal-body">
           {error && (
@@ -366,7 +373,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
                 </p>
               )}
               <button className="btn btn-primary mt-4" onClick={onClose}>
-                View My {type === 'contacts' ? 'Contacts' : type === 'leads' ? 'Leads' : 'Accounts'}
+                View My {importType === 'contacts' ? 'Contacts' : importType === 'leads' ? 'Leads' : 'Accounts'}
               </button>
             </div>
           )}

@@ -71,6 +71,13 @@ export default function NewLeadForm({ onClose }) {
         signal_score: 0,
         priority: 'Cold',
       };
+      
+      // Sanitize empty strings to avoid Postgres constraint errors
+      if (!payload.company_type) delete payload.company_type;
+      if (!payload.next_action_due) delete payload.next_action_due;
+      if (!payload.next_action_owner) delete payload.next_action_owner;
+      if (!payload.buying_potential) payload.buying_potential = 'Unknown';
+      
       await createLead(payload);
       onClose();
     } catch (err) {
@@ -202,7 +209,9 @@ export default function NewLeadForm({ onClose }) {
             <div className="form-section-title" style={{ marginTop: 4 }}>Initial Signals</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
               {SIGNALS_CONFIG.map(({ key, emoji, label }) => (
-                <label key={key} style={{
+                <div key={key} 
+                  onClick={() => setSignal(key, !form.signals[key])}
+                  style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '7px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 500,
                   border: `1px solid ${form.signals[key] ? 'rgba(34,197,94,0.3)' : 'var(--bg-border)'}`,
@@ -210,11 +219,16 @@ export default function NewLeadForm({ onClose }) {
                   color: form.signals[key] ? '#16a34a' : 'var(--text-secondary)',
                   transition: 'all 0.15s',
                 }}>
+                <label className="toggle-switch">
                   <input type="checkbox" checked={form.signals[key]}
-                    onChange={e => setSignal(key, e.target.checked)} style={{ display: 'none' }} />
+                    onChange={e => setSignal(key, e.target.checked)} />
+                  <span className="toggle-slider"></span>
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: 14 }}>{emoji}</span>
                   {label}
-                </label>
+                </div>
+                </div>
               ))}
             </div>
 

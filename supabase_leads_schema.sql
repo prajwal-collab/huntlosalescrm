@@ -124,3 +124,6 @@ create index leads_updated_at_idx on public.leads (updated_at desc);
 -- ============================================
 -- DONE! Run this in Supabase SQL Editor.
 -- ============================================
+
+-- Data Deduplication Constraint
+ALTER TABLE public.leads ADD CONSTRAINT unique_lead_per_org UNIQUE (organization_id, company_name);

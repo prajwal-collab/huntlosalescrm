@@ -96,7 +96,7 @@ const useDataStore = create((set, get) => ({
   bulkCreateLeads: async (leadsList) => {
     const { user } = useAuthStore.getState();
     const records = leadsList.map(l => ({ ...l, owner_id: user?.id }));
-    const { data, error } = await supabase.from('leads').insert(records).select();
+    const { data, error } = await supabase.from('leads').upsert(records, { onConflict: 'organization_id,company_name', ignoreDuplicates: true }).select();
     if (error) throw error;
     set(state => ({ leads: [...data, ...state.leads] }));
     return data;
@@ -145,12 +145,12 @@ const useDataStore = create((set, get) => ({
         name: c.name,
         industry: c.industry,
         size: c.employees, // map from employees
-        arr_estimate: c.revenue, // map from revenue
+        arr_estimate: parseFloat(c.revenue) || 0, // map from revenue
         website: c.domain,
         ...rest
       };
     });
-    const { data, error } = await supabase.from('companies').insert(listWithoutOwner).select();
+    const { data, error } = await supabase.from('companies').upsert(listWithoutOwner, { onConflict: 'organization_id,name', ignoreDuplicates: true }).select();
     if (error) throw error;
     set(state => ({ companies: [...data, ...state.companies] }));
     return data;
@@ -223,7 +223,7 @@ const useDataStore = create((set, get) => ({
         company_id: company_id
       };
     });
-    const { data, error } = await supabase.from('contacts').insert(mappedList).select();
+    const { data, error } = await supabase.from('contacts').upsert(mappedList, { onConflict: 'organization_id,email', ignoreDuplicates: true }).select();
     if (error) throw error;
     set(state => ({ contacts: [...data, ...state.contacts] }));
     return data;
