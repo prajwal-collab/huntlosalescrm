@@ -551,6 +551,71 @@ const useDataStore = create((set, get) => ({
     if (error) throw error;
     return data;
   },
+
+  // ── Webhooks ──────────────────────────────
+  fetchWebhookConfig: async () => {
+    const { user } = useAuthStore.getState();
+    if (!user) return null;
+    const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
+    if (!profile?.organization_id) return null;
+    
+    let { data, error } = await supabase
+      .from('webhook_configs')
+      .select('*')
+      .eq('organization_id', profile.organization_id)
+      .single();
+      
+    if (error && error.code === 'PGRST116') {
+      const { data: newConfig } = await supabase
+        .from('webhook_configs')
+        .insert({ organization_id: profile.organization_id })
+        .select()
+        .single();
+      data = newConfig;
+    }
+    return data || null;
+  },
+
+  saveWebhookConfig: async (configId, updates) => {
+    const { data, error } = await supabase
+      .from('webhook_configs')
+      .update(updates)
+      .eq('id', configId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  regenerateWebhookToken: async (configId) => {
+    const newToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    const { data, error } = await supabase
+      .from('webhook_configs')
+      .update({ secret_token: newToken })
+      .eq('id', configId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  fetchWebhookEvents: async () => {
+    const { user } = useAuthStore.getState();
+    if (!user) return [];
+    const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
+    if (!profile?.organization_id) return [];
+
+    const { data, error } = await supabase
+      .from('webhook_events')
+      .select('*')
+      .eq('organization_id', profile.organization_id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) throw error;
+    return data || [];
+  },
 }));
 
 export default useDataStore;

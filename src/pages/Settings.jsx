@@ -7,6 +7,7 @@ import { User, Key, Bell, Shield, Mail, Calendar, RefreshCw, Trash2, Eye, EyeOff
 import useAuthStore from '../store/useAuthStore';
 import TeamManagement from './settings/TeamManagement';
 import EmailSettingsForm from './settings/EmailSettingsForm';
+import WebhookSettings from './settings/WebhookSettings';
 import { isGeminiConfigured } from '../lib/gemini';
 import { supabase } from '../lib/supabase';
 import { useDialog } from '../context/DialogContext';
@@ -334,7 +335,7 @@ export default function Settings() {
                 </div>
               </div>
 
-
+              <WebhookSettings />
 
               <div style={{ 
                 background: 'var(--bg-surface)', 
