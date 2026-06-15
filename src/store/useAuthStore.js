@@ -222,7 +222,8 @@ const useAuthStore = create(
 
           set({ team });
         } catch (err) {
-          console.warn('[AuthStore] Failed to fetch team from Supabase, maintaining local state:', err.message);
+          console.warn('[AuthStore] Failed to fetch team from Supabase, clearing local state:', err.message);
+          set({ team: [] });
         }
       },
 

@@ -31,7 +31,7 @@ const useDataStore = create((set, get) => ({
         supabase.from('meetings').select('*').order('date', { ascending: true }),
         supabase.from('documents').select('*').order('created_at', { ascending: false }),
         supabase.from('sequences').select('*').order('created_at', { ascending: false }),
-        supabase.from('leads').select('*').order('signal_score', { ascending: false }),
+        supabase.from('leads').select('*').order('created_at', { ascending: false }),
       ]);
 
       const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes, leadsRes] = results;

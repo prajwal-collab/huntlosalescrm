@@ -7,6 +7,7 @@ import TopBar from './TopBar';
 import CommandCenter from '../ai/CommandCenter';
 import useUIStore from '../../store/useUIStore';
 import useDataStore from '../../store/useDataStore';
+import useAuthStore from '../../store/useAuthStore';
 import { useKeyboard } from '../../hooks/useKeyboard';
 import NewDealDrawer from '../pipeline/NewDealDrawer';
 import './Layout.css';
@@ -14,11 +15,13 @@ import './Layout.css';
 export default function Layout({ children }) {
   const { commandCenterOpen, toggleCommandCenter, closeCommandCenter } = useUIStore();
   const { fetchData } = useDataStore();
+  const { fetchTeam } = useAuthStore();
   const [newDealOpen, setNewDealOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchTeam();
+  }, [fetchData, fetchTeam]);
 
   useKeyboard({
     'ctrl+k': () => toggleCommandCenter(),
