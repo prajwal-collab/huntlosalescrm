@@ -23,33 +23,21 @@ function avatarColor(name) {
   return AVATAR_COLORS[(name?.charCodeAt(0) || 0) % AVATAR_COLORS.length];
 }
 
-const CHANNEL_ICON = {
-  email:    <Mail size={16} />,
-  linkedin: <Globe size={16} />,
-  delay:    <Clock size={16} />,
-};
-
-const CHANNEL_BG = {
-  email:    { background: 'rgba(59,130,246,0.12)', color: '#3b82f6' },
-  linkedin: { background: 'rgba(14,165,233,0.12)', color: '#0ea5e9' },
-  delay:    { background: 'rgba(148,163,184,0.12)', color: '#94a3b8' },
-};
-
 // ── Step indicator ───────────────────────────────────────────
 function Steps({ current }) {
   const steps = ['Confirm Leads', 'Choose Sequence', 'Configure'];
   return (
     <div className="enroll-steps">
       {steps.map((label, i) => (
-        <>
-          <div key={label} className={`enroll-step${i < current ? ' done' : i === current ? ' active' : ''}`}>
+        <div key={label} style={{ display: 'contents' }}>
+          <div className={`enroll-step${i < current ? ' done' : i === current ? ' active' : ''}`}>
             <div className="enroll-step-num">
               {i < current ? <Check size={10} /> : i + 1}
             </div>
             {label}
           </div>
-          {i < steps.length - 1 && <div className="enroll-step-divider" key={`div-${i}`} />}
-        </>
+          {i < steps.length - 1 && <div className="enroll-step-divider" />}
+        </div>
       ))}
     </div>
   );
@@ -73,12 +61,11 @@ export default function EnrollSequenceModal({ leads, onClose }) {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    // Check if user has connected an email account
     fetchEmailSettings().then(data => {
       if (data && data.smtp_user) {
         setEmailConfig(data);
       }
-    });
+    }).catch(() => {});
   }, [fetchEmailSettings]);
 
   const seqList = sequences || [];
@@ -150,7 +137,7 @@ export default function EnrollSequenceModal({ leads, onClose }) {
           <div style={{ padding: '12px 24px', background: 'rgba(239,68,68,0.1)', borderBottom: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', gap: 12 }}>
             <AlertCircle size={16} color="var(--danger)" />
             <div style={{ fontSize: 13, color: 'var(--text-primary)' }}>
-              <strong>No email account connected!</strong> Go to <a href="/settings?tab=integrations" style={{ color: 'var(--accent-blue)', textDecoration: 'underline' }}>Settings &gt; Integrations</a> to connect your sender email.
+              <strong>No email account connected.</strong> Go to <a href="/settings?tab=integrations" style={{ color: 'var(--accent-blue)', textDecoration: 'underline' }}>Settings &gt; Integrations</a> to connect your sender email.
             </div>
           </div>
         )}
@@ -177,8 +164,8 @@ export default function EnrollSequenceModal({ leads, onClose }) {
                       </span>
                     </div>
                     <span className={`badge ${
-                      lead.stage === 'Hot' || (lead.signal_score || 0) >= 70 ? 'badge-red'
-                      : lead.stage === 'Warm' || (lead.signal_score || 0) >= 40 ? 'badge-yellow'
+                      (lead._score || 0) >= 70 ? 'badge-red'
+                      : (lead._score || 0) >= 35 ? 'badge-yellow'
                       : 'badge-gray'
                     }`} style={{ fontSize: 10 }}>
                       {lead.stage || 'New Lead'}
@@ -212,10 +199,10 @@ export default function EnrollSequenceModal({ leads, onClose }) {
                 <div className="seq-picker-list">
                   {seqList.map(seq => {
                     const steps = seq.nodes || [];
-                    const emails = steps.filter(n => n.type === 'email').length;
+                    const emails = steps.filter(n => n.type === 'email' || n.type === 'reply').length;
                     const linkedIns = steps.filter(n => n.type === 'linkedin').length;
-                    const lastDayNum = Math.max(...steps.map(n => n.day || 0), 0) || 1;
-                    const enrolled = seq.enrolledCount || 0;
+                    const lastDayNum = steps.length > 0 ? Math.max(...steps.map(n => n.day || 0), 0) || 1 : 1;
+                    const enrolled = seq.enrolled || 0;
 
                     return (
                       <div
@@ -278,6 +265,12 @@ export default function EnrollSequenceModal({ leads, onClose }) {
                 <span className="enroll-review-key">Touch points</span>
                 <span className="enroll-review-val">{nodeCount} steps over {lastDay} days</span>
               </div>
+              {emailConfig && (
+                <div className="enroll-review-row">
+                  <span className="enroll-review-key">Sending from</span>
+                  <span className="enroll-review-val" style={{ color: 'var(--success)', fontWeight: 600 }}>{emailConfig.smtp_user}</span>
+                </div>
+              )}
             </div>
 
             <div className="enroll-config">
@@ -287,6 +280,7 @@ export default function EnrollSequenceModal({ leads, onClose }) {
                   type="date"
                   className="enroll-input"
                   value={config.startDate}
+                  min={new Date().toISOString().split('T')[0]}
                   onChange={e => setConfig({ ...config, startDate: e.target.value })}
                 />
               </div>
@@ -327,7 +321,7 @@ export default function EnrollSequenceModal({ leads, onClose }) {
               <div className="enroll-toggle-row">
                 <div className="enroll-toggle-info">
                   <span className="enroll-toggle-title">Personalise with AI</span>
-                  <span className="enroll-toggle-desc">Auto-fill {"{{first_name}}"} and context</span>
+                  <span className="enroll-toggle-desc">Auto-fill {`{{first_name}}`} and context</span>
                 </div>
                 <button
                   className={`toggle-switch${config.personalise ? ' on' : ''}`}

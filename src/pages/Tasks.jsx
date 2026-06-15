@@ -1,9 +1,9 @@
 // ============================================
 // HUNTLO SALES OS — TASKS PAGE
 // ============================================
-import { useState, useEffect } from 'react';
-import { Search, Plus, CheckCircle, Clock, AlertCircle, X, Loader } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
+import { useState, useMemo } from 'react';
+import { Search, Plus, CheckCircle, Clock, AlertCircle, X, Loader, Filter } from 'lucide-react';
+import { formatDistanceToNow, format, isPast, isValid } from 'date-fns';
 import useDataStore from '../store/useDataStore';
 import { useKeyboard } from '../hooks/useKeyboard';
 import './Tasks.css';
@@ -22,20 +22,67 @@ const ICONS = {
   low: <Clock size={14} />,
 };
 
+function safeFormatDate(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (!isValid(d)) return '—';
+  return format(d, 'MMM d, h:mm a');
+}
+
+function safeIsPast(dateStr) {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  if (!isValid(d)) return false;
+  return isPast(d);
+}
+
 export default function Tasks() {
   const { tasks, deals, createTask, toggleTaskCompletion } = useDataStore();
-  const [filter, setFilter] = useState('pending'); // pending, completed, all
+  const [filter, setFilter] = useState('pending');
+  const [search, setSearch] = useState('');
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({ title: '', deal_id: '', priority: 'medium', type: 'follow-up', due: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  const filteredTasks = tasks.filter(t => {
-    if (filter === 'pending') return t.status !== 'completed';
-    if (filter === 'completed') return t.status === 'completed';
-    return true;
-  });
+  // Counts for each tab
+  const pendingCount = tasks.filter(t => t.status !== 'completed').length;
+  const callCount = tasks.filter(t => t.type === 'call' && t.status !== 'completed').length;
+  const emailCount = tasks.filter(t => t.type === 'email' && t.status !== 'completed').length;
+  const linkedinCount = tasks.filter(t => t.type === 'linkedin' && t.status !== 'completed').length;
+  const overdueCount = tasks.filter(t => t.status !== 'completed' && safeIsPast(t.due)).length;
+
+  const filteredTasks = useMemo(() => {
+    let result = tasks;
+
+    // Status/type filter
+    if (filter === 'pending') {
+      result = result.filter(t => t.status !== 'completed');
+    } else if (filter === 'completed') {
+      result = result.filter(t => t.status === 'completed');
+    } else if (filter === 'call') {
+      result = result.filter(t => t.type === 'call' && t.status !== 'completed');
+    } else if (filter === 'email') {
+      result = result.filter(t => t.type === 'email' && t.status !== 'completed');
+    } else if (filter === 'linkedin') {
+      result = result.filter(t => t.type === 'linkedin' && t.status !== 'completed');
+    } else if (filter === 'overdue') {
+      result = result.filter(t => t.status !== 'completed' && safeIsPast(t.due));
+    }
+
+    // Search filter
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(t =>
+        (t.title || '').toLowerCase().includes(q) ||
+        (t.type || '').toLowerCase().includes(q) ||
+        (t.company || '').toLowerCase().includes(q)
+      );
+    }
+
+    return result;
+  }, [tasks, filter, search]);
 
   const handleComplete = async (id, status) => {
     try {
@@ -85,91 +132,105 @@ export default function Tasks() {
           <h1 className="page-big-title" style={{ fontSize: 22 }}>Tasks</h1>
         </div>
         <div className="page-header-actions">
-          <button className="btn btn-ghost btn-sm">Start call session</button>
           <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}><Plus size={13} /> Create task</button>
         </div>
       </div>
 
+      {/* Tab bar */}
       <div className="apollo-tabs-bar">
         <div className={`apollo-tab ${filter === 'pending' ? 'active' : ''}`} onClick={() => setFilter('pending')}>
-          All tasks <span className="apollo-tab-count">{tasks.filter(t => t.status !== 'completed').length}</span>
+          All tasks <span className="apollo-tab-count">{pendingCount}</span>
         </div>
         <div className={`apollo-tab ${filter === 'call' ? 'active' : ''}`} onClick={() => setFilter('call')}>
-          Call tasks <span className="apollo-tab-count">0</span>
+          Call tasks <span className="apollo-tab-count">{callCount}</span>
         </div>
         <div className={`apollo-tab ${filter === 'email' ? 'active' : ''}`} onClick={() => setFilter('email')}>
-          Email tasks <span className="apollo-tab-count">0</span>
+          Email tasks <span className="apollo-tab-count">{emailCount}</span>
         </div>
         <div className={`apollo-tab ${filter === 'linkedin' ? 'active' : ''}`} onClick={() => setFilter('linkedin')}>
-          LinkedIn tasks <span className="apollo-tab-count">0</span>
+          LinkedIn tasks <span className="apollo-tab-count">{linkedinCount}</span>
         </div>
-        <div className="apollo-tab">Overdue tasks</div>
+        <div className={`apollo-tab ${filter === 'overdue' ? 'active' : ''}`} onClick={() => setFilter('overdue')}>
+          Overdue <span className="apollo-tab-count" style={{ background: overdueCount > 0 ? 'var(--danger)' : undefined }}>{overdueCount}</span>
+        </div>
         <div className={`apollo-tab ${filter === 'completed' ? 'active' : ''}`} onClick={() => setFilter('completed')}>
-          All your tasks
+          Completed
         </div>
-        <div className="apollo-tab">Views v</div>
       </div>
 
+      {/* Sub-bar with working search */}
       <div className="apollo-sub-bar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-secondary)' }}>= Show Filters <span className="apollo-tab-count" style={{ background: 'transparent' }}>1</span></button>
-          <div className="search-box" style={{ width: 240, background: 'transparent', border: '1px solid var(--border-light)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="search-box" style={{ width: 260, background: 'transparent', border: '1px solid var(--border-light)' }}>
             <Search size={14} color="var(--text-tertiary)" />
-            <input placeholder="Search tasks" />
+            <input
+              placeholder="Search tasks..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            {search && <X size={12} style={{ cursor: 'pointer', color: 'var(--text-tertiary)' }} onClick={() => setSearch('')} />}
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500 }}>
-          <span style={{ cursor: 'pointer' }}>↑↓ Sort <span className="apollo-tab-count" style={{ background: 'transparent' }}>1</span></span>
-          <span style={{ cursor: 'pointer' }}>⚙ View options</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500 }}>
+          <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
 
+      {/* Task list */}
       <div className="tasks-list">
         {filteredTasks.length === 0 ? (
-           <div className="apollo-empty-state">
-              <div className="apollo-empty-img">
-                <CheckCircle size={24} /> <span style={{ marginLeft: 8 }}>Complete task</span>
-              </div>
-              <h3 style={{ fontSize: 18, color: 'var(--text-primary)', fontWeight: 500 }}>You have no assigned tasks</h3>
-              <p style={{ fontSize: 13, textDecoration: 'underline', cursor: 'pointer' }}>Learn more about tasks</p>
+          <div className="apollo-empty-state">
+            <div className="apollo-empty-img">
+              <CheckCircle size={24} /> <span style={{ marginLeft: 8 }}>All clear!</span>
+            </div>
+            <h3 style={{ fontSize: 18, color: 'var(--text-primary)', fontWeight: 500 }}>
+              {search ? `No tasks match "${search}"` : 'No tasks in this view'}
+            </h3>
+            <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>
+              {!search && filter === 'pending' && 'Create your first task to get started.'}
+              {!search && filter === 'overdue' && 'Great job — nothing is overdue!'}
+              {!search && filter === 'completed' && 'No completed tasks yet.'}
+            </p>
+            {filter === 'pending' && !search && (
               <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                <button className="btn btn-ghost btn-sm" style={{ border: '1px solid var(--border-light)' }}>View all team tasks</button>
                 <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>New task</button>
               </div>
-           </div>
+            )}
+          </div>
         ) : (
           filteredTasks.map((task, idx) => {
             const isCompleted = task.status === 'completed';
-            const isOverdue = !isCompleted && new Date(task.due) < new Date();
-            
+            const isOverdue = !isCompleted && safeIsPast(task.due);
+
             return (
-              <div 
-                key={task.id} 
+              <div
+                key={task.id}
                 className={`task-row ${idx === selectedIdx ? 'selected' : ''} ${isCompleted ? 'completed' : ''}`}
                 onClick={() => setSelectedIdx(idx)}
               >
-                <button 
+                <button
                   className={`task-checkbox ${isCompleted ? 'checked' : ''}`}
-                  onClick={(e) => { e.stopPropagation(); handleComplete(task.id, isCompleted ? 'pending' : 'completed'); }}
+                  onClick={(e) => { e.stopPropagation(); handleComplete(task.id, task.status); }}
                 >
                   {isCompleted && <CheckCircle size={12} strokeWidth={3} />}
                 </button>
-                
+
                 <div className="task-main">
-                  <span className="task-title" style={{ textDecoration: isCompleted ? 'line-through' : 'none' }}>{task.title}</span>
+                  <span className="task-title" style={{ textDecoration: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.5 : 1 }}>{task.title}</span>
                   <div className="task-meta">
                     <span className="badge badge-gray">{task.type}</span>
+                    {isOverdue && <span className="badge" style={{ background: 'rgba(239,68,68,0.1)', color: '#dc2626', fontSize: 10 }}>⚠ Overdue</span>}
                     {task.company && <span className="task-company">{task.company}</span>}
                   </div>
                 </div>
 
                 <div className="task-right">
-                  <div className="task-priority" style={{ color: PRIORITY_COLORS[task.priority] }}>
-                    {ICONS[task.priority]}
-                    <span style={{ textTransform: 'capitalize' }}>{task.priority}</span>
+                  <div className="task-priority" style={{ color: PRIORITY_COLORS[task.priority] || 'var(--text-tertiary)' }}>
+                    {ICONS[task.priority] || <Clock size={14} />}
+                    <span style={{ textTransform: 'capitalize' }}>{task.priority || 'medium'}</span>
                   </div>
                   <div className={`task-due ${isOverdue ? 'overdue' : ''}`}>
-                    {format(new Date(task.due), 'MMM d, h:mm a')}
+                    {safeFormatDate(task.due)}
                   </div>
                   <div className="avatar avatar-sm" style={{ background: task.ownerColor || '#3b82f6', color: '#fff' }}>
                     {task.ownerInitials || 'ME'}
@@ -181,20 +242,26 @@ export default function Tasks() {
         )}
       </div>
 
+      {/* Keyboard hints */}
+      <div className="keyboard-hints" style={{ padding: '8px', fontSize: '11px', color: 'var(--text-tertiary)', borderTop: '1px solid var(--bg-border)', marginTop: 'auto' }}>
+        <kbd>j/k</kbd> navigate list • <kbd>space</kbd> mark complete
+      </div>
+
+      {/* Add Task panel */}
       {isAdding && (
-        <div className="contact-detail animate-slide-right" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 400, background: 'var(--bg-surface)', borderLeft: '1px solid var(--bg-border)', zIndex: 50 }}>
-          <div className="panel-header" style={{ marginBottom: 24, padding: 24 }}>
+        <div className="contact-detail animate-slide-right" style={{ position: 'fixed', right: 0, top: 0, bottom: 0, width: 400, background: 'var(--bg-surface)', borderLeft: '1px solid var(--bg-border)', zIndex: 50, overflowY: 'auto' }}>
+          <div className="panel-header" style={{ marginBottom: 24, padding: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2 className="panel-title">Add Task</h2>
             <button className="drawer-close" onClick={() => setIsAdding(false)}><X size={16}/></button>
           </div>
-          <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 24px' }}>
+          <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 24px 24px' }}>
             {error && (
               <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <AlertCircle size={14} /> {error}
               </div>
             )}
             <div className="form-group">
-              <label className="label">Task Title</label>
+              <label className="label">Task Title *</label>
               <input className="input-base" autoFocus required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="e.g. Send follow-up email" />
             </div>
             <div className="form-group">
@@ -210,6 +277,7 @@ export default function Tasks() {
                 <option value="follow-up">Follow-up</option>
                 <option value="email">Email</option>
                 <option value="call">Call</option>
+                <option value="linkedin">LinkedIn</option>
                 <option value="prep">Prep</option>
               </select>
             </div>
@@ -223,18 +291,18 @@ export default function Tasks() {
               </select>
             </div>
             <div className="form-group">
-              <label className="label">Due Date</label>
+              <label className="label">Due Date & Time</label>
               <input className="input-base" type="datetime-local" value={formData.due} onChange={e => setFormData({...formData, due: e.target.value})} />
             </div>
-            <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }} disabled={saving}>
-              {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Task'}
-            </button>
+            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setIsAdding(false)} style={{ flex: 1 }}>Cancel</button>
+              <button type="submit" className="btn btn-primary btn-sm" style={{ flex: 2 }} disabled={saving}>
+                {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Task'}
+              </button>
+            </div>
           </form>
         </div>
       )}
-      <div className="keyboard-hints" style={{ padding: '8px', fontSize: '11px', color: 'var(--text-tertiary)', borderTop: '1px solid var(--bg-border)', marginTop: 'auto' }}>
-        <kbd>j/k</kbd> navigate list • <kbd>space</kbd> mark complete
-      </div>
     </div>
   );
 }

@@ -299,8 +299,12 @@ export default function Leads() {
   };
 
   const handleLeadUpdate = async (id, updates) => {
-    const updated = await updateLead(id, updates);
-    setSelectedLead(updated);
+    try {
+      const updated = await updateLead(id, updates);
+      if (updated) setSelectedLead(updated);
+    } catch (err) {
+      console.error('Lead update failed:', err);
+    }
   };
 
   const viewCounts = useMemo(() =>

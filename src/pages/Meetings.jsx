@@ -43,7 +43,7 @@ function MeetingCard({ meeting, onSelect, selected }) {
 
 export default function Meetings() {
   const { meetings, deals, createMeeting } = useDataStore();
-  const { showAlert } = useDialog();
+  const { showSuccess } = useDialog();
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({ title: '', deal_id: '', type: 'Discovery', date: '', duration: 30, platform: 'Google Meet', meeting_link: '' });
@@ -127,7 +127,7 @@ export default function Meetings() {
                </div>
              ) : (
                 <div className="md-section">
-                   <button className="btn btn-primary btn-sm w-full" onClick={() => showAlert('AI Summary', 'Gemini AI Summary generation initiated...')}><Sparkles size={13} /> Generate AI Summary</button>
+                   <button className="btn btn-primary btn-sm w-full" onClick={() => showSuccess('AI Summary', 'Gemini AI will generate a summary once you have meeting notes recorded.')}><Sparkles size={13} /> Generate AI Summary</button>
                 </div>
              )}
 
@@ -135,13 +135,14 @@ export default function Meetings() {
                 <div className="md-section">
                   <h3 className="md-section-title">Attendees</h3>
                   <div className="md-attendees">
-                    {selected.attendees.map(a => (
-                      <div key={a} className="md-attendee">
-                        <div className="avatar avatar-sm" style={{ background: 'var(--bg-border)' }}>{a.slice(0, 2).toUpperCase()}</div>
-                        <span>{a}</span>
-                      </div>
-                    ))}
-                  </div>
+                    {(selected.attendees || []).map(a => (
+                        <div key={a} className="md-attendee">
+                          <div className="avatar avatar-sm" style={{ background: 'var(--bg-border)' }}>{(a || '').slice(0, 2).toUpperCase()}</div>
+                          <span>{a}</span>
+                        </div>
+                      ))}
+                    {(selected.attendees || []).length === 0 && <p className="text-tertiary text-sm">No attendees recorded</p>}
+                    </div>
                 </div>
 
                 <div className="md-section">
@@ -153,20 +154,12 @@ export default function Meetings() {
              <div className="md-grid">
                <div className="md-section">
                  <h3 className="md-section-title">Pain Points</h3>
-                 {selected.painPoints.length > 0 ? (
-                   <ul className="md-list">
-                     {selected.painPoints.map((p, i) => <li key={i}>{p}</li>)}
-                   </ul>
-                 ) : <p className="text-tertiary text-sm">None recorded</p>}
+                  {(() => { const pts = selected.pain_points || selected.painPoints || []; return pts.length > 0 ? (<ul className="md-list">{pts.map((p, i) => <li key={i}>{p}</li>)}</ul>) : <p className="text-tertiary text-sm">None recorded</p>; })()}
                </div>
 
                <div className="md-section">
                  <h3 className="md-section-title">Objections</h3>
-                 {selected.objections.length > 0 ? (
-                   <ul className="md-list">
-                     {selected.objections.map((o, i) => <li key={i}>{o}</li>)}
-                   </ul>
-                 ) : <p className="text-tertiary text-sm">None recorded</p>}
+                  {(() => { const obs = selected.objections || []; return obs.length > 0 ? (<ul className="md-list">{obs.map((o, i) => <li key={i}>{o}</li>)}</ul>) : <p className="text-tertiary text-sm">None recorded</p>; })()}
                </div>
              </div>
 
