@@ -10,6 +10,7 @@ import useDataStore from '../../store/useDataStore';
 import useAuthStore from '../../store/useAuthStore';
 import { useKeyboard } from '../../hooks/useKeyboard';
 import NewDealDrawer from '../pipeline/NewDealDrawer';
+import NotificationManager from './NotificationManager';
 import './Layout.css';
 
 export default function Layout({ children }) {
@@ -30,7 +31,8 @@ export default function Layout({ children }) {
   });
 
   return (
-    <div className="app-shell">
+    <div className={`layout ${theme} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <NotificationManager />
       <Sidebar />
       <div className="main-area">
         <TopBar onNewDeal={() => setNewDealOpen(true)} />

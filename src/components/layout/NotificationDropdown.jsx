@@ -6,9 +6,8 @@ import './NotificationDropdown.css';
 const INITIAL_NOTIFICATIONS = [];
 
 export default function NotificationDropdown({ onClose }) {
-  const { clearNotifications } = useUIStore();
+  const { notifications, markAllNotificationsRead, markNotificationRead, clearNotifications } = useUIStore();
   const [activeTab, setActiveTab] = useState('all');
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const dropdownRef = useRef(null);
 
   // Handle click outside to close
@@ -23,16 +22,11 @@ export default function NotificationDropdown({ onClose }) {
   }, [onClose]);
 
   const handleMarkAllRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, unread: false })));
-    clearNotifications();
+    markAllNotificationsRead();
   };
 
   const handleMarkRead = (id) => {
-    setNotifications(notifications.map(n => n.id === id ? { ...n, unread: false } : n));
-    // If all are read, clear the global badge
-    if (notifications.filter(n => n.unread && n.id !== id).length === 0) {
-      clearNotifications();
-    }
+    markNotificationRead(id);
   };
 
   const filteredNotifications = activeTab === 'unread' 

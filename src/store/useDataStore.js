@@ -96,7 +96,7 @@ const useDataStore = create((set, get) => ({
   bulkCreateLeads: async (leadsList) => {
     const { user } = useAuthStore.getState();
     const records = leadsList.map(l => ({ ...l, owner_id: user?.id }));
-    const { data, error } = await supabase.from('leads').upsert(records, { onConflict: 'organization_id,company_name', ignoreDuplicates: true }).select();
+    const { data, error } = await supabase.from('leads').upsert(records, { onConflict: 'organization_id,email', ignoreDuplicates: true }).select();
     if (error) throw error;
     set(state => ({ leads: [...data, ...state.leads] }));
     return data;

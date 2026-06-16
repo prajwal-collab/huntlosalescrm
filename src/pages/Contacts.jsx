@@ -46,7 +46,7 @@ function getAvatarColor(name) {
 }
 
 // ── Row ─────────────────────────────────────────────────────
-function ContactRow({ contact, company, onSelect, selected, isSelected, toggleSelect }) {
+function ContactRow({ contact, company, onSelect, selected, isSelected, toggleSelect, updateContact }) {
   const [hovered, setHovered] = useState(false);
   const avatarColor = getAvatarColor(contact.name);
   const initials = contact.name
@@ -105,6 +105,20 @@ function ContactRow({ contact, company, onSelect, selected, isSelected, toggleSe
             <span className="cr-val">{contact.whatsapp || contact.phone}</span>
           </div>
         ) : <span className="cr-empty">—</span>}
+      </div>
+
+      {/* Status */}
+      <div className="cr-col" onClick={e => e.stopPropagation()}>
+        <select
+          style={{ padding: '2px 6px', fontSize: 11, cursor: 'pointer', background: 'var(--bg-base)', border: '1px solid var(--bg-border)', borderRadius: 4, color: 'var(--text-primary)', outline: 'none' }}
+          value={contact.status || 'New'}
+          onChange={(e) => updateContact(contact.id, { status: e.target.value })}
+        >
+          <option value="New">New</option>
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+          <option value="DNC">Do Not Contact</option>
+        </select>
       </div>
 
       {/* Tags */}
@@ -267,7 +281,7 @@ function ContactDetail({ contact, onClose }) {
 
 // ── Main Page ─────────────────────────────────────────────────
 export default function Contacts() {
-  const { contacts, companies, createContact } = useDataStore();
+  const { contacts, companies, createContact, updateContact } = useDataStore();
   const { showConfirm, showError } = useDialog();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
@@ -316,6 +330,10 @@ export default function Contacts() {
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.name) return;
+    if (!formData.email.trim() && !formData.whatsapp.trim()) {
+      setError('Please provide at least an Email or a Phone number.');
+      return;
+    }
     setSaving(true); setError(null);
     try {
       await createContact({ ...formData, company_id: formData.company_id || null, tags: [], engagement_score: 0, sentiment: 'neutral' });
@@ -391,6 +409,7 @@ export default function Contacts() {
             <div className="cr-col">Company</div>
             <div className="cr-col">Email</div>
             <div className="cr-col">Phone</div>
+            <div className="cr-col">Status</div>
             <div className="cr-col cr-col-tags">Tags</div>
             <div className="cr-col">Engagement</div>
             <div className="cr-col cr-col-actions">Actions</div>
@@ -409,6 +428,7 @@ export default function Contacts() {
                   isSelected={selectedIds.includes(c.id)}
                   toggleSelect={toggleSelect}
                   onSelect={co => setSelected(co.id === selected?.id ? null : co)}
+                  updateContact={updateContact}
                 />
               );
             })}
@@ -455,9 +475,9 @@ export default function Contacts() {
               <div className="cd-form-body">
                 {[
                   { label: 'Full Name *', key: 'name', type: 'text', required: true, placeholder: 'e.g. Jane Doe' },
-                  { label: 'Email', key: 'email', type: 'email', placeholder: 'jane@example.com' },
+                  { label: 'Email (Required if no phone)', key: 'email', type: 'email', placeholder: 'jane@example.com' },
                   { label: 'Job Title', key: 'designation', type: 'text', placeholder: 'e.g. VP of Sales' },
-                  { label: 'Phone / WhatsApp', key: 'whatsapp', type: 'text', placeholder: '+1 (555) 000-0000' },
+                  { label: 'Phone / WhatsApp (Required if no email)', key: 'whatsapp', type: 'text', placeholder: '+1 (555) 000-0000' },
                   { label: 'LinkedIn URL', key: 'linkedin', type: 'text', placeholder: 'https://linkedin.com/in/...' },
                 ].map(({ label, key, type, required, placeholder }) => (
                   <div key={key} className="cd-form-group">

@@ -171,7 +171,8 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
             <button
               key={st}
               className={`stage-btn${form.stage === st ? ' active' : ''}`}
-              onClick={() => handleStageChange(st)}
+              onClick={() => isOwner && handleStageChange(st)}
+              style={{ cursor: isOwner ? 'pointer' : 'not-allowed', opacity: isOwner ? 1 : 0.7 }}
             >
               {st}
             </button>

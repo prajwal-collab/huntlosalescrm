@@ -196,8 +196,14 @@ const useAuthStore = create(
         }
       },
 
-      // Team management
       fetchTeam: async () => {
+        const u = get().user;
+        
+        // Auto-upgrade prajwal to Admin in DB if needed (best effort)
+        if (u && u.email === 'prajwal@earlyjobs.in') {
+          supabase.from('profiles').update({ role: 'Admin' }).eq('id', u.id).then();
+        }
+
         try {
           const [profilesRes, invitesRes] = await Promise.all([
             supabase.from('profiles').select('*'),
@@ -226,10 +232,45 @@ const useAuthStore = create(
             }))
           ];
 
+          // Ensure current user is always visible in the list, even if DB query misses them
+          if (u && !team.some(m => m.id === u.id)) {
+             team.push({
+                id: u.id,
+                email: u.email,
+                name: u.user_metadata?.full_name || u.email || 'You',
+                role: u.email === 'prajwal@earlyjobs.in' ? 'Admin' : 'Member',
+                status: 'active',
+                type: 'member',
+                initials: (u.email || '?').substring(0, 2).toUpperCase(),
+                color: '#3b82f6'
+             });
+          }
+
+          // Force prajwal to show as Admin in UI
+          team = team.map(m => {
+            if (m.email === 'prajwal@earlyjobs.in') {
+              return { ...m, role: 'Admin' };
+            }
+            return m;
+          });
+
           set({ team });
         } catch (err) {
-          console.warn('[AuthStore] Failed to fetch team from Supabase, clearing local state:', err.message);
-          set({ team: [] });
+          console.warn('[AuthStore] Failed to fetch team from Supabase, falling back:', err.message);
+          if (u) {
+            set({ team: [{
+                id: u.id,
+                email: u.email,
+                name: u.user_metadata?.full_name || u.email || 'You',
+                role: u.email === 'prajwal@earlyjobs.in' ? 'Admin' : 'Member',
+                status: 'active',
+                type: 'member',
+                initials: (u.email || '?').substring(0, 2).toUpperCase(),
+                color: '#3b82f6'
+            }] });
+          } else {
+            set({ team: [] });
+          }
         }
       },
 

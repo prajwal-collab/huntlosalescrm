@@ -102,6 +102,7 @@ CREATE TABLE public.contacts (
   linkedin TEXT,
   whatsapp TEXT,
   timezone TEXT,
+  status TEXT DEFAULT 'New',
   tags TEXT[] DEFAULT '{}',
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),

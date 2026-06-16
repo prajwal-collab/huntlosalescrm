@@ -61,6 +61,10 @@ export default function NewLeadForm({ onClose }) {
       setError('Company name is required.');
       return;
     }
+    if (!form.email.trim() && !form.phone.trim()) {
+      setError('Please provide at least an Email or a Phone number.');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -192,13 +196,13 @@ export default function NewLeadForm({ onClose }) {
             </div>
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Email</label>
+                <label className="form-label">Email <span style={{fontSize:10, color:'var(--text-tertiary)'}}>(Required if no phone)</span></label>
                 <input type="email" className="form-input" placeholder="jane@acme.com"
                   value={form.email}
                   onChange={e => set('email', e.target.value)} />
               </div>
               <div className="form-group">
-                <label className="form-label">Phone / WhatsApp</label>
+                <label className="form-label">Phone / WhatsApp <span style={{fontSize:10, color:'var(--text-tertiary)'}}>(Required if no email)</span></label>
                 <input className="form-input" placeholder="+44 7700 900000"
                   value={form.phone}
                   onChange={e => set('phone', e.target.value)} />

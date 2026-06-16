@@ -131,10 +131,30 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }
       </div>
 
       {/* Stage */}
-      <div className="lc">
-        <span className="stage-badge" style={{ background: stageStyle.bg, color: stageStyle.color }}>
-          {lead.stage || 'New Lead'}
-        </span>
+      <div className="lc" onClick={(e) => e.stopPropagation()}>
+        {isOwner ? (
+          <select 
+            className="stage-badge"
+            style={{ 
+              background: stageStyle.bg, 
+              color: stageStyle.color, 
+              border: 'none', 
+              cursor: 'pointer',
+              appearance: 'none',
+              outline: 'none'
+            }}
+            value={lead.stage || 'New Lead'}
+            onChange={(e) => updateLead(lead.id, { stage: e.target.value })}
+          >
+            {Object.keys(STAGE_COLORS).map(st => (
+              <option key={st} value={st} style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>{st}</option>
+            ))}
+          </select>
+        ) : (
+          <span className="stage-badge" style={{ background: stageStyle.bg, color: stageStyle.color }}>
+            {lead.stage || 'New Lead'}
+          </span>
+        )}
       </div>
 
       {/* Signal Score */}
