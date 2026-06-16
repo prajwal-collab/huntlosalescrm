@@ -1,5 +1,15 @@
+﻿// ============================================
+// HUNTLO ΓÇö LEADS PAGE
+// AI-Native Signal-Driven Lead System
 // ============================================
-// HUNTLO — LEADS PAGE
+import { useState, useMemo } from 'react';
+import {
+  Search, Plus, X, Zap, TrendingUp, Building2,
+  Mail, Link2, Phone, Globe, ChevronDown,
+  AlertCircle, Calendar, Target, DollarSign,
+  Users, SlidersHorizontal, CheckCircle2
+// ============================================
+// HUNTLO ΓÇö LEADS PAGE
 // AI-Native Signal-Driven Lead System
 // ============================================
 import { useState, useMemo } from 'react';
@@ -19,7 +29,10 @@ import { useDialog } from '../context/DialogContext';
 import { computeSignalScore, getPriority } from '../utils/leadScoring';
 import './Leads.css';
 
-// ── Stage colours ───────────────────────────────────────────
+// ΓöÇΓöÇ Signal score computation ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// Extracted to src/utils/leadScoring.js
+
+// ΓöÇΓöÇ Stage colours ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const STAGE_COLORS = {
   'New Lead':          { bg: 'rgba(100,116,139,0.1)', color: '#64748b' },
   'Researching':       { bg: 'rgba(99,102,241,0.1)',  color: '#6366f1' },
@@ -37,25 +50,25 @@ const STAGE_COLORS = {
 // Logo colour palette
 const LOGO_COLORS = ['#3b82f6','#8b5cf6','#06b6d4','#f97316','#22c55e','#ec4899','#6366f1','#14b8a6'];
 
-// ── Smart View definitions ──────────────────────────────────
+// ΓöÇΓöÇ Smart View definitions ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const VIEWS = [
   { id: 'all',         label: 'All Leads',          dot: '#64748b',  filter: () => true },
-  { id: 'hot',         label: '🔥 Hot Leads',        dot: '#dc2626',  filter: l => computeSignalScore(l) >= 70 },
-  { id: 'signals',     label: '📈 Buying Signals',   dot: '#16a34a',  filter: l => {
+  { id: 'hot',         label: '≡ƒöÑ Hot Leads',        dot: '#dc2626',  filter: l => computeSignalScore(l) >= 70 },
+  { id: 'signals',     label: '≡ƒôê Buying Signals',   dot: '#16a34a',  filter: l => {
     const s = l.signals || {};
     return s.hiring_activity || s.recruiter_hiring || s.funding_activity || l.demo_requested || l.positive_interest;
   }},
-  { id: 'followup',    label: '⏰ Needs Follow-up',  dot: '#d97706',  filter: l => {
+  { id: 'followup',    label: 'ΓÅ░ Needs Follow-up',  dot: '#d97706',  filter: l => {
     if (!l.next_action_due) return false;
     return new Date(l.next_action_due) < new Date();
   }},
-  { id: 'demo',        label: '📅 Demo Scheduled',   dot: '#7c3aed',  filter: l => l.stage === 'Demo Scheduled' },
-  { id: 'trial',       label: '🧪 Trial Users',       dot: '#0891b2',  filter: l => l.stage === 'Trial Started' },
-  { id: 'lost',        label: '❌ Lost',              dot: '#dc2626',  filter: l => l.stage === 'Lost' },
-  { id: 'highMRR',     label: '💰 High MRR Potential',dot: '#16a34a', filter: l => (l.estimated_mrr || 0) >= 500 },
+  { id: 'demo',        label: '≡ƒôà Demo Scheduled',   dot: '#7c3aed',  filter: l => l.stage === 'Demo Scheduled' },
+  { id: 'trial',       label: '≡ƒº¬ Trial Users',       dot: '#0891b2',  filter: l => l.stage === 'Trial Started' },
+  { id: 'lost',        label: 'Γ¥î Lost',              dot: '#dc2626',  filter: l => l.stage === 'Lost' },
+  { id: 'highMRR',     label: '≡ƒÆ░ High MRR Potential',dot: '#16a34a', filter: l => (l.estimated_mrr || 0) >= 500 },
 ];
 
-// ── Lead Row ────────────────────────────────────────────────
+// ΓöÇΓöÇ Lead Row ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }) {
   const score = useMemo(() => computeSignalScore(lead), [lead]);
   const priority = getPriority(score);
@@ -78,12 +91,12 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }
   };
 
   const activeSignals = [
-    { key: 'hiring_activity',      emoji: '💼', tip: 'Hiring Activity' },
-    { key: 'recruiter_hiring',     emoji: '🎯', tip: 'Recruiter Hiring' },
-    { key: 'funding_activity',     emoji: '💰', tip: 'Funding Activity' },
-    { key: 'linkedin_activity',    emoji: '🔗', tip: 'LinkedIn Activity' },
-    { key: 'job_posting_activity', emoji: '📋', tip: 'Job Postings' },
-    { key: 'company_growth',       emoji: '📈', tip: 'Company Growth' },
+    { key: 'hiring_activity',      emoji: '≡ƒÆ╝', tip: 'Hiring Activity' },
+    { key: 'recruiter_hiring',     emoji: '≡ƒÄ»', tip: 'Recruiter Hiring' },
+    { key: 'funding_activity',     emoji: '≡ƒÆ░', tip: 'Funding Activity' },
+    { key: 'linkedin_activity',    emoji: '≡ƒöù', tip: 'LinkedIn Activity' },
+    { key: 'job_posting_activity', emoji: '≡ƒôï', tip: 'Job Postings' },
+    { key: 'company_growth',       emoji: '≡ƒôê', tip: 'Company Growth' },
   ];
 
   return (
@@ -107,7 +120,7 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }
       <div className="lead-company-cell">
         <div className="lead-logo" style={{ background: logoColor }}>{initial}</div>
         <div className="lead-company-info">
-          <span className="lead-company-name">{lead.company_name || '—'}</span>
+          <span className="lead-company-name">{lead.company_name || 'ΓÇö'}</span>
           <span className="lead-contact-name">{lead.contact_name || lead.designation || 'No contact'}</span>
         </div>
       </div>
@@ -175,13 +188,13 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }
             <span className="next-action-text">{lead.next_action}</span>
             {lead.next_action_due && (
               <span className={`next-action-due${isOverdue ? ' overdue' : ''}`}>
-                {isOverdue ? '⚠ Overdue · ' : ''}
+                {isOverdue ? 'ΓÜá Overdue ┬╖ ' : ''}
                 {new Date(lead.next_action_due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </span>
             )}
           </div>
         ) : (
-          <span style={{ fontSize: 12, color: 'var(--danger)', fontWeight: 600 }}>⚠ No action set</span>
+          <span style={{ fontSize: 12, color: 'var(--danger)', fontWeight: 600 }}>ΓÜá No action set</span>
         )}
       </div>
 
@@ -192,7 +205,7 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }
             ${lead.estimated_mrr.toLocaleString()}/mo
           </span>
         ) : (
-          <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>—</span>
+          <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>ΓÇö</span>
         )}
       </div>
 
@@ -218,7 +231,7 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }
   );
 }
 
-// ── Main Page ───────────────────────────────────────────────
+// ΓöÇΓöÇ Main Page ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 export default function Leads() {
   const { leads, deleteLead, bulkDeleteLeads, updateLead } = useDataStore();
   const { team, user } = useAuthStore();
@@ -291,173 +304,6 @@ export default function Leads() {
     } catch (err) {
       console.error('Lead update failed:', err);
     }
-  };
-
-  const viewCounts = useMemo(() =>
-    Object.fromEntries(VIEWS.map(v => [v.id, enriched.filter(v.filter).length])),
-    [enriched]
-  );
-
-  return (
-    <div className="leads-page">
-      {/* Header */}
-      <div className="leads-header">
-        <div className="leads-header-left">
-          <span className="leads-title">Leads</span>
-          <span className="leads-count">{filtered.length}</span>
-        </div>
-        <div className="leads-header-right">
-          <button className="btn btn-ghost btn-sm" style={{ gap: 6, fontSize: 12 }}>
-            <SlidersHorizontal size={14} /> Filter
-          </button>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => setShowImporter(true)}
-            style={{ fontSize: 13 }}
-          >
-            Import
-          </button>
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={() => setShowNewForm(true)}
-            style={{ gap: 6, fontSize: 13 }}
-          >
-            <Plus size={15} /> New Lead
-          </button>
-        </div>
-      </div>
-
-      {/* Smart View Tabs */}
-      <div className="leads-view-bar">
-        {VIEWS.map(view => (
-          <button
-            key={view.id}
-            className={`view-tab${activeView === view.id ? ' active' : ''}`}
-            onClick={() => { setActiveView(view.id); setSelectedIds([]); }}
-          >
-            {view.label}
-            {viewCounts[view.id] > 0 && (
-              <span style={{
-                fontSize: 10, fontWeight: 700,
-                background: activeView === view.id ? 'var(--accent-blue-dim)' : 'var(--bg-border)',
-                color: activeView === view.id ? '#fff' : 'var(--text-tertiary)',
-                padding: '1px 6px', borderRadius: 10
-              }}>
-                {viewCounts[view.id]}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Toolbar */}
-      <div className="leads-toolbar">
-        <div className="leads-search-wrap">
-          <Search size={14} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
-          <input
-            placeholder="Search companies, contacts…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          {search && (
-            <X size={14} style={{ color: 'var(--text-tertiary)', cursor: 'pointer', flexShrink: 0 }}
-              onClick={() => setSearch('')} />
-          )}
-        </div>
-      </div>
-
-      {/* Bulk action bar */}
-      {selectedIds.length > 0 && (
-        <div className="bulk-bar">
-          <span>{selectedIds.length} selected</span>
-          <button
-            onClick={() => setShowEnrollModal(true)}
-            className="btn btn-sm"
-            style={{ background: 'var(--accent-blue)', color: '#fff', fontSize: 12, border: 'none', marginLeft: 8 }}
-          >
-            Enroll in Sequence
-          </button>
-          <button
-            onClick={handleBulkDelete}
-            className="btn btn-sm"
-            style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 12 }}
-          >
-            Delete
-          </button>
-          <button
-            onClick={() => setSelectedIds([])}
-            className="btn btn-sm"
-            style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: 12 }}
-          >
-            Clear
-          </button>
-        </div>
-      )}
-
-      {/* Body */}
-      <div className="leads-body">
-        <div className="leads-table-wrap">
-          {/* Head */}
-          <div className="leads-table-head">
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <input
-                type="checkbox"
-                checked={
-                  selectedIds.length > 0 &&
-                  selectedIds.length === filtered.filter(l => l.owner_id === user?.id).length
-                }
-                onChange={toggleAll}
-                style={{ width: 15, height: 15, accentColor: 'var(--accent-blue)' }}
-              />
-            </div>
-            <span>Company / Contact</span>
-            <span>Owner</span>
-            <span>Stage</span>
-            <span>Signal Score</span>
-            <span>Priority</span>
-            <span>Active Signals</span>
-            <span>Next Action</span>
-            <span>Est. MRR</span>
-            <span>Notes / Remarks</span>
-          </div>
-
-          {/* Rows */}
-          <div className="leads-list">
-            {filtered.length === 0 ? (
-              <div className="leads-empty">
-                <Target size={36} style={{ opacity: 0.3 }} />
-                <h3>{search ? 'No leads match your search' : 'No leads in this view'}</h3>
-                <p>
-                  {search
-                    ? 'Try adjusting your search terms.'
-                    : activeView === 'all'
-                      ? 'Add your first lead to get started.'
-                      : `No leads match the "${viewDef.label}" filter yet.`
-                  }
-                </p>
-                {activeView === 'all' && !search && (
-                  <button className="btn btn-primary btn-sm" onClick={() => setShowNewForm(true)}>
-                    <Plus size={14} /> Add First Lead
-                  </button>
-                )}
-              </div>
-            ) : (
-              filtered.map(lead => (
-                <LeadRow
-                  key={lead.id}
-                  lead={lead}
-                  isSelected={selectedIds.includes(lead.id)}
-                  onSelect={toggleSelect}
-                  onClick={handleLeadClick}
-                  updateLead={updateLead}
-                  team={team}
-                  user={user}
-                />
-              ))
-            )}
-          </div>
-        </div>
-
         {/* Right Drawer */}
         {selectedLead && (
           <LeadDrawer
