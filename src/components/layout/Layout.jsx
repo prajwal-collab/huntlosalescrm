@@ -31,7 +31,7 @@ export default function Layout({ children }) {
   });
 
   return (
-    <div className={`layout ${theme} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+    <div className="app-shell">
       <NotificationManager />
       <Sidebar />
       <div className="main-area">
