@@ -8,6 +8,7 @@ import usePipelineStore from '../store/usePipelineStore';
 import useDataStore from '../store/useDataStore';
 import { queryGemini } from '../lib/gemini';
 import { useDialog } from '../context/DialogContext';
+import { computeSignalScore } from '../utils/leadScoring';
 import './HomeOS.css';
 
 const AI_INSIGHTS = [];
@@ -27,7 +28,7 @@ function PriorityCard({ icon: Icon, label, count, urgency, color, onClick }) {
 }
 
 export default function HomeOS() {
-  const { deals, tasks, meetings } = useDataStore();
+  const { deals, tasks, meetings, leads } = useDataStore();
   const { showAlert } = useDialog();
   const [aiQuery, setAiQuery] = useState('');
   const [aiResponse, setAiResponse] = useState('');
@@ -41,7 +42,7 @@ export default function HomeOS() {
     const today = new Date(now);
     return d.toDateString() === today.toDateString() || m.status === 'scheduled';
   });
-  const hotDeals = deals.filter(d => d.engagement_score >= 75 && d.stage !== 'Closed Won' && d.stage !== 'Closed Lost');
+  const hotLeads = leads.filter(l => computeSignalScore(l) >= 70 && l.stage !== 'Lost');
   const staleDeals = deals.filter(d => {
     const days = (now - new Date(d.updated_at).getTime()) / 86400000;
     return days > 5 && d.stage !== 'Closed Won' && d.stage !== 'Closed Lost';
@@ -115,8 +116,8 @@ export default function HomeOS() {
         </div>
         <div className="stat-card">
           <span className="stat-label">Hot Leads</span>
-          <span className="stat-value">{hotDeals.length}</span>
-          <span className="stat-delta up">Score ≥ 75</span>
+          <span className="stat-value">{hotLeads.length}</span>
+          <span className="stat-delta up">Score ≥ 70</span>
         </div>
       </section>
 
@@ -129,7 +130,7 @@ export default function HomeOS() {
           <PriorityCard icon={Clock} label="Pending Tasks" count={pendingTasks.length} urgency="medium" color="var(--warning)" onClick={() => showAlert('Tasks Info', 'Viewing pending tasks details')} />
           <PriorityCard icon={FileText} label="Proposals Out" count={deals.filter(d => d.stage === 'Proposal Sent').length} urgency="low" color="var(--accent-purple)" onClick={() => showAlert('Deals Info', 'Viewing active proposals details')} />
           <PriorityCard icon={TrendingUp} label="Stale Deals" count={staleDeals.length} urgency="warning" color="var(--orange)" onClick={() => showAlert('Deals Info', 'Viewing stale deals details')} />
-          <PriorityCard icon={Zap} label="Hot Leads" count={hotDeals.length} urgency="positive" color="var(--success)" onClick={() => showAlert('Leads Info', 'Viewing hot leads details')} />
+          <PriorityCard icon={Zap} label="Hot Leads" count={hotLeads.length} urgency="positive" color="var(--success)" onClick={() => showAlert('Leads Info', 'Viewing hot leads details')} />
         </div>
       </section>
 

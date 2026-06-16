@@ -8,6 +8,16 @@ import {
   Mail, Link2, Phone, Globe, ChevronDown,
   AlertCircle, Calendar, Target, DollarSign,
   Users, SlidersHorizontal, CheckCircle2
+// ============================================
+// HUNTLO — LEADS PAGE
+// AI-Native Signal-Driven Lead System
+// ============================================
+import { useState, useMemo } from 'react';
+import {
+  Search, Plus, X, Zap, TrendingUp, Building2,
+  Mail, Link2, Phone, Globe, ChevronDown,
+  AlertCircle, Calendar, Target, DollarSign,
+  Users, SlidersHorizontal, CheckCircle2
 } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import useAuthStore from '../store/useAuthStore';
@@ -16,30 +26,11 @@ import NewLeadForm from '../components/leads/NewLeadForm';
 import EnrollSequenceModal from '../components/sequences/EnrollSequenceModal';
 import CsvImporterModal from '../components/CsvImporterModal';
 import { useDialog } from '../context/DialogContext';
+import { computeSignalScore, getPriority } from '../utils/leadScoring';
 import './Leads.css';
 
 // ── Signal score computation ────────────────────────────────
-function computeSignalScore(lead) {
-  const s = lead.signals || {};
-  let score = 0;
-  if (s.hiring_activity)      score += 25;
-  if (s.recruiter_hiring)     score += 20;
-  if (s.funding_activity)     score += 20;
-  if (s.linkedin_activity)    score += 10;
-  if (s.job_posting_activity) score += 10;
-  if (s.company_growth)       score += 10;
-  if (lead.demo_requested)    score += 20;
-  if (lead.positive_interest) score += 15;
-  if (lead.reply_status === 'Positive') score += 20;
-  if (lead.email_status === 'Replied')  score += 15;
-  return Math.min(score, 100);
-}
-
-function getPriority(score) {
-  if (score >= 70) return 'Hot';
-  if (score >= 35) return 'Warm';
-  return 'Cold';
-}
+// Extracted to src/utils/leadScoring.js
 
 // ── Stage colours ───────────────────────────────────────────
 const STAGE_COLORS = {
@@ -78,7 +69,7 @@ const VIEWS = [
 ];
 
 // ── Lead Row ────────────────────────────────────────────────
-function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team }) {
+function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }) {
   const score = useMemo(() => computeSignalScore(lead), [lead]);
   const priority = getPriority(score);
   const signals = lead.signals || {};
@@ -87,6 +78,7 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team }) {
   const initial = (lead.company_name || '?').charAt(0).toUpperCase();
   const isOverdue = lead.next_action_due && new Date(lead.next_action_due) < new Date();
   const scoreColor = score >= 70 ? '#dc2626' : score >= 35 ? '#d97706' : '#94a3b8';
+  const isOwner = user?.id === lead.owner_id;
 
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [noteValue, setNoteValue] = useState(lead.notes || '');
@@ -113,12 +105,14 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team }) {
       onClick={() => onClick(lead)}
     >
       {/* Checkbox */}
-      <div className="lc" onClick={e => { e.stopPropagation(); onSelect(lead.id); }}>
+      <div className="lc" onClick={e => { if (isOwner) { e.stopPropagation(); onSelect(lead.id); } }}>
         <input
           type="checkbox"
           checked={isSelected}
           onChange={() => {}}
-          style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--accent-blue)' }}
+          disabled={!isOwner}
+          title={!isOwner ? 'Only owner can select this lead' : ''}
+          style={{ width: 15, height: 15, cursor: isOwner ? 'pointer' : 'not-allowed', accentColor: 'var(--accent-blue)', opacity: isOwner ? 1 : 0.5 }}
         />
       </div>
 
@@ -216,7 +210,7 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team }) {
       </div>
 
       {/* Notes / Remarks */}
-      <div className="lc" style={{ paddingRight: 16 }} onClick={(e) => e.stopPropagation()} onDoubleClick={() => setIsEditingNote(true)}>
+      <div className="lc" style={{ paddingRight: 16 }} onClick={(e) => e.stopPropagation()} onDoubleClick={() => { if (isOwner) setIsEditingNote(true); }}>
         {isEditingNote ? (
           <input
             autoFocus
@@ -228,7 +222,7 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team }) {
             onKeyDown={(e) => { if (e.key === 'Enter') handleNoteSave(); }}
           />
         ) : (
-          <span style={{ fontSize: 12, color: noteValue ? 'var(--text-secondary)' : 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', cursor: 'pointer' }}>
+          <span style={{ fontSize: 12, color: noteValue ? 'var(--text-secondary)' : 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', cursor: isOwner ? 'pointer' : 'default' }}>
             {noteValue || 'Double-click to add note...'}
           </span>
         )}
@@ -240,7 +234,7 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team }) {
 // ── Main Page ───────────────────────────────────────────────
 export default function Leads() {
   const { leads, deleteLead, bulkDeleteLeads, updateLead } = useDataStore();
-  const { team } = useAuthStore();
+  const { team, user } = useAuthStore();
   const { showConfirm } = useDialog();
   const [activeView, setActiveView] = useState('all');
   const [search, setSearch] = useState('');
@@ -279,8 +273,13 @@ export default function Leads() {
   };
 
   const toggleAll = () => {
-    if (selectedIds.length === filtered.length) setSelectedIds([]);
-    else setSelectedIds(filtered.map(l => l.id));
+    // Only select leads the user owns
+    const selectable = filtered.filter(l => l.owner_id === user?.id);
+    if (selectedIds.length === selectable.length && selectable.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(selectable.map(l => l.id));
+    }
   };
 
   const handleBulkDelete = async () => {
@@ -305,169 +304,6 @@ export default function Leads() {
     } catch (err) {
       console.error('Lead update failed:', err);
     }
-  };
-
-  const viewCounts = useMemo(() =>
-    Object.fromEntries(VIEWS.map(v => [v.id, enriched.filter(v.filter).length])),
-    [enriched]
-  );
-
-  return (
-    <div className="leads-page">
-      {/* Header */}
-      <div className="leads-header">
-        <div className="leads-header-left">
-          <span className="leads-title">Leads</span>
-          <span className="leads-count">{filtered.length}</span>
-        </div>
-        <div className="leads-header-right">
-          <button className="btn btn-ghost btn-sm" style={{ gap: 6, fontSize: 12 }}>
-            <SlidersHorizontal size={14} /> Filter
-          </button>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => setShowImporter(true)}
-            style={{ fontSize: 13 }}
-          >
-            Import
-          </button>
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={() => setShowNewForm(true)}
-            style={{ gap: 6, fontSize: 13 }}
-          >
-            <Plus size={15} /> New Lead
-          </button>
-        </div>
-      </div>
-
-      {/* Smart View Tabs */}
-      <div className="leads-view-bar">
-        {VIEWS.map(view => (
-          <button
-            key={view.id}
-            className={`view-tab${activeView === view.id ? ' active' : ''}`}
-            onClick={() => { setActiveView(view.id); setSelectedIds([]); }}
-          >
-            {view.label}
-            {viewCounts[view.id] > 0 && (
-              <span style={{
-                fontSize: 10, fontWeight: 700,
-                background: activeView === view.id ? 'var(--accent-blue-dim)' : 'var(--bg-border)',
-                color: activeView === view.id ? '#fff' : 'var(--text-tertiary)',
-                padding: '1px 6px', borderRadius: 10
-              }}>
-                {viewCounts[view.id]}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Toolbar */}
-      <div className="leads-toolbar">
-        <div className="leads-search-wrap">
-          <Search size={14} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
-          <input
-            placeholder="Search companies, contacts…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          {search && (
-            <X size={14} style={{ color: 'var(--text-tertiary)', cursor: 'pointer', flexShrink: 0 }}
-              onClick={() => setSearch('')} />
-          )}
-        </div>
-      </div>
-
-      {/* Bulk action bar */}
-      {selectedIds.length > 0 && (
-        <div className="bulk-bar">
-          <span>{selectedIds.length} selected</span>
-          <button
-            onClick={() => setShowEnrollModal(true)}
-            className="btn btn-sm"
-            style={{ background: 'var(--accent-blue)', color: '#fff', fontSize: 12, border: 'none', marginLeft: 8 }}
-          >
-            Enroll in Sequence
-          </button>
-          <button
-            onClick={handleBulkDelete}
-            className="btn btn-sm"
-            style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 12 }}
-          >
-            Delete
-          </button>
-          <button
-            onClick={() => setSelectedIds([])}
-            className="btn btn-sm"
-            style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: 12 }}
-          >
-            Clear
-          </button>
-        </div>
-      )}
-
-      {/* Body */}
-      <div className="leads-body">
-        <div className="leads-table-wrap">
-          {/* Head */}
-          <div className="leads-table-head">
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <input
-                type="checkbox"
-                checked={selectedIds.length === filtered.length && filtered.length > 0}
-                onChange={toggleAll}
-                style={{ width: 15, height: 15, accentColor: 'var(--accent-blue)' }}
-              />
-            </div>
-            <span>Company / Contact</span>
-            <span>Owner</span>
-            <span>Stage</span>
-            <span>Signal Score</span>
-            <span>Priority</span>
-            <span>Active Signals</span>
-            <span>Next Action</span>
-            <span>Est. MRR</span>
-            <span>Notes / Remarks</span>
-          </div>
-
-          {/* Rows */}
-          <div className="leads-list">
-            {filtered.length === 0 ? (
-              <div className="leads-empty">
-                <Target size={36} style={{ opacity: 0.3 }} />
-                <h3>{search ? 'No leads match your search' : 'No leads in this view'}</h3>
-                <p>
-                  {search
-                    ? 'Try adjusting your search terms.'
-                    : activeView === 'all'
-                      ? 'Add your first lead to get started.'
-                      : `No leads match the "${viewDef.label}" filter yet.`
-                  }
-                </p>
-                {activeView === 'all' && !search && (
-                  <button className="btn btn-primary btn-sm" onClick={() => setShowNewForm(true)}>
-                    <Plus size={14} /> Add First Lead
-                  </button>
-                )}
-              </div>
-            ) : (
-              filtered.map(lead => (
-                <LeadRow
-                  key={lead.id}
-                  lead={lead}
-                  isSelected={selectedIds.includes(lead.id)}
-                  onSelect={toggleSelect}
-                  onClick={handleLeadClick}
-                  updateLead={updateLead}
-                  team={team}
-                />
-              ))
-            )}
-          </div>
-        </div>
-
         {/* Right Drawer */}
         {selectedLead && (
           <LeadDrawer

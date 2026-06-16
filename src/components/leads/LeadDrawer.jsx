@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useDialog } from '../../context/DialogContext';
 import useAuthStore from '../../store/useAuthStore';
+import { computeSignalScore } from '../../utils/leadScoring';
 
 const STAGES = [
   'New Lead', 'Researching', 'Ready for Outreach', 'Outreach Started',
@@ -49,12 +50,13 @@ function Field({ label, value, children }) {
 
 export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
   const { showConfirm } = useDialog();
-  const { team } = useAuthStore();
+  const { team, user } = useAuthStore();
   const [tab, setTab] = useState('intelligence');
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState({ ...lead });
 
+  const isOwner = user?.id === lead.owner_id;
   const signals = form.signals || {};
 
   const handleSignalToggle = (key) => {
@@ -84,19 +86,7 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
   const set = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 
   // score computation inline
-  const s = signals;
-  let score = 0;
-  if (s.hiring_activity)      score += 25;
-  if (s.recruiter_hiring)     score += 20;
-  if (s.funding_activity)     score += 20;
-  if (s.linkedin_activity)    score += 10;
-  if (s.job_posting_activity) score += 10;
-  if (s.company_growth)       score += 10;
-  if (form.demo_requested)    score += 20;
-  if (form.positive_interest) score += 15;
-  if (form.reply_status === 'Positive')    score += 20;
-  if (form.email_status === 'Replied')     score += 15;
-  score = Math.min(score, 100);
+  const score = computeSignalScore(form);
   const scoreColor = score >= 70 ? '#dc2626' : score >= 35 ? '#d97706' : '#94a3b8';
 
   return (
@@ -150,21 +140,25 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
               </>
             ) : (
               <>
-                <button onClick={() => setEditMode(true)} className="btn btn-ghost btn-sm"
-                  style={{ fontSize: 12, gap: 4 }}>
-                  <Edit3 size={13} /> Edit
-                </button>
-                <button onClick={async () => {
-                  const confirmed = await showConfirm(
-                    'Delete Lead',
-                    `Are you sure you want to permanently delete this lead from ${form.company_name || 'CRM'}?`
-                  );
-                  if (confirmed) onDelete(lead.id);
-                }}
-                  className="btn btn-ghost btn-sm"
-                  style={{ fontSize: 12, color: 'var(--danger)' }}>
-                  <Trash2 size={13} />
-                </button>
+                {isOwner && (
+                  <>
+                    <button onClick={() => setEditMode(true)} className="btn btn-ghost btn-sm"
+                      style={{ fontSize: 12, gap: 4 }}>
+                      <Edit3 size={13} /> Edit
+                    </button>
+                    <button onClick={async () => {
+                      const confirmed = await showConfirm(
+                        'Delete Lead',
+                        `Are you sure you want to permanently delete this lead from ${form.company_name || 'CRM'}?`
+                      );
+                      if (confirmed) onDelete(lead.id);
+                    }}
+                      className="btn btn-ghost btn-sm"
+                      style={{ fontSize: 12, color: 'var(--danger)' }}>
+                      <Trash2 size={13} />
+                    </button>
+                  </>
+                )}
               </>
             )}
             <button onClick={onClose} className="drawer-close"><X size={16} /></button>

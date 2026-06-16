@@ -25,7 +25,7 @@ export default function Reports() {
   const [timeframe, setTimeframe] = useState('YTD');
   const [activeTab, setActiveTab] = useState('overview');
   const [showCustomizer, setShowCustomizer] = useState(false);
-  const { deals, meetings, tasks, companies, contacts } = useDataStore();
+  const { deals, meetings, tasks, companies, contacts, leads } = useDataStore();
   const { team, fetchTeam } = useAuthStore();
 
   const [widgets, setWidgets] = useState(() => {
@@ -123,12 +123,16 @@ export default function Reports() {
 
   const sourceData = useMemo(() => {
     const sources = { 'Outbound': 0, 'Inbound': 0, 'Referral': 0, 'Partner': 0 };
-    deals.forEach(d => {
-      const keys = Object.keys(sources);
-      sources[keys[d.id?.length % 4 || 0]]++; 
+    leads.forEach(l => {
+      const source = l.campaign_type || l.outreach_channel || 'Outbound';
+      if (sources[source] !== undefined) {
+        sources[source]++;
+      } else {
+        sources[source] = 1;
+      }
     });
-    return Object.keys(sources).map(k => ({ name: k, value: sources[k] }));
-  }, [deals]);
+    return Object.keys(sources).map(k => ({ name: k, value: sources[k] })).filter(s => s.value > 0);
+  }, [leads]);
 
   const taskCompletion = useMemo(() => {
     const data = [];
