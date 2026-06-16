@@ -139,7 +139,13 @@ const useAuthStore = create(
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${appUrl}/reset-password`,
         });
-        if (error) return { success: false, error: error.message };
+        if (error) {
+          let msg = error.message;
+          if (msg.includes('Error sending recovery email') || msg.includes('rate limit')) {
+            msg = 'Email rate limit reached (max 3 per hour on Supabase free tier). Please configure a custom SMTP provider in your Supabase Auth settings, or wait an hour.';
+          }
+          return { success: false, error: msg };
+        }
         return { success: true };
       },
 
