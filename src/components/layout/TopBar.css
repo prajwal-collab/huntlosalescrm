@@ -1,39 +1,48 @@
-/* TOPBAR */
+/* ============================================
+   TOPBAR — Premium Header
+   ============================================ */
 .topbar {
   height: var(--topbar-height);
-  background: var(--bg-base);
+  background: var(--bg-surface);
   border-bottom: 1px solid var(--bg-border);
   display: flex;
   align-items: center;
-  padding: 0 var(--space-5);
+  padding: 0 var(--space-6);
   gap: var(--space-4);
   flex-shrink: 0;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.02);
 }
 
 .topbar-left { display: flex; align-items: center; min-width: 160px; }
-.page-title { font-size: var(--text-md); font-weight: 600; color: var(--text-primary); }
+.page-title { 
+  font-size: 15px; 
+  font-weight: 700; 
+  color: var(--text-primary); 
+  letter-spacing: -0.02em; 
+}
 
 .topbar-center { flex: 1; display: flex; justify-content: center; }
 
 .ai-search-trigger {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: var(--bg-surface);
+  gap: 10px;
+  background: var(--bg-base);
   border: 1px solid var(--bg-border);
   border-radius: var(--radius-md);
-  padding: 7px 12px;
+  padding: 8px 16px;
   cursor: pointer;
   width: 100%;
-  max-width: 460px;
+  max-width: 480px;
   transition: var(--transition-base);
   color: var(--text-tertiary);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
+  box-shadow: var(--shadow-inner);
 }
 .ai-search-trigger:hover, .ai-search-trigger.focused {
   border-color: var(--accent-blue);
-  background: var(--bg-elevated);
+  background: var(--bg-surface);
   color: var(--text-secondary);
   box-shadow: 0 0 0 3px var(--accent-blue-glow);
 }
@@ -43,19 +52,22 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  background: var(--bg-border);
-  border-radius: 4px;
-  padding: 2px 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: 5px;
+  padding: 2px 7px;
   font-size: 11px;
   color: var(--text-tertiary);
   font-family: var(--font-mono);
   white-space: nowrap;
+  font-weight: 500;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
 }
 
 .topbar-right { display: flex; align-items: center; gap: 8px; min-width: 160px; justify-content: flex-end; }
 
 .icon-btn {
-  width: 32px; height: 32px;
+  width: 34px; height: 34px;
   display: flex; align-items: center; justify-content: center;
   background: transparent;
   border: 1px solid var(--bg-border);
@@ -65,17 +77,26 @@
   transition: var(--transition-fast);
   position: relative;
 }
-.icon-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.icon-btn:hover { 
+  background: var(--bg-hover); 
+  color: var(--text-primary); 
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+.icon-btn:active { transform: translateY(0); }
 
 .notif-badge {
   position: absolute;
-  top: -4px; right: -4px;
-  background: var(--accent-blue);
+  top: -5px; right: -5px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
   color: #fff;
   font-size: 9px;
   font-weight: 700;
-  width: 16px; height: 16px;
+  width: 18px; height: 18px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  border: 1.5px solid var(--bg-base);
+  border: 2px solid var(--bg-surface);
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  animation: pop-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }

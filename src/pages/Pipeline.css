@@ -1,5 +1,7 @@
-/* PIPELINE */
-.pipeline-page { display: flex; flex-direction: column; gap: var(--space-4); height: 100%; overflow: hidden; }
+/* ============================================
+   PIPELINE — Premium Kanban Board
+   ============================================ */
+.pipeline-page { display: flex; flex-direction: column; gap: var(--space-4); height: 100%; overflow: hidden; animation: fade-in 0.25s ease; }
 
 .pipeline-toolbar {
   display: flex;
@@ -10,19 +12,20 @@
 
 .filter-chips { display: flex; gap: 4px; }
 .filter-chip {
-  padding: 5px 12px;
+  padding: 6px 14px;
   border-radius: var(--radius-full);
   font-size: var(--text-xs);
-  font-weight: 500;
+  font-weight: 550;
   border: 1px solid var(--bg-border);
-  background: transparent;
+  background: var(--bg-surface);
   color: var(--text-secondary);
   cursor: pointer;
   transition: var(--transition-fast);
   text-transform: capitalize;
+  box-shadow: var(--shadow-xs);
 }
-.filter-chip:hover { background: var(--bg-elevated); color: var(--text-primary); }
-.filter-chip.active { background: var(--accent-blue-muted); color: var(--accent-blue); border-color: rgba(59,130,246,0.3); }
+.filter-chip:hover { background: var(--bg-hover); color: var(--text-primary); border-color: #cbd5e1; }
+.filter-chip.active { background: var(--accent-blue-muted); color: var(--accent-blue); border-color: rgba(79,110,247,0.25); }
 
 /* Kanban */
 .kanban-board {
@@ -33,50 +36,52 @@
   flex: 1;
   padding-bottom: var(--space-4);
 }
-.kanban-board::-webkit-scrollbar { height: 4px; }
+.kanban-board::-webkit-scrollbar { height: 6px; }
 
 .kanban-col {
-  width: 240px;
-  min-width: 240px;
-  background: var(--bg-surface);
+  width: 260px;
+  min-width: 260px;
+  background: var(--bg-base);
   border: 1px solid var(--bg-border);
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
-  transition: var(--transition-fast);
+  transition: var(--transition-base);
   overflow: hidden;
 }
 .kanban-col.drag-over {
   border-color: var(--accent-blue);
-  box-shadow: 0 0 0 2px var(--accent-blue-glow);
+  box-shadow: 0 0 0 3px var(--accent-blue-glow);
+  background: rgba(79, 110, 247, 0.02);
 }
 
 .kanban-col-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--bg-border);
   flex-shrink: 0;
+  background: var(--bg-surface);
 }
-.kanban-stage { font-size: var(--text-xs); font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+.kanban-stage { font-size: var(--text-xs); font-weight: 650; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
 .kanban-meta { display: flex; align-items: center; gap: 6px; }
 .kanban-count {
-  width: 18px; height: 18px;
-  background: var(--bg-elevated);
-  border-radius: 4px;
+  width: 20px; height: 20px;
+  background: var(--bg-hover);
+  border-radius: 5px;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-secondary);
   display: flex; align-items: center; justify-content: center;
 }
-.kanban-arr { font-size: 10px; color: var(--success); font-weight: 500; }
+.kanban-arr { font-size: 10px; color: var(--success); font-weight: 600; }
 
 .kanban-cards {
   padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   overflow-y: auto;
   flex: 1;
 }
@@ -84,47 +89,49 @@
 .kanban-empty {
   text-align: center;
   font-size: var(--text-xs);
-  color: var(--text-muted);
-  padding: var(--space-6) 0;
-  border: 1px dashed var(--bg-border);
-  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  padding: var(--space-8) 0;
+  border: 2px dashed var(--bg-border);
+  border-radius: var(--radius-md);
 }
 
 /* Deal Card */
 .deal-card {
-  background: var(--bg-elevated);
+  background: var(--bg-surface);
   border: 1px solid var(--bg-border);
   border-radius: var(--radius-md);
-  padding: 10px;
+  padding: 12px;
   cursor: pointer;
   transition: var(--transition-base);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  box-shadow: var(--shadow-xs);
 }
 .deal-card:hover {
-  border-color: var(--text-tertiary);
-  transform: translateY(-1px);
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
-.deal-card-top { display: flex; align-items: center; gap: 8px; }
+.deal-card-top { display: flex; align-items: center; gap: 10px; }
 .deal-logo {
-  width: 28px; height: 28px;
-  border-radius: 6px;
+  width: 30px; height: 30px;
+  border-radius: var(--radius-sm);
   display: flex; align-items: center; justify-content: center;
   font-size: 13px; font-weight: 700;
   flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 .deal-info { flex: 1; min-width: 0; }
 .deal-company { font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.deal-arr { font-size: 11px; color: var(--text-secondary); }
-.deal-urgency-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.deal-arr { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+.deal-urgency-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 4px currentColor; }
 
-.deal-card-mid { display: flex; flex-direction: column; gap: 4px; }
+.deal-card-mid { display: flex; flex-direction: column; gap: 5px; }
 .deal-score-row { display: flex; justify-content: space-between; }
 .deal-score-label { font-size: 10px; color: var(--text-tertiary); }
-.deal-score-val { font-size: 10px; font-weight: 600; }
+.deal-score-val { font-size: 10px; font-weight: 700; }
 
 .deal-next-step {
   font-size: 11px;
@@ -132,24 +139,26 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  border-left: 2px solid var(--bg-border);
-  padding-left: 6px;
+  border-left: 2px solid var(--accent-blue);
+  padding-left: 8px;
 }
 
 .deal-card-footer { display: flex; align-items: center; gap: 6px; }
 .deal-avatar {
-  width: 18px; height: 18px;
+  width: 20px; height: 20px;
   border-radius: 50%;
   font-size: 8px; font-weight: 700;
   color: #fff;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.8);
 }
 .deal-time { font-size: 10px; color: var(--text-tertiary); flex: 1; }
 .deal-tasks {
   font-size: 10px;
-  color: var(--text-tertiary);
-  background: var(--bg-border);
-  padding: 1px 5px;
-  border-radius: 3px;
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
 }

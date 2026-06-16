@@ -18,7 +18,7 @@
   display: none;
   flex: 1;
   position: relative;
-  background: #000;
+  background: #0a0e1a;
   overflow: hidden;
 }
 
@@ -36,7 +36,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.85;
+  opacity: 0.75;
   mix-blend-mode: screen;
 }
 
@@ -57,46 +57,46 @@
 }
 
 .auth-brand-icon {
-  width: 40px;
-  height: 40px;
-  background: var(--accent-blue);
-  border-radius: var(--radius-sm);
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, #5b7bf9 0%, #3b5ce4 100%);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 24px rgba(59, 130, 246, 0.5);
+  box-shadow: 0 4px 24px rgba(79, 110, 247, 0.4);
   overflow: hidden;
 }
 
 .auth-brand-text {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 800;
   color: #fff;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .auth-brand-text span {
-  color: var(--accent-blue);
+  color: #7b9dff;
 }
 
 .auth-value-prop {
   max-width: 480px;
-  margin-bottom: 40px;
+  margin-bottom: 60px;
 }
 
 .auth-value-prop h2 {
-  font-size: 42px;
-  font-weight: 700;
+  font-size: 44px;
+  font-weight: 800;
   color: #fff;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-  margin-bottom: 20px;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  margin-bottom: 24px;
 }
 
 .auth-value-prop p {
   font-size: 18px;
-  color: rgba(255, 255, 255, 0.8);
-  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
 }
 
 /* Right Side - Form */
@@ -106,7 +106,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 24px;
+  padding: 48px 32px;
   overflow-y: auto;
   position: relative;
   background: var(--bg-base);
@@ -115,7 +115,7 @@
 .auth-card {
   width: 100%;
   max-width: 400px;
-  animation: fade-in-up 0.5s ease-out;
+  animation: fade-in-up 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes fade-in-up {
@@ -125,25 +125,25 @@
 
 /* Headings */
 .auth-heading {
-  font-size: 32px;
-  font-weight: 700;
+  font-size: 30px;
+  font-weight: 800;
   color: var(--text-primary);
   margin-bottom: 8px;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .auth-sub {
   font-size: 15px;
   color: var(--text-secondary);
-  margin-bottom: 32px;
-  line-height: 1.5;
+  margin-bottom: 36px;
+  line-height: 1.6;
 }
 
 /* Form */
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 22px;
 }
 
 /* Form Inputs Overlay */
@@ -151,34 +151,44 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
-  margin-bottom: 6px;
+  margin-bottom: 7px;
 }
 
 .auth-form .input-base {
   padding: 12px 16px;
   font-size: 15px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-surface);
   border: 1px solid var(--bg-border);
-  transition: all 0.2s ease;
+  transition: var(--transition-base);
+  box-shadow: var(--shadow-inner);
 }
 
 .auth-form .input-base:focus {
   border-color: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-  background: var(--bg-hover);
+  box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.12);
+  background: #fff;
+}
+
+/* Auth Button */
+.auth-form .btn-primary {
+  padding: 13px 24px;
+  font-size: 15px;
+  font-weight: 650;
+  border-radius: var(--radius-md);
 }
 
 /* Divider */
 .auth-divider {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin: 8px 0;
+  gap: 14px;
+  margin: 4px 0;
   font-size: 12px;
   color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 1px;
+  font-weight: 500;
 }
 
 .auth-divider::before,
@@ -191,7 +201,7 @@
 
 /* Footer */
 .auth-footer {
-  margin-top: 24px;
+  margin-top: 28px;
   text-align: center;
   font-size: 14px;
   color: var(--text-secondary);
@@ -207,33 +217,35 @@
 
 .auth-footer a:hover,
 .auth-link:hover {
-  color: #60a5fa;
+  color: #6b8bff;
   text-decoration: none;
 }
 
 /* Alerts */
 .auth-error {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 8px;
-  padding: 12px 16px;
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 13px 16px;
   font-size: 14px;
-  color: #f87171;
+  color: #dc2626;
   display: flex;
   align-items: center;
   gap: 10px;
+  animation: fade-in 0.2s ease;
 }
 
 .auth-success {
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  border-radius: 8px;
-  padding: 12px 16px;
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 13px 16px;
   font-size: 14px;
-  color: #4ade80;
+  color: #059669;
   display: flex;
   align-items: center;
   gap: 10px;
+  animation: fade-in 0.2s ease;
 }
 
 /* Password field */
@@ -243,7 +255,7 @@
 
 .password-toggle {
   position: absolute;
-  right: 12px;
+  right: 14px;
   top: 50%;
   transform: translateY(-50%);
   background: none;
@@ -254,20 +266,21 @@
   align-items: center;
   padding: 4px;
   transition: color 0.2s ease;
+  border-radius: 4px;
 }
 
 .password-toggle:hover {
   color: var(--text-primary);
+  background: var(--bg-hover);
 }
 
 .invite-details-premium {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-lg);
   padding: 24px;
   margin-bottom: 32px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .invite-row {
@@ -284,23 +297,24 @@
 .invite-icon-box {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .invite-label {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 2px;
+  letter-spacing: 0.6px;
+  margin-bottom: 3px;
+  font-weight: 550;
 }
 
 .invite-value {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 650;
   color: var(--text-primary);
 }
 

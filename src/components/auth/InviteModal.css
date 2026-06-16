@@ -1,143 +1,150 @@
-.invite-modal-overlay {
+/* ============================================
+   INVITE MODAL — Premium
+   ============================================ */
+.invite-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 200;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  animation: fadeIn 0.2s ease-out;
+  animation: fade-in-fast 0.15s ease;
 }
 
-.invite-modal-content {
+.invite-modal {
   background: var(--bg-surface);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--bg-border);
-  border-radius: var(--radius-xl);
-  width: 90%;
-  max-width: 480px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-  overflow: hidden;
+  box-shadow: var(--shadow-2xl, var(--shadow-xl));
+  width: 480px;
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  animation: scale-in 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.invite-modal-header {
-  padding: 24px;
-  border-bottom: 1px solid var(--bg-border);
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.invite-modal-header h2 {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 4px 0;
-}
-
-.invite-modal-header p {
-  font-size: 13px;
-  color: var(--text-tertiary);
-  margin: 0;
-}
-
-.invite-modal-body {
-  padding: 24px;
-}
-
-.invite-emails-input {
-  width: 100%;
-  background: var(--bg-base);
-  border: 1px solid var(--bg-border);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 14px;
-  min-height: 80px;
-  resize: vertical;
-  transition: all 0.2s ease;
-}
-
-.invite-emails-input:focus {
-  outline: none;
-  border-color: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.invite-role-select {
-  width: 100%;
-  background: var(--bg-base);
-  border: 1px solid var(--bg-border);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  color: var(--text-primary);
-  font-size: 14px;
-  margin-top: 16px;
-  cursor: pointer;
-}
-
-.invite-modal-footer {
-  padding: 16px 24px;
-  background: var(--bg-elevated);
-  border-top: 1px solid var(--bg-border);
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-.invite-success-view {
-  padding: 40px 24px;
-  text-align: center;
-}
-
-.invite-success-view h3 {
-  font-size: 18px;
-  color: var(--text-primary);
-  margin: 16px 0 8px 0;
-}
-
-.invite-success-view p {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin-bottom: 24px;
-}
-
-.invite-copy-box {
-  background: var(--bg-base);
-  border: 1px dashed var(--bg-border);
-  padding: 12px;
-  border-radius: var(--radius-md);
+.invite-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--bg-border);
 }
 
-.invite-copy-text {
-  font-size: 12px;
+.invite-header h2 {
+  font-size: 16px;
+  font-weight: 700;
   color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.invite-body {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow-y: auto;
+}
+
+.invite-email-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.invite-email-row .form-group { flex: 1; }
+
+.invite-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.invite-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-base);
+  border: 1px solid var(--bg-border);
+  font-size: 13px;
+  color: var(--text-primary);
+  transition: var(--transition-fast);
+}
+
+.invite-chip:hover { background: var(--bg-hover); }
+
+.invite-role-select {
+  margin-left: auto;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--bg-border);
+  background: var(--bg-surface);
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.invite-remove {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  transition: var(--transition-fast);
+}
+.invite-remove:hover { color: var(--danger); }
+
+.invite-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 22px;
+  border-top: 1px solid var(--bg-border);
+  background: var(--bg-base);
+}
+
+.invite-link-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-base);
+  margin-top: 4px;
+}
+
+.invite-link-text {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 1;
-  text-align: left;
 }
 
-.invite-copy-btn {
-  background: var(--bg-elevated);
+.invite-link-copy {
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: var(--bg-surface);
   border: 1px solid var(--bg-border);
   color: var(--text-secondary);
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: var(--transition-fast);
+  white-space: nowrap;
 }
-
-.invite-copy-btn:hover {
-  background: var(--bg-border);
-  color: var(--text-primary);
-}
+.invite-link-copy:hover { background: var(--bg-hover); color: var(--text-primary); }
