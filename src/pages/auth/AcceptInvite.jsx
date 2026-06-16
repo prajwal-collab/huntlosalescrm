@@ -6,6 +6,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Mail, Shield, CheckCircle, AlertCircle, Loader, ArrowRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import logoImg from '../../assets/logo.png';
+import bgImg from '../../assets/auth_bg.png';
 import './Auth.css';
 
 export default function AcceptInvite() {
@@ -62,11 +63,23 @@ export default function AcceptInvite() {
   if (loading) {
     return (
       <div className="auth-shell">
-        <div className="auth-bg-glow" />
-        <div className="auth-card" style={{ textAlign: 'center', padding: '48px 24px' }}>
-          <Loader size={36} className="cc-spinner" style={{ margin: '0 auto 16px', color: 'var(--accent-blue)' }} />
-          <h2 className="auth-heading" style={{ fontSize: '18px' }}>Verifying your invitation...</h2>
-          <p className="auth-sub">Please wait while we check our secure servers.</p>
+        <div className="auth-left">
+          <img src={bgImg} alt="Background" className="auth-bg-image" />
+          <div className="auth-left-content">
+            <div className="auth-brand">
+              <div className="auth-brand-icon">
+                <img src={logoImg} alt="Huntlo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+              <div className="auth-brand-text">Huntlo<span> OS</span></div>
+            </div>
+          </div>
+        </div>
+        <div className="auth-right">
+          <div className="auth-card" style={{ textAlign: 'center' }}>
+            <Loader size={40} className="cc-spinner" style={{ margin: '0 auto 24px', color: 'var(--accent-blue)' }} />
+            <h2 className="auth-heading">Verifying invitation...</h2>
+            <p className="auth-sub">Checking secure token</p>
+          </div>
         </div>
       </div>
     );
@@ -75,14 +88,28 @@ export default function AcceptInvite() {
   if (error) {
     return (
       <div className="auth-shell">
-        <div className="auth-bg-glow" />
-        <div className="auth-card" style={{ textAlign: 'center', padding: '48px 24px' }}>
-          <AlertCircle size={48} color="var(--danger)" style={{ margin: '0 auto 20px' }} />
-          <h2 className="auth-heading">{error}</h2>
-          <p className="auth-sub">Ask your workspace administrator to send a new invite if necessary.</p>
-          <Link to="/signin" className="btn btn-primary btn-md w-full" style={{ marginTop: 24, display: 'flex', justifyContent: 'center' }}>
-            Back to Sign In
-          </Link>
+        <div className="auth-left">
+          <img src={bgImg} alt="Background" className="auth-bg-image" />
+          <div className="auth-left-content">
+            <div className="auth-brand">
+              <div className="auth-brand-icon">
+                <img src={logoImg} alt="Huntlo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+              <div className="auth-brand-text">Huntlo<span> OS</span></div>
+            </div>
+          </div>
+        </div>
+        <div className="auth-right">
+          <div className="auth-card" style={{ textAlign: 'center' }}>
+            <div style={{ background: 'var(--danger-glow)', width: 80, height: 80, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+              <AlertCircle size={40} color="var(--danger)" />
+            </div>
+            <h2 className="auth-heading">Invite Error</h2>
+            <p className="auth-sub" style={{ fontSize: 16 }}>{error}</p>
+            <Link to="/signin" className="btn btn-primary btn-lg w-full" style={{ marginTop: 24, display: 'flex', justifyContent: 'center' }}>
+              Back to Sign In
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -90,70 +117,80 @@ export default function AcceptInvite() {
 
   return (
     <div className="auth-shell">
-      <div className="auth-bg-glow" />
-      <div className="auth-card">
-        <div className="auth-logo">
-          <div className="auth-logo-icon" style={{ padding: 0, overflow: 'hidden' }}>
-            <img src={logoImg} alt="Huntlo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      {/* Left Branding Panel */}
+      <div className="auth-left">
+        <img src={bgImg} alt="Background" className="auth-bg-image" />
+        <div className="auth-left-content">
+          <div className="auth-brand">
+            <div className="auth-brand-icon">
+              <img src={logoImg} alt="Huntlo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+            <div className="auth-brand-text">Huntlo<span> OS</span></div>
           </div>
-          <div className="auth-logo-text">Huntlo<span> OS</span></div>
-        </div>
-
-        <h1 className="auth-heading">Join the workspace</h1>
-        <p className="auth-sub" style={{ marginBottom: 24 }}>You have been invited to join a collaborative sales team.</p>
-
-        <div className="invite-details-box" style={{ 
-          background: 'rgba(255, 255, 255, 0.03)', 
-          border: '1px solid var(--bg-border)', 
-          borderRadius: '12px', 
-          padding: '20px', 
-          marginBottom: '28px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'var(--accent-blue-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-blue)' }}>
-              <Shield size={16} />
-            </div>
-            <div>
-              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Workspace</div>
-              <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>{invite?.organization_name}</div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-              <Mail size={16} />
-            </div>
-            <div>
-              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Your Email</div>
-              <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>{invite?.email}</div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--success)' }}>
-              <CheckCircle size={16} />
-            </div>
-            <div>
-              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Assigned Role</div>
-              <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--success)' }}>{invite?.role}</div>
-            </div>
+          <div className="auth-value-prop">
+            <h2>You've been invited.</h2>
+            <p>Join your team's workspace to start collaborating on deals and managing pipelines together.</p>
           </div>
         </div>
+      </div>
 
-        <button 
-          onClick={handleAccept}
-          className="btn btn-primary btn-lg w-full" 
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-        >
-          Create Account & Join Workspace <ArrowRight size={16} />
-        </button>
+      {/* Right Form Panel */}
+      <div className="auth-right">
+        <div className="auth-card">
+          <div className="auth-mobile-logo">
+            <div className="auth-brand-icon" style={{ width: 32, height: 32 }}>
+              <img src={logoImg} alt="Huntlo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+            <div className="auth-brand-text" style={{ fontSize: 20 }}>Huntlo<span> OS</span></div>
+          </div>
 
-        <p className="auth-footer" style={{ marginTop: 24 }}>
-          Invited to a different account? <Link to="/signin">Sign in</Link>
-        </p>
+          <h1 className="auth-heading">Accept Invite</h1>
+          <p className="auth-sub">Review your invitation details before joining.</p>
+
+          <div className="invite-details-premium">
+            <div className="invite-row">
+              <div className="invite-icon-box" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa' }}>
+                <Shield size={20} />
+              </div>
+              <div>
+                <div className="invite-label">Workspace</div>
+                <div className="invite-value">{invite?.organization_name}</div>
+              </div>
+            </div>
+
+            <div className="invite-row">
+              <div className="invite-icon-box" style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-secondary)' }}>
+                <Mail size={20} />
+              </div>
+              <div>
+                <div className="invite-label">Your Email</div>
+                <div className="invite-value">{invite?.email}</div>
+              </div>
+            </div>
+
+            <div className="invite-row">
+              <div className="invite-icon-box" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#34d399' }}>
+                <CheckCircle size={20} />
+              </div>
+              <div>
+                <div className="invite-label">Assigned Role</div>
+                <div className="invite-value" style={{ color: '#34d399' }}>{invite?.role}</div>
+              </div>
+            </div>
+          </div>
+
+          <button 
+            onClick={handleAccept}
+            className="btn btn-primary btn-lg w-full" 
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+          >
+            Complete Profile to Join <ArrowRight size={18} />
+          </button>
+
+          <p className="auth-footer" style={{ marginTop: 24 }}>
+            Invited to a different account? <Link to="/signin">Sign in</Link>
+          </p>
+        </div>
       </div>
     </div>
   );

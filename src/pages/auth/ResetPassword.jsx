@@ -3,9 +3,10 @@
 // ============================================
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader, Eye, EyeOff, Lock } from 'lucide-react';
+import { Loader, Eye, EyeOff, Lock, AlertCircle } from 'lucide-react';
 import useAuthStore from '../../store/useAuthStore';
 import logoImg from '../../assets/logo.png';
+import bgImg from '../../assets/auth_bg.png';
 import './Auth.css';
 import { supabase } from '../../lib/supabase';
 
@@ -63,82 +64,95 @@ export default function ResetPassword() {
 
   return (
     <div className="auth-shell">
-      <div className="auth-bg-glow" />
-      <div className="auth-card">
-        <div className="auth-logo">
-          <div className="auth-logo-icon" style={{ padding: 0, overflow: 'hidden' }}>
-            <img src={logoImg} alt="Huntlo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      {/* Left Branding Panel */}
+      <div className="auth-left">
+        <img src={bgImg} alt="Background" className="auth-bg-image" />
+        <div className="auth-left-content">
+          <div className="auth-brand">
+            <div className="auth-brand-icon">
+              <img src={logoImg} alt="Huntlo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+            <div className="auth-brand-text">Huntlo<span> OS</span></div>
           </div>
-          <div className="auth-logo-text">Huntlo<span> OS</span></div>
+          <div className="auth-value-prop">
+            <h2>Secure your account.</h2>
+            <p>Set a strong password to protect your workspace and sensitive data.</p>
+          </div>
         </div>
+      </div>
 
-        <h1 className="auth-heading">Set New Password</h1>
-        <p className="auth-sub">Please enter your new password below</p>
-
-        <form className="auth-form" onSubmit={handleSubmit}>
-          {status.message && (
-            <div className={status.type === 'error' ? 'auth-error' : 'auth-success'} style={{
-              padding: '12px',
-              borderRadius: '8px',
-              backgroundColor: status.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
-              color: status.type === 'error' ? '#ef4444' : '#22c55e',
-              fontSize: '14px',
-              marginBottom: '16px',
-              border: `1px solid ${status.type === 'error' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)'}`
-            }}>
-              {status.message}
+      {/* Right Form Panel */}
+      <div className="auth-right">
+        <div className="auth-card">
+          <div className="auth-mobile-logo">
+            <div className="auth-brand-icon" style={{ width: 32, height: 32 }}>
+              <img src={logoImg} alt="Huntlo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
-          )}
-
-          <div className="form-group">
-            <label className="label" htmlFor="new-password">New Password</label>
-            <div className="password-wrapper">
-              <Lock size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', zIndex: 1 }} />
-              <input
-                id="new-password"
-                name="new-password"
-                autoComplete="new-password"
-                className="input-base"
-                type={showPw ? 'text' : 'password'}
-                placeholder="Enter new password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                style={{ paddingLeft: '36px', paddingRight: '38px' }}
-              />
-              <button type="button" className="password-toggle" onClick={() => setShowPw(p => !p)}>
-                {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
-            </div>
-          </div>
-          
-          <div className="form-group">
-            <label className="label" htmlFor="confirm-password">Confirm New Password</label>
-            <div className="password-wrapper">
-              <Lock size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', zIndex: 1 }} />
-              <input
-                id="confirm-password"
-                name="confirm-password"
-                autoComplete="new-password"
-                className="input-base"
-                type={showPw ? 'text' : 'password'}
-                placeholder="Confirm new password"
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                required
-                style={{ paddingLeft: '36px', paddingRight: '38px' }}
-              />
-            </div>
+            <div className="auth-brand-text" style={{ fontSize: 20 }}>Huntlo<span> OS</span></div>
           </div>
 
-          <button
-            type="submit"
-            className="btn btn-primary btn-lg w-full"
-            disabled={isSubmitting || loading}
-          >
-            {(isSubmitting || loading) ? <><Loader size={14} className="cc-spinner" /> Updating...</> : 'Update password'}
-          </button>
-        </form>
+          <h1 className="auth-heading">Set New Password</h1>
+          <p className="auth-sub">Please enter your new password below</p>
+
+          <form className="auth-form" onSubmit={handleSubmit}>
+            {status.message && (
+              <div className={status.type === 'error' ? 'auth-error' : 'auth-success'}>
+                {status.type === 'error' ? <AlertCircle size={16} /> : null}
+                <span>{status.message}</span>
+              </div>
+            )}
+
+            <div className="form-group">
+              <label className="label" htmlFor="new-password">New Password</label>
+              <div className="password-wrapper">
+                <Lock size={16} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', zIndex: 1 }} />
+                <input
+                  id="new-password"
+                  name="new-password"
+                  autoComplete="new-password"
+                  className="input-base"
+                  type={showPw ? 'text' : 'password'}
+                  placeholder="Enter new password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  style={{ paddingLeft: '44px', paddingRight: '42px', width: '100%' }}
+                />
+                <button type="button" className="password-toggle" onClick={() => setShowPw(p => !p)}>
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+            
+            <div className="form-group">
+              <label className="label" htmlFor="confirm-password">Confirm New Password</label>
+              <div className="password-wrapper">
+                <Lock size={16} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', zIndex: 1 }} />
+                <input
+                  id="confirm-password"
+                  name="confirm-password"
+                  autoComplete="new-password"
+                  className="input-base"
+                  type={showPw ? 'text' : 'password'}
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  required
+                  style={{ paddingLeft: '44px', paddingRight: '42px', width: '100%' }}
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="btn btn-primary btn-lg w-full"
+              disabled={isSubmitting || loading}
+              style={{ marginTop: '12px' }}
+            >
+              {(isSubmitting || loading) ? <><Loader size={16} className="cc-spinner" /> Updating...</> : 'Update password →'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
