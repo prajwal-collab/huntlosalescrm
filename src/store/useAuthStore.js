@@ -64,9 +64,14 @@ const useAuthStore = create(
           set({ user: data.user, session: data.session, loading: false });
           return { success: true };
         } catch (err) {
-          const msg = err.message === 'Invalid login credentials'
-            ? 'Incorrect email or password. Please try again.'
-            : err.message;
+          let msg = err.message;
+          if (msg === 'Invalid login credentials') {
+            msg = 'Incorrect email or password. Please try again.';
+          } else if (msg.includes('Email not confirmed')) {
+            msg = 'Your email is not yet confirmed. Please check your inbox or contact support.';
+          } else if (msg.includes('rate limit') || msg.includes('too many requests')) {
+            msg = 'Too many login attempts. Please wait a moment and try again.';
+          }
           set({ error: msg, loading: false });
           return { success: false, error: msg };
         }
@@ -91,11 +96,29 @@ const useAuthStore = create(
             },
           });
           if (error) throw error;
+
+          // If email confirmation is disabled, Supabase returns a session immediately
+          if (data.session) {
+            set({ user: data.user, session: data.session, loading: false });
+            return { success: true, needsConfirmation: false };
+          }
+
           set({ loading: false });
-          return { success: true, needsConfirmation: !data.session };
+          return { success: true, needsConfirmation: true };
         } catch (err) {
-          set({ error: err.message, loading: false });
-          return { success: false, error: err.message };
+          let msg = err.message;
+          // Provide user-friendly messages for common Supabase auth errors
+          if (msg.includes('Error sending confirmation email') || msg.includes('Error sending confirmation')) {
+            msg = 'Unable to send confirmation email. Please try again in a few minutes, or contact support.';
+          } else if (msg.includes('User already registered') || msg.includes('already been registered')) {
+            msg = 'An account with this email already exists. Please sign in instead.';
+          } else if (msg.includes('rate limit') || msg.includes('too many requests')) {
+            msg = 'Too many sign-up attempts. Please wait a moment and try again.';
+          } else if (msg.includes('Password should be at least')) {
+            msg = 'Password must be at least 6 characters long.';
+          }
+          set({ error: msg, loading: false });
+          return { success: false, error: msg };
         }
       },
 
