@@ -4,6 +4,7 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import useAuthStore from './useAuthStore';
+import useUIStore from './useUIStore';
 
 const useDataStore = create((set, get) => ({
   companies: [],
@@ -160,7 +161,21 @@ const useDataStore = create((set, get) => ({
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
         get()._refreshTable('tasks');
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'documents' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'documents' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const doc = payload.new;
+          const { user } = useAuthStore.getState();
+          if (doc.owner_id !== user?.id) {
+            useUIStore.getState().addNotification({
+              id: `doc-${doc.id}`,
+              title: 'New Document Added',
+              message: `${doc.name} was added by your team.`,
+              type: 'system',
+              unread: true,
+              time: new Date().toISOString()
+            });
+          }
+        }
         get()._refreshTable('documents');
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, () => {
@@ -511,6 +526,28 @@ const useDataStore = create((set, get) => ({
       console.error('Supabase insert failed:', error.message);
       throw error;
     }
+    
+    // Notify team members via email
+    try {
+      const { sendSequenceEmail } = await import('../lib/resend.js');
+      const { teamMembers } = get();
+      const currentMember = teamMembers.find(tm => tm.id === user?.id);
+      const uploaderName = currentMember?.name || 'A team member';
+
+      for (const member of teamMembers) {
+        if (member.id !== user?.id && member.email) {
+          sendSequenceEmail({
+            toEmail: member.email,
+            subject: `New Document Added: ${data.name}`,
+            body: `${uploaderName} has added a new document to the Huntlo CRM.\n\nDocument: ${data.name}\nType: ${data.type || 'Link'}\n\nYou can access it directly here: ${data.url}\n\nBest,\nHuntlo Sales OS`,
+            fromName: 'Huntlo Notifications'
+          }).catch(err => console.warn('Email notify failed:', err));
+        }
+      }
+    } catch (emailErr) {
+      console.warn('Failed to load email client for notifications:', emailErr);
+    }
+
     set(state => ({ documents: [data, ...state.documents] }));
     return data;
   },
