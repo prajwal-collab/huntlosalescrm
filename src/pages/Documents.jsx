@@ -6,11 +6,13 @@ import { useDialog } from '../context/DialogContext';
 import './Documents.css';
 
 export default function Documents() {
-  const { documents, companies, createDocument } = useDataStore();
+  const { documents, companies, createDocument, teamMembers } = useDataStore();
   const { showAlert } = useDialog();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({ name: '', company_id: '', url: '', type: 'PDF' });
 
   const filtered = documents.filter(d => {
@@ -22,6 +24,8 @@ export default function Documents() {
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.url) return;
+    setSaving(true);
+    setError(null);
     try {
       await createDocument({
         name: formData.name,
@@ -33,8 +37,10 @@ export default function Documents() {
       });
       setIsAdding(false);
       setFormData({ name: '', company_id: '', url: '', type: 'PDF' });
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      setError(err.message || 'Failed to add document.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -59,6 +65,7 @@ export default function Documents() {
           <div className="doc-table-head">
             <span className="th-cell" style={{ flex: 2 }}>Name</span>
             <span className="th-cell" style={{ flex: 1 }}>Company</span>
+            <span className="th-cell" style={{ flex: 1 }}>Owner</span>
             <span className="th-cell" style={{ width: 80 }}>Views</span>
             <span className="th-cell" style={{ width: 120 }}>Modified</span>
             <span style={{ width: 40 }}></span>
@@ -76,6 +83,9 @@ export default function Documents() {
                     </div>
                   </div>
                   <div className="doc-company" style={{ flex: 1 }}>{company?.name || 'All'}</div>
+                  <div className="doc-owner" style={{ flex: 1, fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    {teamMembers?.find(tm => tm.id === doc.owner_id)?.name || 'ME'}
+                  </div>
                   <div className="doc-views" style={{ width: 80 }}>{doc.views}</div>
                   <div className="doc-date" style={{ width: 120 }}>{formatDistanceToNow(new Date(doc.created_at), { addSuffix: true })}</div>
                   <div className="doc-actions" style={{ width: 40 }}>
@@ -123,6 +133,11 @@ export default function Documents() {
               <button className="drawer-close" style={{ position: 'absolute', top: 24, right: 24 }} onClick={() => setIsAdding(false)}><X size={16}/></button>
             </div>
             <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {error && (
+                <div style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '13px' }}>
+                  {error}
+                </div>
+              )}
               <div className="form-group">
                 <label className="label">Document Name</label>
                 <input className="input-base" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Acme Corp Proposal" />
@@ -147,7 +162,9 @@ export default function Documents() {
                   <option value="Spreadsheet">Spreadsheet</option>
                 </select>
               </div>
-              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }}>Save Document</button>
+              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }} disabled={saving}>
+                {saving ? 'Saving...' : 'Save Document'}
+              </button>
             </form>
           </div>
         )}

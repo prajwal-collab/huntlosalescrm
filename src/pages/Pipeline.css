@@ -162,3 +162,29 @@
   border-radius: 4px;
   font-weight: 600;
 }
+
+.deal-drag-handle {
+  color: var(--text-tertiary);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: -4px;
+}
+.deal-drag-handle:active {
+  cursor: grabbing;
+}
+.deal-card:hover .deal-drag-handle {
+  opacity: 1;
+}
+
+.dragging-card {
+  opacity: 0.5;
+  transform: scale(0.98);
+}
+.dragging-card .deal-card {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px var(--accent-blue-glow);
+}

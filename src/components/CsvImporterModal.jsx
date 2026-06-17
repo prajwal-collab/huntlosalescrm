@@ -128,19 +128,9 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
       return;
     }
 
-    if (importType === 'contacts') {
-      if (!mapping['email'] && !mapping['phone']) {
-        setError('Please map at least Email or Phone.');
-        return;
-      }
-    }
     if (importType === 'leads') {
       if (!mapping['company_name']) {
         setError('Company Name is required for Leads.');
-        return;
-      }
-      if (!mapping['email'] && !mapping['phone']) {
-        setError('Please map at least Email or Phone for Leads.');
         return;
       }
     }
@@ -186,12 +176,11 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
       
       return obj;
     }).filter(obj => {
-      const hasEmailOrPhone = (obj.email && obj.email.trim() !== '') || (obj.phone && obj.phone.trim() !== '');
       if (importType === 'leads') {
-        return obj.company_name && obj.company_name.trim() !== '' && hasEmailOrPhone;
+        return obj.company_name && obj.company_name.trim() !== '';
       }
       if (importType === 'contacts') {
-        return obj.name && obj.name.trim() !== '' && hasEmailOrPhone;
+        return obj.name && obj.name.trim() !== '';
       }
       return obj.name && obj.name.trim() !== '';
     });

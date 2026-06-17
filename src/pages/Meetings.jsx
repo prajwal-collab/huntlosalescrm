@@ -8,9 +8,10 @@ import useDataStore from '../store/useDataStore';
 import { useDialog } from '../context/DialogContext';
 import './Meetings.css';
 
-function MeetingCard({ meeting, onSelect, selected }) {
+function MeetingCard({ meeting, onSelect, selected, ownerName }) {
   const date = new Date(meeting.date);
   const isPast = meeting.status === 'completed';
+  const initials = ownerName !== 'ME' ? ownerName.substring(0, 2).toUpperCase() : 'ME';
 
   return (
     <div className={`meeting-card ${selected ? 'selected' : ''} ${isPast ? 'past' : ''}`} onClick={() => onSelect(meeting)}>
@@ -32,9 +33,9 @@ function MeetingCard({ meeting, onSelect, selected }) {
         </div>
       </div>
       
-      <div className="mc-owner">
-        <div className="avatar avatar-sm" style={{ background: '#3b82f6', color: '#fff' }}>
-          ME
+      <div className="mc-owner" title={ownerName !== 'ME' ? ownerName : undefined}>
+        <div className="avatar avatar-sm" style={{ background: 'var(--accent-blue)', color: '#fff', fontSize: '10px' }}>
+          {initials}
         </div>
       </div>
     </div>
@@ -42,7 +43,7 @@ function MeetingCard({ meeting, onSelect, selected }) {
 }
 
 export default function Meetings() {
-  const { meetings, deals, createMeeting } = useDataStore();
+  const { meetings, deals, createMeeting, teamMembers } = useDataStore();
   const { showSuccess } = useDialog();
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -86,13 +87,13 @@ export default function Meetings() {
           <h1 className="page-big-title">Meetings & Demos</h1>
           <p className="page-big-sub">Central hub for demos, discovery, and onboarding calls</p>
         </div>
-        <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}><Plus size={13} /> Schedule Meeting</button>
+        <button className="btn btn-primary btn-sm" onClick={() => { setIsAdding(true); setSelected(null); }}><Plus size={13} /> Schedule Meeting</button>
       </div>
 
       <div className="meetings-layout">
         <div className="meetings-list">
           {meetings.sort((a, b) => new Date(b.date) - new Date(a.date)).map(m => (
-            <MeetingCard key={m.id} meeting={m} selected={selected?.id === m.id} onSelect={setSelected} />
+            <MeetingCard key={m.id} meeting={m} selected={selected?.id === m.id} onSelect={(meeting) => { setSelected(meeting); setIsAdding(false); }} ownerName={teamMembers?.find(tm => tm.id === m.owner_id)?.name || 'ME'} />
           ))}
           {meetings.length === 0 && (
              <div className="empty-state" style={{ marginTop: 40 }}>
@@ -103,7 +104,7 @@ export default function Meetings() {
           )}
         </div>
 
-        {selected && (
+        {selected && !isAdding && (
           <div className="meeting-detail animate-slide-up">
              <div className="md-header">
                 <h2 className="md-title">{selected.title}</h2>

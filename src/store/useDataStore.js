@@ -14,6 +14,7 @@ const useDataStore = create((set, get) => ({
   documents: [],
   sequences: [],
   leads: [],
+  teamMembers: [],
   loading: false,
   error: null,
   _realtimeChannel: null,
@@ -107,9 +108,10 @@ const useDataStore = create((set, get) => ({
         supabase.from('documents').select('*').order('created_at', { ascending: false }),
         supabase.from('sequences').select('*').order('created_at', { ascending: false }),
         supabase.from('leads').select('*').order('created_at', { ascending: false }),
+        supabase.from('team_members').select('*'),
       ]);
 
-      const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes, leadsRes] = results;
+      const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes, leadsRes, teamRes] = results;
 
       // Helper to safely extract data from allSettled results
       const extract = (res) => (res.status === 'fulfilled' && !res.value.error) ? res.value.data : [];
@@ -123,6 +125,7 @@ const useDataStore = create((set, get) => ({
         documents: extract(docsRes),
         sequences: extract(seqRes),
         leads: extract(leadsRes),
+        teamMembers: extract(teamRes),
         loading: false,
         error: null
       });

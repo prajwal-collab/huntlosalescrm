@@ -16,6 +16,7 @@ function DealCard({ deal, onClick }) {
   return (
     <div className="deal-card" onClick={() => onClick(deal.id)} id={`deal-${deal.id}`}>
       <div className="deal-card-top">
+        <div className="deal-drag-handle" title="Drag to move"><GripVertical size={14} /></div>
         <div className="deal-logo" style={{ background: deal.color + '22', color: deal.color }}>
           {deal.logo}
         </div>
@@ -52,6 +53,25 @@ function DealCard({ deal, onClick }) {
   );
 }
 
+function DraggableDealCard({ deal, onClick }) {
+  const [isDragging, setIsDragging] = useState(false);
+
+  return (
+    <div
+      draggable
+      onDragStart={e => {
+        setIsDragging(true);
+        e.dataTransfer.setData('dealId', deal.id);
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      onDragEnd={() => setIsDragging(false)}
+      className={isDragging ? 'dragging-card' : ''}
+    >
+      <DealCard deal={deal} onClick={onClick} />
+    </div>
+  );
+}
+
 const PIPELINE_STAGES = ['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'];
 
 function KanbanColumn({ stage, deals, onDealClick, onDrop }) {
@@ -74,13 +94,7 @@ function KanbanColumn({ stage, deals, onDealClick, onDrop }) {
       </div>
       <div className="kanban-cards">
         {deals.map(deal => (
-          <div
-            key={deal.id}
-            draggable
-            onDragStart={e => e.dataTransfer.setData('dealId', deal.id)}
-          >
-            <DealCard deal={deal} onClick={onDealClick} />
-          </div>
+          <DraggableDealCard key={deal.id} deal={deal} onClick={onDealClick} />
         ))}
         {deals.length === 0 && (
           <div className="kanban-empty">Drop deals here</div>

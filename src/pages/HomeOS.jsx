@@ -3,6 +3,7 @@
 // ============================================
 import { useState, useMemo } from 'react';
 import { Sparkles, AlertCircle, Calendar, FileText, Clock, TrendingUp, ArrowRight, Zap, Activity } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import usePipelineStore from '../store/usePipelineStore';
 import useDataStore from '../store/useDataStore';
@@ -11,8 +12,6 @@ import { useDialog } from '../context/DialogContext';
 import { computeSignalScore } from '../utils/leadScoring';
 import './HomeOS.css';
 
-const AI_INSIGHTS = [];
-const ACTIVITY_FEED = [];
 
 function PriorityCard({ icon: Icon, label, count, urgency, color, onClick }) {
   return (
@@ -28,8 +27,9 @@ function PriorityCard({ icon: Icon, label, count, urgency, color, onClick }) {
 }
 
 export default function HomeOS() {
-  const { deals, tasks, meetings, leads } = useDataStore();
+  const { deals, tasks, meetings, leads, documents } = useDataStore();
   const { showAlert } = useDialog();
+  const navigate = useNavigate();
   const [aiQuery, setAiQuery] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -55,6 +55,36 @@ export default function HomeOS() {
   const wonARR = deals
     .filter(d => d.stage === 'Closed Won')
     .reduce((sum, d) => sum + (d.arr || 0), 0);
+
+  const newDealsThisWeek = deals.filter(d => (now - new Date(d.created_at).getTime()) < 7 * 86400000).length;
+  const closedThisMonth = deals.filter(d => d.stage === 'Closed Won' && (now - new Date(d.updated_at || d.created_at).getTime()) < 30 * 86400000).length;
+
+  const activityFeed = useMemo(() => {
+    const feed = [];
+    deals.forEach(d => feed.push({ icon: '💼', text: `Deal: ${d.title} updated to ${d.stage}`, time: d.updated_at || d.created_at }));
+    meetings.forEach(m => feed.push({ icon: '📅', text: `Meeting: ${m.title} scheduled`, time: m.created_at }));
+    tasks.forEach(t => feed.push({ icon: '✅', text: `Task: ${t.title} ${t.status}`, time: t.updated_at || t.created_at }));
+    documents.forEach(doc => feed.push({ icon: '📄', text: `Document: ${doc.name} added`, time: doc.created_at }));
+    leads.forEach(l => feed.push({ icon: '👤', text: `Lead: ${l.company_name} added`, time: l.created_at }));
+    return feed.sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 10);
+  }, [deals, meetings, tasks, documents, leads]);
+
+  const aiInsights = useMemo(() => {
+    const insights = [];
+    if (staleDeals.length > 0) {
+      insights.push({ type: 'warning', icon: '⚠️', text: `You have ${staleDeals.length} stale deals needing attention.`, action: 'View Deals', onClick: () => navigate('/pipeline') });
+    }
+    if (hotLeads.length > 0) {
+      insights.push({ type: 'success', icon: '🔥', text: `${hotLeads.length} hot leads are ready for outreach.`, action: 'Contact Now', onClick: () => navigate('/leads') });
+    }
+    if (overdueTasks.length > 0) {
+      insights.push({ type: 'danger', icon: '⏰', text: `${overdueTasks.length} tasks are overdue.`, action: 'View Tasks', onClick: () => navigate('/tasks') });
+    }
+    if (insights.length === 0 && deals.length > 0) {
+      insights.push({ type: 'info', icon: '💡', text: 'Pipeline is looking healthy. Keep pushing new leads.', action: 'Add Lead', onClick: () => navigate('/leads') });
+    }
+    return insights;
+  }, [staleDeals, hotLeads, overdueTasks, navigate, deals.length]);
 
   const handleAIQuery = async (e) => {
     e.preventDefault();
@@ -102,17 +132,17 @@ export default function HomeOS() {
         <div className="stat-card">
           <span className="stat-label">Pipeline ARR</span>
           <span className="stat-value">${(totalARR / 1000).toFixed(0)}k</span>
-          <span className="stat-delta up">↑ 22% vs last month</span>
+          <span className="stat-delta up">Real-time total</span>
         </div>
         <div className="stat-card">
-          <span className="stat-label">Won This Month</span>
+          <span className="stat-label">Won ARR</span>
           <span className="stat-value">${(wonARR / 1000).toFixed(0)}k</span>
-          <span className="stat-delta up">↑ 1 deal closed</span>
+          <span className="stat-delta up">{closedThisMonth} closed recently</span>
         </div>
         <div className="stat-card">
           <span className="stat-label">Active Deals</span>
           <span className="stat-value">{deals.filter(d => d.stage !== 'Closed Won' && d.stage !== 'Closed Lost').length}</span>
-          <span className="stat-delta up">↑ 3 new this week</span>
+          <span className="stat-delta up">↑ {newDealsThisWeek} new this week</span>
         </div>
         <div className="stat-card">
           <span className="stat-label">Hot Leads</span>
@@ -125,12 +155,12 @@ export default function HomeOS() {
       <section className="section">
         <h2 className="section-title">Today's Priorities</h2>
         <div className="priorities-grid">
-          <PriorityCard icon={AlertCircle} label="Overdue Tasks" count={overdueTasks.length} urgency="urgent" color="var(--danger)" onClick={() => showAlert('Tasks Info', 'Viewing overdue tasks details')} />
-          <PriorityCard icon={Calendar} label="Demos Today" count={todayMeetings.length} urgency="high" color="var(--accent-blue)" onClick={() => showAlert('Meetings Info', "Viewing today's demos details")} />
-          <PriorityCard icon={Clock} label="Pending Tasks" count={pendingTasks.length} urgency="medium" color="var(--warning)" onClick={() => showAlert('Tasks Info', 'Viewing pending tasks details')} />
-          <PriorityCard icon={FileText} label="Proposals Out" count={deals.filter(d => d.stage === 'Proposal Sent').length} urgency="low" color="var(--accent-purple)" onClick={() => showAlert('Deals Info', 'Viewing active proposals details')} />
-          <PriorityCard icon={TrendingUp} label="Stale Deals" count={staleDeals.length} urgency="warning" color="var(--orange)" onClick={() => showAlert('Deals Info', 'Viewing stale deals details')} />
-          <PriorityCard icon={Zap} label="Hot Leads" count={hotLeads.length} urgency="positive" color="var(--success)" onClick={() => showAlert('Leads Info', 'Viewing hot leads details')} />
+          <PriorityCard icon={AlertCircle} label="Overdue Tasks" count={overdueTasks.length} urgency="urgent" color="var(--danger)" onClick={() => navigate('/tasks')} />
+          <PriorityCard icon={Calendar} label="Demos Today" count={todayMeetings.length} urgency="high" color="var(--accent-blue)" onClick={() => navigate('/meetings')} />
+          <PriorityCard icon={Clock} label="Pending Tasks" count={pendingTasks.length} urgency="medium" color="var(--warning)" onClick={() => navigate('/tasks')} />
+          <PriorityCard icon={FileText} label="Proposals Out" count={deals.filter(d => d.stage === 'Proposal').length} urgency="low" color="var(--accent-purple)" onClick={() => navigate('/pipeline')} />
+          <PriorityCard icon={TrendingUp} label="Stale Deals" count={staleDeals.length} urgency="warning" color="var(--orange)" onClick={() => navigate('/pipeline')} />
+          <PriorityCard icon={Zap} label="Hot Leads" count={hotLeads.length} urgency="positive" color="var(--success)" onClick={() => navigate('/leads')} />
         </div>
       </section>
 
@@ -139,11 +169,11 @@ export default function HomeOS() {
         <section className="section">
           <h2 className="section-title"><Sparkles size={14} /> AI Insights</h2>
           <div className="insights-list">
-            {AI_INSIGHTS.length > 0 ? AI_INSIGHTS.map((ins, i) => (
+            {aiInsights.length > 0 ? aiInsights.map((ins, i) => (
               <div key={i} className={`insight-card insight-${ins.type}`}>
                 <span className="insight-icon">{ins.icon}</span>
                 <span className="insight-text">{ins.text}</span>
-                <button className="insight-action" onClick={() => showAlert('AI Recommendation', 'Applying AI recommendation...')}>{ins.action} →</button>
+                <button className="insight-action" onClick={ins.onClick}>{ins.action} →</button>
               </div>
             )) : (
               <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '13px' }}>
@@ -157,13 +187,13 @@ export default function HomeOS() {
         <section className="section">
           <h2 className="section-title"><Activity size={14} /> Activity Feed</h2>
           <div className="activity-list">
-            {ACTIVITY_FEED.length > 0 ? ACTIVITY_FEED.map((item, i) => (
+            {activityFeed.length > 0 ? activityFeed.map((item, i) => (
               <div key={i} className="activity-item animate-fade-in" style={{ animationDelay: `${i * 40}ms` }}>
                 <span className="activity-icon">{item.icon}</span>
                 <div className="activity-body">
                   <span className="activity-text">{item.text}</span>
                   <span className="activity-time">
-                    {formatDistanceToNow(new Date(item.time), { addSuffix: true })}
+                    {item.time ? formatDistanceToNow(new Date(item.time), { addSuffix: true }) : 'Just now'}
                   </span>
                 </div>
               </div>

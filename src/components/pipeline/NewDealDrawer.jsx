@@ -1,15 +1,19 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, AlertCircle, Loader } from 'lucide-react';
 import useDataStore from '../../store/useDataStore';
 import './DealDrawer.css';
 
 export default function NewDealDrawer({ onClose }) {
   const { companies, createDeal } = useDataStore();
   const [formData, setFormData] = useState({ title: '', company_id: '', arr: '', urgency: 'medium' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.title || !formData.company_id) return;
+    setSaving(true);
+    setError(null);
     try {
       await createDeal({
         title: formData.title,
@@ -20,8 +24,11 @@ export default function NewDealDrawer({ onClose }) {
         engagement_score: 0
       });
       onClose();
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Failed to add deal');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -35,6 +42,11 @@ export default function NewDealDrawer({ onClose }) {
           </button>
         </div>
         <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '24px' }}>
+          {error && (
+            <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertCircle size={14} /> {error}
+            </div>
+          )}
           <div className="form-group">
             <label className="label">Deal Title</label>
             <input className="input-base" autoFocus required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="e.g. Enterprise Q3 Expansion" />
@@ -59,7 +71,9 @@ export default function NewDealDrawer({ onClose }) {
               <option value="urgent">Urgent</option>
             </select>
           </div>
-          <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }}>Save Deal</button>
+          <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }} disabled={saving}>
+            {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Deal'}
+          </button>
         </form>
       </div>
     </div>

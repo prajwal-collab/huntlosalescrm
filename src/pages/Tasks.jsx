@@ -37,7 +37,7 @@ function safeIsPast(dateStr) {
 }
 
 export default function Tasks() {
-  const { tasks, deals, createTask, toggleTaskCompletion } = useDataStore();
+  const { tasks, deals, createTask, toggleTaskCompletion, teamMembers } = useDataStore();
   const [filter, setFilter] = useState('pending');
   const [search, setSearch] = useState('');
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -201,6 +201,9 @@ export default function Tasks() {
           filteredTasks.map((task, idx) => {
             const isCompleted = task.status === 'completed';
             const isOverdue = !isCompleted && safeIsPast(task.due);
+            const owner = teamMembers?.find(tm => tm.id === task.owner_id);
+            const ownerName = owner?.name || 'ME';
+            const ownerInitials = ownerName !== 'ME' ? ownerName.substring(0, 2).toUpperCase() : 'ME';
 
             return (
               <div
@@ -232,8 +235,8 @@ export default function Tasks() {
                   <div className={`task-due ${isOverdue ? 'overdue' : ''}`}>
                     {safeFormatDate(task.due)}
                   </div>
-                  <div className="avatar avatar-sm" style={{ background: task.ownerColor || '#3b82f6', color: '#fff' }}>
-                    {task.ownerInitials || 'ME'}
+                  <div className="avatar avatar-sm" style={{ background: owner?.color || '#3b82f6', color: '#fff', fontSize: '10px' }} title={ownerName !== 'ME' ? ownerName : undefined}>
+                    {ownerInitials}
                   </div>
                 </div>
               </div>

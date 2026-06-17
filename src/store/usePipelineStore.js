@@ -17,21 +17,23 @@ const usePipelineStore = create((set, get) => ({
   closeDrawer: () => set({ drawerOpen: false, selectedDealId: null }),
 
   getSelectedDeal: () => {
-    const { deals, companies, contacts } = useDataStore.getState();
+    const { deals, companies, contacts, teamMembers } = useDataStore.getState();
     const { selectedDealId } = get();
     const rawDeal = deals.find(d => d.id === selectedDealId);
     if (!rawDeal) return null;
     
     const company = companies.find(c => c.id === rawDeal.company_id);
     const dealContacts = contacts.filter(c => c.company_id === rawDeal.company_id).map(c => c.name);
+    const owner = teamMembers?.find(tm => tm.id === rawDeal.owner_id);
+    const ownerName = owner?.name || 'Me';
     
     return {
       ...rawDeal,
       company: company?.name || 'Unknown',
       logo: company?.name?.charAt(0) || 'U',
       color: '#3b82f6',
-      owner: 'Me',
-      ownerColor: '#3b82f6',
+      owner: ownerName,
+      ownerColor: owner?.color || '#3b82f6',
       contacts: dealContacts,
       activities: [], // Mock activities
       engagementScore: rawDeal.engagement_score || 0,
@@ -45,10 +47,11 @@ const usePipelineStore = create((set, get) => ({
 
   getFilteredDeals: () => {
     const { filter, search } = get();
-    const { deals, companies, contacts } = useDataStore.getState();
+    const { deals, companies, contacts, teamMembers } = useDataStore.getState();
     
     // 1. Create O(1) hash maps for quick lookups
     const companyMap = new Map(companies.map(c => [c.id, c]));
+    const teamMap = new Map((teamMembers || []).map(tm => [tm.id, tm]));
     
     // Group contacts by company_id to avoid repeated filtering
     const contactsByCompany = new Map();
@@ -82,12 +85,16 @@ const usePipelineStore = create((set, get) => ({
       const company = companyMap.get(d.company_id);
       const companyContacts = contactsByCompany.get(d.company_id) || [];
       const leadName = companyContacts.length > 0 ? companyContacts[0].name : 'No Lead assigned';
+      const owner = teamMap.get(d.owner_id);
+      const ownerName = owner?.name || 'Me';
       return { 
         ...d, 
         company: company?.name || 'Unknown', 
         leadName,
         logo: (company?.name || 'U').charAt(0).toUpperCase(),
         color: '#3b82f6',
+        owner: ownerName,
+        ownerColor: owner?.color || '#3b82f6',
         engagementScore: d.engagement_score || 0
       };
     });
