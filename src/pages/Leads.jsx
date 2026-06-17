@@ -15,6 +15,7 @@ import LeadDrawer from '../components/leads/LeadDrawer';
 import NewLeadForm from '../components/leads/NewLeadForm';
 import EnrollSequenceModal from '../components/sequences/EnrollSequenceModal';
 import CsvImporterModal from '../components/CsvImporterModal';
+import BulkEditModal from '../components/BulkEditModal';
 import { useDialog } from '../context/DialogContext';
 import { computeSignalScore, getPriority } from '../utils/leadScoring';
 import './Leads.css';
@@ -241,6 +242,7 @@ export default function Leads() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
 
   // Enrich each lead with computed score
@@ -383,9 +385,16 @@ export default function Leads() {
         <div className="bulk-bar">
           <span>{selectedIds.length} selected</span>
           <button
-            onClick={() => setShowEnrollModal(true)}
+            onClick={() => setShowBulkEdit(true)}
             className="btn btn-sm"
             style={{ background: 'var(--accent-blue)', color: '#fff', fontSize: 12, border: 'none', marginLeft: 8 }}
+          >
+            Bulk Edit
+          </button>
+          <button
+            onClick={() => setShowEnrollModal(true)}
+            className="btn btn-sm"
+            style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 12, border: 'none', marginLeft: 8 }}
           >
             Enroll in Sequence
           </button>
@@ -505,6 +514,14 @@ export default function Leads() {
         isOpen={showImporter}
         onClose={() => setShowImporter(false)}
         type="leads"
+      />
+
+      <BulkEditModal
+        isOpen={showBulkEdit}
+        onClose={() => setShowBulkEdit(false)}
+        entityType="leads"
+        selectedIds={selectedIds}
+        onClearSelection={() => setSelectedIds([])}
       />
     </div>
   );

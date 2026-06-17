@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import CsvImporterModal from '../components/CsvImporterModal';
+import BulkEditModal from '../components/BulkEditModal';
 import { useDialog } from '../context/DialogContext';
 import './Companies.css';
 
@@ -378,6 +379,7 @@ export default function Companies() {
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isImporterOpen, setIsImporterOpen] = useState(false);
+  const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', industry: '', size: '', website: '', linkedin: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -433,10 +435,16 @@ export default function Companies() {
         </div>
         <div className="cg-header-right">
           {selectedIds.length > 0 ? (
-            <button className="btn btn-sm" style={{ background: 'var(--danger)', color: '#fff', border: 'none' }}
-              onClick={handleBulkDelete} disabled={deleting}>
-              {deleting ? 'Deleting…' : `Delete ${selectedIds.length}`}
-            </button>
+            <>
+              <button className="btn btn-sm" style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none' }}
+                onClick={() => setIsBulkEditOpen(true)}>
+                Bulk Edit
+              </button>
+              <button className="btn btn-sm" style={{ background: 'var(--danger)', color: '#fff', border: 'none' }}
+                onClick={handleBulkDelete} disabled={deleting}>
+                {deleting ? 'Deleting…' : `Delete ${selectedIds.length}`}
+              </button>
+            </>
           ) : (
             <>
               <button className="btn btn-ghost btn-sm" onClick={() => setIsImporterOpen(true)}>Import</button>
@@ -573,6 +581,14 @@ export default function Companies() {
       </div>
 
       <CsvImporterModal isOpen={isImporterOpen} onClose={() => setIsImporterOpen(false)} type="companies" />
+
+      <BulkEditModal
+        isOpen={isBulkEditOpen}
+        onClose={() => setIsBulkEditOpen(false)}
+        entityType="companies"
+        selectedIds={selectedIds}
+        onClearSelection={() => setSelectedIds([])}
+      />
     </div>
   );
 }

@@ -250,6 +250,13 @@ const useDataStore = create((set, get) => ({
     set(state => ({ leads: state.leads.filter(l => !ids.includes(l.id)) }));
   },
 
+  bulkUpdateLeads: async (ids, updates) => {
+    const { data, error } = await supabase.from('leads').update(updates).in('id', ids).select();
+    if (error) throw error;
+    set(state => ({ leads: state.leads.map(l => ids.includes(l.id) ? { ...l, ...updates } : l) }));
+    return data;
+  },
+
   bulkCreateLeads: async (leadsList) => {
     const { user } = useAuthStore.getState();
     const orgId = await get()._getOrgId();
@@ -295,6 +302,13 @@ const useDataStore = create((set, get) => ({
     const { error } = await supabase.from('companies').delete().in('id', ids);
     if (error) throw error;
     set(state => ({ companies: state.companies.filter(c => !ids.includes(c.id)) }));
+  },
+
+  bulkUpdateCompanies: async (ids, updates) => {
+    const { data, error } = await supabase.from('companies').update(updates).in('id', ids).select();
+    if (error) throw error;
+    set(state => ({ companies: state.companies.map(c => ids.includes(c.id) ? { ...c, ...updates } : c) }));
+    return data;
   },
 
   bulkCreateCompanies: async (companiesList) => {
@@ -352,6 +366,13 @@ const useDataStore = create((set, get) => ({
     const { error } = await supabase.from('contacts').delete().in('id', ids);
     if (error) throw error;
     set(state => ({ contacts: state.contacts.filter(c => !ids.includes(c.id)) }));
+  },
+
+  bulkUpdateContacts: async (ids, updates) => {
+    const { data, error } = await supabase.from('contacts').update(updates).in('id', ids).select();
+    if (error) throw error;
+    set(state => ({ contacts: state.contacts.map(c => ids.includes(c.id) ? { ...c, ...updates } : c) }));
+    return data;
   },
 
   bulkCreateContacts: async (contactsList) => {

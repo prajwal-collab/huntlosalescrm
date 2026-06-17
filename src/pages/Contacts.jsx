@@ -10,6 +10,7 @@ import {
 import useDataStore from '../store/useDataStore';
 import CsvImporterModal from '../components/CsvImporterModal';
 import EnrollSequenceModal from '../components/sequences/EnrollSequenceModal';
+import BulkEditModal from '../components/BulkEditModal';
 import { useDialog } from '../context/DialogContext';
 import './Contacts.css';
 
@@ -288,6 +289,7 @@ export default function Contacts() {
   const [isAdding, setIsAdding] = useState(false);
   const [isImporterOpen, setIsImporterOpen] = useState(false);
   const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
+  const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', designation: '', company_id: '', linkedin: '', whatsapp: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -355,6 +357,10 @@ export default function Contacts() {
           {selectedIds.length > 0 ? (
             <>
               <button className="btn btn-sm" style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none' }}
+                onClick={() => setIsBulkEditOpen(true)}>
+                Bulk Edit
+              </button>
+              <button className="btn btn-sm" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--bg-border)' }}
                 onClick={() => setIsEnrollModalOpen(true)}>
                 Enroll {selectedIds.length} in Sequence
               </button>
@@ -523,6 +529,14 @@ export default function Contacts() {
           }}
         />
       )}
+
+      <BulkEditModal
+        isOpen={isBulkEditOpen}
+        onClose={() => setIsBulkEditOpen(false)}
+        entityType="contacts"
+        selectedIds={selectedIds}
+        onClearSelection={() => setSelectedIds([])}
+      />
     </div>
   );
 }
