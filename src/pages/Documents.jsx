@@ -99,22 +99,6 @@ export default function Documents() {
                 <FileText size={32} />
                 <h3>No documents yet</h3>
                 <p>Add your first proposal or contract.</p>
-                <button 
-                  className="btn btn-secondary btn-sm" 
-                  style={{ marginTop: 16 }}
-                  onClick={async () => {
-                    const { SEED_DOCUMENTS } = await import('../store/seedData.js');
-                    for (const doc of SEED_DOCUMENTS) {
-                      try {
-                        await createDocument(doc);
-                      } catch (err) {
-                        console.error('Failed to load sample doc', err);
-                      }
-                    }
-                  }}
-                >
-                  Load Sample Documents
-                </button>
               </div>
             )}
           </div>
