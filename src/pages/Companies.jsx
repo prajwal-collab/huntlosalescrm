@@ -111,7 +111,7 @@ function CompanyRow({ company, contacts, onSelect, selected, isSelected, toggleS
         </div>
       </div>
 
-      {/* ARR */}
+      {/* MRR */}
       <div className="co-col">
         {arr > 0 ? (
           <span style={{ fontSize: 13, fontWeight: 700, color: '#16a34a' }}>
@@ -180,9 +180,45 @@ function CompanyRow({ company, contacts, onSelect, selected, isSelected, toggleS
 
 // ── Company Panel ──────────────────────────────────────────────
 function CompanyPanel({ company, contacts, onClose }) {
+  const { updateCompany } = useDataStore();
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    name: company.name || '',
+    industry: company.industry || '',
+    size: company.size || '',
+    arr_estimate: company.arr_estimate || '',
+    website: company.website || '',
+    linkedin: company.linkedin || '',
+    notes: company.notes || ''
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
   const logoColor = company.logoColor || getLogoColor(company.name);
   const initial = (company.name || '?').charAt(0).toUpperCase();
   const contactsForCompany = contacts.filter(c => c.company_id === company.id);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      await updateCompany(company.id, {
+        name: formData.name,
+        industry: formData.industry,
+        size: formData.size,
+        arr_estimate: Number(formData.arr_estimate) || 0,
+        website: formData.website,
+        linkedin: formData.linkedin,
+        notes: formData.notes
+      });
+      setIsEditing(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="company-panel animate-slide-right">
@@ -192,102 +228,144 @@ function CompanyPanel({ company, contacts, onClose }) {
           {company.logo || initial}
         </div>
         <div className="cp-header-info">
-          <h2 className="cp-name">{company.name}</h2>
-          <p className="cp-sub">
-            {[company.industry, company.size].filter(Boolean).join(' · ')}
-          </p>
-          {company.website && (
-            <a
-              href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
-              target="_blank" rel="noopener noreferrer"
-              className="cp-website"
-            >
-              <Globe size={11} /> {company.website.replace(/^https?:\/\//, '').split('/')[0]}
-            </a>
+          {isEditing ? (
+            <input className="input-base" style={{ fontSize: 16, fontWeight: 600, padding: '4px 8px' }} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} autoFocus />
+          ) : (
+            <>
+              <h2 className="cp-name">{company.name}</h2>
+              <p className="cp-sub">
+                {[company.industry, company.size].filter(Boolean).join(' · ')}
+              </p>
+            </>
           )}
         </div>
         <button className="drawer-close" onClick={onClose}><X size={16} /></button>
       </div>
 
-      {/* Tags */}
-      {(company.tags || []).length > 0 && (
-        <div className="cp-tags">
-          {company.tags.map(t => <span key={t} className={`badge ${TAG_COLORS[t] || 'badge-gray'}`}>{t}</span>)}
-        </div>
-      )}
+      {isEditing ? (
+        <form onSubmit={handleSave} className="cp-form" style={{ padding: '0 24px 24px' }}>
+          {error && <div className="cp-form-error" style={{ marginBottom: 12 }}><AlertCircle size={14} /> {error}</div>}
+          <div className="cp-form-group">
+            <label className="cp-form-label">Industry</label>
+            <input className="input-base" value={formData.industry} onChange={e => setFormData({...formData, industry: e.target.value})} />
+          </div>
+          <div className="cp-form-group">
+            <label className="cp-form-label">Size</label>
+            <select className="input-base" value={formData.size} onChange={e => setFormData({...formData, size: e.target.value})}>
+              <option value="">Select size…</option>
+              {['1-10','11-50','51-200','201-1000','1000+'].map(s => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="cp-form-group">
+            <label className="cp-form-label">MRR Estimate ($)</label>
+            <input className="input-base" type="number" value={formData.arr_estimate} onChange={e => setFormData({...formData, arr_estimate: e.target.value})} />
+          </div>
+          <div className="cp-form-group">
+            <label className="cp-form-label">Website</label>
+            <input className="input-base" value={formData.website} onChange={e => setFormData({...formData, website: e.target.value})} />
+          </div>
+          <div className="cp-form-group">
+            <label className="cp-form-label">LinkedIn</label>
+            <input className="input-base" value={formData.linkedin} onChange={e => setFormData({...formData, linkedin: e.target.value})} />
+          </div>
+          <div className="cp-form-group">
+            <label className="cp-form-label">Notes</label>
+            <textarea className="input-base" rows={4} value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>
+              {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Changes'}
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setIsEditing(false)}>Cancel</button>
+          </div>
+        </form>
+      ) : (
+        <>
+          {/* Quick Actions */}
+          <div style={{ padding: '0 24px', display: 'flex', gap: 8, marginBottom: 16 }}>
+             <button className="btn btn-ghost btn-sm" onClick={() => setIsEditing(true)}>Edit Details</button>
+          </div>
 
-      {/* Stats */}
-      <div className="cp-stats">
-        <div className="cp-stat">
-          <span className="cp-stat-label">ARR Estimate</span>
-          <span className="cp-stat-val" style={{ color: '#16a34a' }}>
-            ${((company.arr_estimate || 0) / 1000).toFixed(0)}k
-          </span>
-        </div>
-        <div className="cp-stat">
-          <span className="cp-stat-label">Engagement</span>
-          <span className="cp-stat-val">{company.engagement_score || 0}</span>
-        </div>
-        <div className="cp-stat">
-          <span className="cp-stat-label">Contacts</span>
-          <span className="cp-stat-val">{contactsForCompany.length}</span>
-        </div>
-        <div className="cp-stat">
-          <span className="cp-stat-label">Size</span>
-          <span className="cp-stat-val">{company.size || '—'}</span>
-        </div>
-      </div>
-
-      {/* Contacts list */}
-      {contactsForCompany.length > 0 && (
-        <div className="cp-section">
-          <div className="cp-section-label">People ({contactsForCompany.length})</div>
-          {contactsForCompany.map(c => (
-            <div key={c.id} className="cp-contact-row">
-              <div className="cp-contact-avatar" style={{ background: getLogoColor(c.name) }}>
-                {(c.name || '?').charAt(0).toUpperCase()}
-              </div>
-              <div className="cp-contact-info">
-                <span className="cp-contact-name">{c.name}</span>
-                <span className="cp-contact-title">{c.designation || 'No title'}</span>
-                {c.email && (
-                  <span className="cp-contact-email">
-                    {c.email} <CopyBtn text={c.email} />
-                  </span>
-                )}
-              </div>
-              {c.email && <a href={`mailto:${c.email}`} className="co-action-btn" onClick={e => e.stopPropagation()}><ExternalLink size={12} /></a>}
+          {/* Tags */}
+          {(company.tags || []).length > 0 && (
+            <div className="cp-tags">
+              {company.tags.map(t => <span key={t} className={`badge ${TAG_COLORS[t] || 'badge-gray'}`}>{t}</span>)}
             </div>
-          ))}
-        </div>
+          )}
+
+          {/* Stats */}
+          <div className="cp-stats">
+            <div className="cp-stat">
+              <span className="cp-stat-label">MRR Estimate</span>
+              <span className="cp-stat-val" style={{ color: '#16a34a' }}>
+                ${((company.arr_estimate || 0) / 1000).toFixed(0)}k
+              </span>
+            </div>
+            <div className="cp-stat">
+              <span className="cp-stat-label">Engagement</span>
+              <span className="cp-stat-val">{company.engagement_score || 0}</span>
+            </div>
+            <div className="cp-stat">
+              <span className="cp-stat-label">Contacts</span>
+              <span className="cp-stat-val">{contactsForCompany.length}</span>
+            </div>
+            <div className="cp-stat">
+              <span className="cp-stat-label">Size</span>
+              <span className="cp-stat-val">{company.size || '—'}</span>
+            </div>
+          </div>
+
+          {/* Contacts list */}
+          {contactsForCompany.length > 0 && (
+            <div className="cp-section">
+              <div className="cp-section-label">People ({contactsForCompany.length})</div>
+              {contactsForCompany.map(c => (
+                <div key={c.id} className="cp-contact-row">
+                  <div className="cp-contact-avatar" style={{ background: getLogoColor(c.name) }}>
+                    {(c.name || '?').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="cp-contact-info">
+                    <span className="cp-contact-name">{c.name}</span>
+                    <span className="cp-contact-title">{c.designation || 'No title'}</span>
+                    {c.email && (
+                      <span className="cp-contact-email">
+                        {c.email} <CopyBtn text={c.email} />
+                      </span>
+                    )}
+                  </div>
+                  {c.email && <a href={`mailto:${c.email}`} className="co-action-btn" onClick={e => e.stopPropagation()}><ExternalLink size={12} /></a>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Links */}
+          <div className="cp-section">
+            <div className="cp-section-label">Links</div>
+            {company.website && (
+              <a href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
+                target="_blank" rel="noopener noreferrer" className="cp-link">
+                <Globe size={13} /> {company.website}
+              </a>
+            )}
+            {company.linkedin && (
+              <a href={company.linkedin.startsWith('http') ? company.linkedin : `https://${company.linkedin}`}
+                target="_blank" rel="noopener noreferrer" className="cp-link">
+                <ExternalLink size={13} /> LinkedIn Page
+              </a>
+            )}
+            {!company.website && !company.linkedin && <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>No links added</span>}
+          </div>
+
+          {/* Notes */}
+          {company.notes && (
+            <div className="cp-section">
+              <div className="cp-section-label">Notes</div>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{company.notes}</p>
+            </div>
+          )}
+        </>
       )}
-
-      {/* Links */}
-      <div className="cp-section">
-        <div className="cp-section-label">Links</div>
-        {company.website && (
-          <a href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
-            target="_blank" rel="noopener noreferrer" className="cp-link">
-            <Globe size={13} /> {company.website}
-          </a>
-        )}
-        {company.linkedin && (
-          <a href={company.linkedin.startsWith('http') ? company.linkedin : `https://${company.linkedin}`}
-            target="_blank" rel="noopener noreferrer" className="cp-link">
-            <ExternalLink size={13} /> LinkedIn Page
-          </a>
-        )}
-        {!company.website && !company.linkedin && <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>No links added</span>}
-      </div>
-
-      {/* Notes */}
-      {company.notes && (
-        <div className="cp-section">
-          <div className="cp-section-label">Notes</div>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{company.notes}</p>
-        </div>
-      )}
-
     </div>
   );
 }
@@ -405,7 +483,7 @@ export default function Companies() {
             <div className="co-col">Industry</div>
             <div className="co-col">Size</div>
             <div className="co-col">Contacts</div>
-            <div className="co-col">ARR</div>
+            <div className="co-col">MRR</div>
             <div className="co-col">Engagement</div>
             <div className="co-col co-col-tags">Tags</div>
             <div className="co-col co-col-actions">Actions</div>
