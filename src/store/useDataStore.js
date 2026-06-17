@@ -199,17 +199,13 @@ const useDataStore = create((set, get) => ({
   createLead: async (lead) => {
     const { user } = useAuthStore.getState();
     const newLead = { ...lead, owner_id: user?.id };
-    try {
-      const { data, error } = await supabase.from('leads').insert(newLead).select().single();
-      if (error) throw error;
-      set(state => ({ leads: [data, ...state.leads] }));
-      return data;
-    } catch (err) {
-      console.warn('Supabase insert failed, falling back to local state:', err.message);
-      const fallbackData = { ...newLead, id: Date.now().toString(), created_at: new Date().toISOString() };
-      set(state => ({ leads: [fallbackData, ...state.leads] }));
-      return fallbackData;
+    const { data, error } = await supabase.from('leads').insert(newLead).select().single();
+    if (error) {
+      console.error('Supabase insert failed:', error.message);
+      throw error;
     }
+    set(state => ({ leads: [data, ...state.leads] }));
+    return data;
   },
 
   updateLead: async (id, updates) => {
@@ -242,17 +238,13 @@ const useDataStore = create((set, get) => ({
 
   // ── Companies ─────────────────────────────
   createCompany: async (company) => {
-    try {
-      const { data, error } = await supabase.from('companies').insert(company).select().single();
-      if (error) throw error;
-      set(state => ({ companies: [data, ...state.companies] }));
-      return data;
-    } catch (err) {
-      console.warn('Supabase insert failed, falling back to local state:', err.message);
-      const fallbackData = { ...company, id: Date.now().toString(), created_at: new Date().toISOString() };
-      set(state => ({ companies: [fallbackData, ...state.companies] }));
-      return fallbackData;
+    const { data, error } = await supabase.from('companies').insert(company).select().single();
+    if (error) {
+      console.error('Supabase insert failed:', error.message);
+      throw error;
     }
+    set(state => ({ companies: [data, ...state.companies] }));
+    return data;
   },
 
   updateCompany: async (id, updates) => {
@@ -296,17 +288,13 @@ const useDataStore = create((set, get) => ({
 
   // ── Contacts ──────────────────────────────
   createContact: async (contact) => {
-    try {
-      const { data, error } = await supabase.from('contacts').insert(contact).select().single();
-      if (error) throw error;
-      set(state => ({ contacts: [data, ...state.contacts] }));
-      return data;
-    } catch (err) {
-      console.warn('Supabase insert failed, falling back to local state:', err.message);
-      const fallbackData = { ...contact, id: Date.now().toString(), created_at: new Date().toISOString() };
-      set(state => ({ contacts: [fallbackData, ...state.contacts] }));
-      return fallbackData;
+    const { data, error } = await supabase.from('contacts').insert(contact).select().single();
+    if (error) {
+      console.error('Supabase insert failed:', error.message);
+      throw error;
     }
+    set(state => ({ contacts: [data, ...state.contacts] }));
+    return data;
   },
 
   updateContact: async (id, updates) => {
@@ -371,17 +359,13 @@ const useDataStore = create((set, get) => ({
   createDeal: async (deal) => {
     const { user } = useAuthStore.getState();
     const newDeal = { ...deal, owner_id: user?.id };
-    try {
-      const { data, error } = await supabase.from('deals').insert(newDeal).select().single();
-      if (error) throw error;
-      set(state => ({ deals: [data, ...state.deals] }));
-      return data;
-    } catch (err) {
-      console.warn('Supabase insert failed, falling back to local state:', err.message);
-      const fallbackData = { ...newDeal, id: Date.now().toString(), created_at: new Date().toISOString() };
-      set(state => ({ deals: [fallbackData, ...state.deals] }));
-      return fallbackData;
+    const { data, error } = await supabase.from('deals').insert(newDeal).select().single();
+    if (error) {
+      console.error('Supabase insert failed:', error.message);
+      throw error;
     }
+    set(state => ({ deals: [data, ...state.deals] }));
+    return data;
   },
 
   updateDeal: async (id, updates) => {
@@ -414,17 +398,13 @@ const useDataStore = create((set, get) => ({
   createTask: async (task) => {
     const { user } = useAuthStore.getState();
     const newTask = { ...task, owner_id: user?.id };
-    try {
-      const { data, error } = await supabase.from('tasks').insert(newTask).select().single();
-      if (error) throw error;
-      set(state => ({ tasks: [data, ...state.tasks] }));
-      return data;
-    } catch (err) {
-      console.warn('Supabase insert failed, falling back to local state:', err.message);
-      const fallbackData = { ...newTask, id: Date.now().toString(), created_at: new Date().toISOString() };
-      set(state => ({ tasks: [fallbackData, ...state.tasks] }));
-      return fallbackData;
+    const { data, error } = await supabase.from('tasks').insert(newTask).select().single();
+    if (error) {
+      console.error('Supabase insert failed:', error.message);
+      throw error;
     }
+    set(state => ({ tasks: [data, ...state.tasks] }));
+    return data;
   },
 
   updateTask: async (id, updates) => {
@@ -500,17 +480,13 @@ const useDataStore = create((set, get) => ({
       }
     }
 
-    try {
-      const { data, error } = await supabase.from('meetings').insert(meetingData).select().single();
-      if (error) throw error;
-      set(state => ({ meetings: [data, ...state.meetings] }));
-      return data;
-    } catch (err) {
-      console.warn('Supabase insert failed, falling back to local state:', err.message);
-      const fallbackData = { ...meetingData, id: Date.now().toString(), created_at: new Date().toISOString() };
-      set(state => ({ meetings: [fallbackData, ...state.meetings] }));
-      return fallbackData;
+    const { data, error } = await supabase.from('meetings').insert(meetingData).select().single();
+    if (error) {
+      console.error('Supabase insert failed:', error.message);
+      throw error;
     }
+    set(state => ({ meetings: [data, ...state.meetings] }));
+    return data;
   },
 
   updateMeeting: async (id, updates) => {
@@ -530,17 +506,13 @@ const useDataStore = create((set, get) => ({
   createDocument: async (doc) => {
     const { user } = useAuthStore.getState();
     const newDoc = { ...doc, owner_id: user?.id };
-    try {
-      const { data, error } = await supabase.from('documents').insert(newDoc).select().single();
-      if (error) throw error;
-      set(state => ({ documents: [data, ...state.documents] }));
-      return data;
-    } catch (err) {
-      console.warn('Supabase insert failed, falling back to local state:', err.message);
-      const fallbackData = { ...newDoc, id: Date.now().toString(), created_at: new Date().toISOString() };
-      set(state => ({ documents: [fallbackData, ...state.documents] }));
-      return fallbackData;
+    const { data, error } = await supabase.from('documents').insert(newDoc).select().single();
+    if (error) {
+      console.error('Supabase insert failed:', error.message);
+      throw error;
     }
+    set(state => ({ documents: [data, ...state.documents] }));
+    return data;
   },
 
   updateDocument: async (id, updates) => {
