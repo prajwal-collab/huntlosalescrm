@@ -172,6 +172,43 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
         if (!obj.stage) obj.stage = 'New Lead';
         if (obj.estimated_mrr) obj.estimated_mrr = parseInt(obj.estimated_mrr) || 0;
         if (obj.recruiter_team_size) obj.recruiter_team_size = parseInt(obj.recruiter_team_size) || 0;
+        
+        if (obj.next_action_due) {
+          try {
+            let dateStr = obj.next_action_due.trim();
+            // Handle DD/MM/YY or DD/MM/YYYY format commonly used outside the US
+            if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(dateStr)) {
+              const parts = dateStr.split(/[\/\-]/);
+              // Assume DD/MM/YY or DD/MM/YYYY
+              let day = parseInt(parts[0], 10);
+              let month = parseInt(parts[1], 10);
+              let year = parseInt(parts[2], 10);
+              if (year < 100) year += 2000;
+              // If day > 12, it must be DD/MM. If day <= 12 and month > 12, it's MM/DD.
+              if (month > 12 && day <= 12) {
+                // Swap day and month if it looks like MM/DD
+                let temp = day;
+                day = month;
+                month = temp;
+              }
+              const parsed = new Date(year, month - 1, day);
+              if (!isNaN(parsed.getTime())) {
+                obj.next_action_due = parsed.toISOString();
+              } else {
+                delete obj.next_action_due;
+              }
+            } else {
+              const parsedDate = new Date(dateStr);
+              if (!isNaN(parsedDate.getTime())) {
+                obj.next_action_due = parsedDate.toISOString();
+              } else {
+                delete obj.next_action_due;
+              }
+            }
+          } catch (e) {
+            delete obj.next_action_due;
+          }
+        }
       }
       
       return obj;
