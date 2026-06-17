@@ -29,11 +29,11 @@ export async function sendTeamInvitation({ toEmail, toName, inviterName, role, i
     }
   }
 
-  // If still no token, return error
+  // If still no token, return graceful failure (InviteModal will show manual link)
   if (!token) {
     return { 
       success: false, 
-      error: 'Google Workspace is not connected. Please connect your Google account in Settings > Integrations first to send team invitations.' 
+      error: 'Google Workspace not connected. Share the invite link directly instead.' 
     };
   }
 

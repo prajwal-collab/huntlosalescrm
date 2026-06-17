@@ -92,14 +92,12 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }
       onClick={() => onClick(lead)}
     >
       {/* Checkbox */}
-      <div className="lc" onClick={e => { if (isOwner) { e.stopPropagation(); onSelect(lead.id); } }}>
+      <div className="lc" onClick={e => { e.stopPropagation(); onSelect(lead.id); }}>
         <input
           type="checkbox"
           checked={isSelected}
           onChange={() => {}}
-          disabled={!isOwner}
-          title={!isOwner ? 'Only owner can select this lead' : ''}
-          style={{ width: 15, height: 15, cursor: isOwner ? 'pointer' : 'not-allowed', accentColor: 'var(--accent-blue)', opacity: isOwner ? 1 : 0.5 }}
+          style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--accent-blue)' }}
         />
       </div>
 
@@ -132,29 +130,23 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }
 
       {/* Stage */}
       <div className="lc" onClick={(e) => e.stopPropagation()}>
-        {isOwner ? (
-          <select 
-            className="stage-badge"
-            style={{ 
-              background: stageStyle.bg, 
-              color: stageStyle.color, 
-              border: 'none', 
-              cursor: 'pointer',
-              appearance: 'none',
-              outline: 'none'
-            }}
-            value={lead.stage || 'New Lead'}
-            onChange={(e) => updateLead(lead.id, { stage: e.target.value })}
-          >
-            {Object.keys(STAGE_COLORS).map(st => (
-              <option key={st} value={st} style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>{st}</option>
-            ))}
-          </select>
-        ) : (
-          <span className="stage-badge" style={{ background: stageStyle.bg, color: stageStyle.color }}>
-            {lead.stage || 'New Lead'}
-          </span>
-        )}
+        <select 
+          className="stage-badge"
+          style={{ 
+            background: stageStyle.bg, 
+            color: stageStyle.color, 
+            border: 'none', 
+            cursor: 'pointer',
+            appearance: 'none',
+            outline: 'none'
+          }}
+          value={lead.stage || 'New Lead'}
+          onChange={(e) => updateLead(lead.id, { stage: e.target.value })}
+        >
+          {Object.keys(STAGE_COLORS).map(st => (
+            <option key={st} value={st} style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>{st}</option>
+          ))}
+        </select>
       </div>
 
       {/* Signal Score */}
@@ -217,7 +209,7 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }
       </div>
 
       {/* Notes / Remarks */}
-      <div className="lc" style={{ paddingRight: 16 }} onClick={(e) => e.stopPropagation()} onDoubleClick={() => { if (isOwner) setIsEditingNote(true); }}>
+      <div className="lc" style={{ paddingRight: 16 }} onClick={(e) => e.stopPropagation()} onDoubleClick={() => setIsEditingNote(true)}>
         {isEditingNote ? (
           <input
             autoFocus
@@ -229,7 +221,7 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }
             onKeyDown={(e) => { if (e.key === 'Enter') handleNoteSave(); }}
           />
         ) : (
-          <span style={{ fontSize: 12, color: noteValue ? 'var(--text-secondary)' : 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', cursor: isOwner ? 'pointer' : 'default' }}>
+          <span style={{ fontSize: 12, color: noteValue ? 'var(--text-secondary)' : 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', cursor: 'pointer' }}>
             {noteValue || 'Double-click to add note...'}
           </span>
         )}
@@ -280,8 +272,8 @@ export default function Leads() {
   };
 
   const toggleAll = () => {
-    // Only select leads the user owns
-    const selectable = filtered.filter(l => l.owner_id === user?.id);
+    // Select all visible leads (transparent team access)
+    const selectable = filtered;
     if (selectedIds.length === selectable.length && selectable.length > 0) {
       setSelectedIds([]);
     } else {
@@ -424,7 +416,7 @@ export default function Leads() {
                 type="checkbox"
                 checked={
                   selectedIds.length > 0 &&
-                  selectedIds.length === filtered.filter(l => l.owner_id === user?.id).length
+                  selectedIds.length === filtered.length
                 }
                 onChange={toggleAll}
                 style={{ width: 15, height: 15, accentColor: 'var(--accent-blue)' }}

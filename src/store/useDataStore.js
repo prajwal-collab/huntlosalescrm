@@ -16,12 +16,87 @@ const useDataStore = create((set, get) => ({
   leads: [],
   loading: false,
   error: null,
+  _realtimeChannel: null,
+
+  // Ensure the current user has a profile and organization
+  // This self-heals when the signup trigger didn't fire properly
+  ensureProfile: async () => {
+    const { user } = useAuthStore.getState();
+    if (!user) return;
+
+    try {
+      // Check if profile exists
+      const { data: profile, error: profileErr } = await supabase
+        .from('profiles')
+        .select('id, organization_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileErr && profileErr.code !== 'PGRST116') {
+        console.warn('[DataStore] Profile check error:', profileErr.message);
+      }
+
+      // If no profile exists, create organization + profile
+      if (!profile) {
+        console.log('[DataStore] No profile found, auto-creating...');
+        
+        // Create a default organization
+        const { data: org, error: orgErr } = await supabase
+          .from('organizations')
+          .insert({ name: user.user_metadata?.full_name ? `${user.user_metadata.full_name}'s Workspace` : 'My Workspace' })
+          .select()
+          .single();
+
+        if (orgErr) {
+          console.error('[DataStore] Failed to create organization:', orgErr.message);
+          return;
+        }
+
+        // Create the user's profile
+        const { error: insertErr } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.email,
+            role: 'Admin',
+            organization_id: org.id,
+          });
+
+        if (insertErr) {
+          console.error('[DataStore] Failed to create profile:', insertErr.message);
+        } else {
+          console.log('[DataStore] Profile created successfully for org:', org.id);
+        }
+      } else if (!profile.organization_id) {
+        // Profile exists but no organization — create one and link it
+        console.log('[DataStore] Profile missing organization, auto-creating...');
+        const { data: org, error: orgErr } = await supabase
+          .from('organizations')
+          .insert({ name: 'My Workspace' })
+          .select()
+          .single();
+
+        if (!orgErr && org) {
+          await supabase
+            .from('profiles')
+            .update({ organization_id: org.id })
+            .eq('id', user.id);
+        }
+      }
+    } catch (err) {
+      console.error('[DataStore] ensureProfile error:', err);
+    }
+  },
 
   fetchData: async () => {
     set({ loading: true, error: null });
     try {
       const { user } = useAuthStore.getState();
       if (!user) throw new Error('Not authenticated');
+
+      // Auto-repair profile/organization if missing
+      await get().ensureProfile();
 
       const results = await Promise.allSettled([
         supabase.from('companies').select('*').order('created_at', { ascending: false }),
@@ -51,11 +126,71 @@ const useDataStore = create((set, get) => ({
         loading: false,
         error: null
       });
+
+      // Set up Realtime subscriptions for team transparency
+      get().setupRealtime();
     } catch (error) {
       console.error('[DataStore] Fetch error:', error);
       set({ error: error.message, loading: false });
     }
   },
+
+  // Supabase Realtime — live sync across all team members
+  setupRealtime: () => {
+    // Clean up existing subscription
+    const existing = get()._realtimeChannel;
+    if (existing) {
+      supabase.removeChannel(existing);
+    }
+
+    const channel = supabase
+      .channel('org-data-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
+        get()._refreshTable('leads');
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deals' }, () => {
+        get()._refreshTable('deals');
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'meetings' }, () => {
+        get()._refreshTable('meetings');
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+        get()._refreshTable('tasks');
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'documents' }, () => {
+        get()._refreshTable('documents');
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, () => {
+        get()._refreshTable('companies');
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contacts' }, () => {
+        get()._refreshTable('contacts');
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sequences' }, () => {
+        get()._refreshTable('sequences');
+      })
+      .subscribe();
+
+    set({ _realtimeChannel: channel });
+  },
+
+  // Refresh a single table (called by Realtime)
+  _refreshTable: async (table) => {
+    try {
+      const orderCol = table === 'tasks' ? 'due' : table === 'meetings' ? 'date' : 'created_at';
+      const ascending = table === 'tasks' || table === 'meetings';
+      const { data, error } = await supabase
+        .from(table)
+        .select('*')
+        .order(orderCol, { ascending });
+      if (!error && data) {
+        set({ [table]: data });
+      }
+    } catch (err) {
+      console.warn(`[DataStore] Realtime refresh failed for ${table}:`, err);
+    }
+  },
+
 
   // ── Leads ──────────────────────────────────
   createLead: async (lead) => {

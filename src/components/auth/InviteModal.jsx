@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { X, Mail, CheckCircle, Copy, Check, Loader, Users } from 'lucide-react';
+import { X, Mail, CheckCircle, Copy, Check, Loader, Users, AlertCircle } from 'lucide-react';
 import useAuthStore from '../../store/useAuthStore';
 import { sendTeamInvitation, generateInviteToken } from '../../lib/resend';
 import './InviteModal.css';
 
 export default function InviteModal({ isOpen, onClose }) {
-  const { inviteMember, user } = useAuthStore();
+  const { inviteMember, user, fetchTeam } = useAuthStore();
   const [emails, setEmails] = useState('');
   const [role, setRole] = useState('Member');
   const [loading, setLoading] = useState(false);
@@ -28,9 +28,22 @@ export default function InviteModal({ isOpen, onClose }) {
     const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
 
     for (const email of emailList) {
+      const token = generateInviteToken();
+      const inviteLink = `${appUrl}/accept-invite?token=${token}`;
+
       try {
-        const token = generateInviteToken();
-        const resendResult = await sendTeamInvitation({
+        // Step 1: Always save invite to DB first so it shows in team list
+        await inviteMember({ email, role, token });
+      } catch (err) {
+        console.error(`Failed to save invite for ${email}:`, err);
+        // Even if DB insert fails, still show the manual link
+        manualList.push({ email, link: inviteLink, note: 'Could not save to database' });
+        continue;
+      }
+
+      try {
+        // Step 2: Try to send email (may fail if Google not connected)
+        const emailResult = await sendTeamInvitation({
           toEmail: email,
           toName: email.split('@')[0],
           inviterName,
@@ -38,16 +51,16 @@ export default function InviteModal({ isOpen, onClose }) {
           inviteToken: token
         });
 
-        await inviteMember({ email, role, token });
-
-        if (resendResult.success) {
+        if (emailResult.success) {
           successList.push({ email });
         } else {
-          manualList.push({ email, link: `${appUrl}/accept-invite?token=${token}` });
+          // Email failed but invite is saved — show manual link
+          manualList.push({ email, link: inviteLink });
         }
       } catch (err) {
-        console.error(`Failed to invite ${email}:`, err);
-        // Fallback to manual if insert succeeded but resend threw
+        console.error(`Email delivery failed for ${email}:`, err);
+        // Invite is saved in DB, just show manual link
+        manualList.push({ email, link: inviteLink });
       }
     }
 
@@ -123,7 +136,7 @@ export default function InviteModal({ isOpen, onClose }) {
               </div>
             </div>
             <h3>Invitations Processed</h3>
-            <p>We've successfully processed your invites.</p>
+            <p>Members have been added to your workspace. They'll appear in the team list.</p>
 
             <div style={{ textAlign: 'left', marginTop: 24 }}>
               {results.success.length > 0 && (
@@ -139,7 +152,13 @@ export default function InviteModal({ isOpen, onClose }) {
 
               {results.manual.length > 0 && (
                 <div>
-                  <h4 style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>Manual Links (Email delivery unavailable):</h4>
+                  <div style={{ background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', borderRadius: 8, padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <AlertCircle size={16} color="#2563eb" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      Email couldn't be sent automatically. Connect Google Workspace in Settings → Integrations to send emails, or share these invite links directly.
+                    </span>
+                  </div>
+                  <h4 style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>Share these invite links:</h4>
                   {results.manual.map((m, i) => (
                     <div key={i} className="invite-copy-box" style={{ marginBottom: 8 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -156,6 +175,7 @@ export default function InviteModal({ isOpen, onClose }) {
             </div>
 
             <button className="btn btn-primary" style={{ width: '100%', marginTop: 32 }} onClick={() => {
+              fetchTeam(); // Refresh team list so new invite shows immediately
               onClose();
               setEmails('');
               setResults(null);
