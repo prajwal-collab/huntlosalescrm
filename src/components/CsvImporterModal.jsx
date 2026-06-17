@@ -282,7 +282,31 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
       setStep('done');
     } catch (err) {
       console.error(err);
-      setError(`Import failed: ${err.message}`);
+      if (err.message && err.message.includes('row-level security')) {
+        setError(
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <strong style={{ fontSize: '15px' }}>Import Blocked: Workspace Setup Pending</strong>
+            <span>Your account is currently not linked to a secure workspace organization. This is required to store your records securely and prevents imports.</span>
+            <div style={{ marginTop: '4px', padding: '10px', backgroundColor: 'rgba(255, 0, 0, 0.05)', borderRadius: '6px', border: '1px solid rgba(255, 0, 0, 0.1)' }}>
+              <strong style={{ display: 'block', marginBottom: '6px' }}>How to fix this:</strong> 
+              <ol style={{ margin: 0, paddingLeft: '20px', lineHeight: '1.5' }}>
+                <li>Your workspace is likely still being created in the background.</li>
+                <li>Click the refresh button below to synchronize your account.</li>
+                <li>If the issue persists, try logging out and logging back in.</li>
+              </ol>
+            </div>
+            <button 
+              className="btn btn-sm" 
+              style={{ width: 'fit-content', marginTop: '4px', backgroundColor: 'var(--text-primary)', color: 'white' }}
+              onClick={() => window.location.reload()}
+            >
+              Sync & Refresh Page
+            </button>
+          </div>
+        );
+      } else {
+        setError(`Import failed: ${err.message}`);
+      }
       setStep('map');
     }
   };
@@ -316,9 +340,9 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
 
         <div className="csv-modal-body">
           {error && (
-            <div className="csv-alert error">
-              <AlertCircle size={16} />
-              <span>{error}</span>
+            <div className="csv-alert error" style={{ alignItems: 'flex-start' }}>
+              <AlertCircle size={18} style={{ marginTop: '2px', flexShrink: 0 }} />
+              <div style={{ flex: 1, lineHeight: '1.4' }}>{error}</div>
             </div>
           )}
 
