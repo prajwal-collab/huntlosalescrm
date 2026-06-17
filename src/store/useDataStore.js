@@ -520,7 +520,20 @@ const useDataStore = create((set, get) => ({
   // ── Documents ─────────────────────────────
   createDocument: async (doc) => {
     const { user } = useAuthStore.getState();
-    const newDoc = { ...doc, owner_id: user?.id };
+    
+    // Explicitly fetch organization_id to prevent RLS violations if the db trigger is missing
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('organization_id')
+      .eq('id', user?.id)
+      .maybeSingle();
+
+    const newDoc = { 
+      ...doc, 
+      owner_id: user?.id,
+      ...(profile?.organization_id ? { organization_id: profile.organization_id } : {})
+    };
+
     const { data, error } = await supabase.from('documents').insert(newDoc).select().single();
     if (error) {
       console.error('Supabase insert failed:', error.message);
