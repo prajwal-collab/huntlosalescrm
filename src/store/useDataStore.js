@@ -209,11 +209,19 @@ const useDataStore = create((set, get) => ({
     }
   },
 
+  _getOrgId: async () => {
+    const { user } = useAuthStore.getState();
+    if (!user) return null;
+    const { data } = await supabase.from('profiles').select('organization_id').eq('id', user.id).maybeSingle();
+    return data?.organization_id || null;
+  },
+
 
   // ── Leads ──────────────────────────────────
   createLead: async (lead) => {
     const { user } = useAuthStore.getState();
-    const newLead = { ...lead, owner_id: user?.id };
+    const orgId = await get()._getOrgId();
+    const newLead = { ...lead, owner_id: user?.id, ...(orgId ? { organization_id: orgId } : {}) };
     const { data, error } = await supabase.from('leads').insert(newLead).select().single();
     if (error) {
       console.error('Supabase insert failed:', error.message);
@@ -244,7 +252,12 @@ const useDataStore = create((set, get) => ({
 
   bulkCreateLeads: async (leadsList) => {
     const { user } = useAuthStore.getState();
-    const records = leadsList.map(l => ({ ...l, owner_id: user?.id }));
+    const orgId = await get()._getOrgId();
+    const records = leadsList.map(l => ({ 
+      ...l, 
+      owner_id: user?.id,
+      ...(orgId ? { organization_id: orgId } : {})
+    }));
     const { data, error } = await supabase.from('leads').upsert(records, { onConflict: 'organization_id,email', ignoreDuplicates: true }).select();
     if (error) throw error;
     set(state => ({ leads: [...data, ...state.leads] }));
@@ -253,7 +266,10 @@ const useDataStore = create((set, get) => ({
 
   // ── Companies ─────────────────────────────
   createCompany: async (company) => {
-    const { data, error } = await supabase.from('companies').insert(company).select().single();
+    const { user } = useAuthStore.getState();
+    const orgId = await get()._getOrgId();
+    const payload = { ...company, owner_id: user?.id, ...(orgId ? { organization_id: orgId } : {}) };
+    const { data, error } = await supabase.from('companies').insert(payload).select().single();
     if (error) {
       console.error('Supabase insert failed:', error.message);
       throw error;
@@ -282,6 +298,8 @@ const useDataStore = create((set, get) => ({
   },
 
   bulkCreateCompanies: async (companiesList) => {
+    const { user } = useAuthStore.getState();
+    const orgId = await get()._getOrgId();
     const listWithoutOwner = companiesList.map(c => {
       // Remove any fields that don't belong in the table
       // eslint-disable-next-line no-unused-vars
@@ -292,6 +310,8 @@ const useDataStore = create((set, get) => ({
         size: c.employees, // map from employees
         arr_estimate: parseFloat(c.revenue) || 0, // map from revenue
         website: c.domain,
+        owner_id: user?.id,
+        ...(orgId ? { organization_id: orgId } : {}),
         ...rest
       };
     });
@@ -303,7 +323,10 @@ const useDataStore = create((set, get) => ({
 
   // ── Contacts ──────────────────────────────
   createContact: async (contact) => {
-    const { data, error } = await supabase.from('contacts').insert(contact).select().single();
+    const { user } = useAuthStore.getState();
+    const orgId = await get()._getOrgId();
+    const payload = { ...contact, owner_id: user?.id, ...(orgId ? { organization_id: orgId } : {}) };
+    const { data, error } = await supabase.from('contacts').insert(payload).select().single();
     if (error) {
       console.error('Supabase insert failed:', error.message);
       throw error;
@@ -332,6 +355,8 @@ const useDataStore = create((set, get) => ({
   },
 
   bulkCreateContacts: async (contactsList) => {
+    const { user } = useAuthStore.getState();
+    const orgId = await get()._getOrgId();
     const state = get();
     let allCompanies = [...state.companies];
     
@@ -341,7 +366,14 @@ const useDataStore = create((set, get) => ({
     
     if (companiesToCreate.length > 0) {
       const { data: newComps, error: compErr } = await supabase.from('companies').insert(
-        companiesToCreate.map(name => ({ name, industry: 'Unknown', arr_estimate: 0, engagement_score: 0 }))
+        companiesToCreate.map(name => ({ 
+          name, 
+          industry: 'Unknown', 
+          arr_estimate: 0, 
+          engagement_score: 0,
+          owner_id: user?.id,
+          ...(orgId ? { organization_id: orgId } : {})
+        }))
       ).select();
       if (!compErr && newComps) {
         allCompanies = [...allCompanies, ...newComps];
@@ -361,7 +393,9 @@ const useDataStore = create((set, get) => ({
         designation: c.title, // map from title
         whatsapp: c.phone, // map from phone
         linkedin: c.linkedin,
-        company_id: company_id
+        company_id: company_id,
+        owner_id: user?.id,
+        ...(orgId ? { organization_id: orgId } : {})
       };
     });
     const { data, error } = await supabase.from('contacts').upsert(mappedList, { onConflict: 'organization_id,email', ignoreDuplicates: true }).select();
@@ -373,7 +407,8 @@ const useDataStore = create((set, get) => ({
   // ── Deals ─────────────────────────────────
   createDeal: async (deal) => {
     const { user } = useAuthStore.getState();
-    const newDeal = { ...deal, owner_id: user?.id };
+    const orgId = await get()._getOrgId();
+    const newDeal = { ...deal, owner_id: user?.id, ...(orgId ? { organization_id: orgId } : {}) };
     const { data, error } = await supabase.from('deals').insert(newDeal).select().single();
     if (error) {
       console.error('Supabase insert failed:', error.message);
@@ -412,7 +447,8 @@ const useDataStore = create((set, get) => ({
   // ── Tasks ─────────────────────────────────
   createTask: async (task) => {
     const { user } = useAuthStore.getState();
-    const newTask = { ...task, owner_id: user?.id };
+    const orgId = await get()._getOrgId();
+    const newTask = { ...task, owner_id: user?.id, ...(orgId ? { organization_id: orgId } : {}) };
     const { data, error } = await supabase.from('tasks').insert(newTask).select().single();
     if (error) {
       console.error('Supabase insert failed:', error.message);
@@ -447,7 +483,8 @@ const useDataStore = create((set, get) => ({
   // ── Meetings ──────────────────────────────
   createMeeting: async (meeting) => {
     const { user, session } = useAuthStore.getState();
-    let meetingData = { ...meeting, owner_id: user?.id };
+    const orgId = await get()._getOrgId();
+    let meetingData = { ...meeting, owner_id: user?.id, ...(orgId ? { organization_id: orgId } : {}) };
 
     // Try to create a Google Calendar event if the user has linked Google
     const googleToken = session?.provider_token;
@@ -520,18 +557,12 @@ const useDataStore = create((set, get) => ({
   // ── Documents ─────────────────────────────
   createDocument: async (doc) => {
     const { user } = useAuthStore.getState();
-    
-    // Explicitly fetch organization_id to prevent RLS violations if the db trigger is missing
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('organization_id')
-      .eq('id', user?.id)
-      .maybeSingle();
+    const orgId = await get()._getOrgId();
 
     const newDoc = { 
       ...doc, 
       owner_id: user?.id,
-      ...(profile?.organization_id ? { organization_id: profile.organization_id } : {})
+      ...(orgId ? { organization_id: orgId } : {})
     };
 
     const { data, error } = await supabase.from('documents').insert(newDoc).select().single();
@@ -581,7 +612,10 @@ const useDataStore = create((set, get) => ({
   // ── Sequences ─────────────────────────────
   createSequence: async (seq) => {
     try {
-      const { data, error } = await supabase.from('sequences').insert(seq).select().single();
+      const { user } = useAuthStore.getState();
+      const orgId = await get()._getOrgId();
+      const payload = { ...seq, owner_id: user?.id, ...(orgId ? { organization_id: orgId } : {}) };
+      const { data, error } = await supabase.from('sequences').insert(payload).select().single();
       if (error) throw error;
       set(state => ({ sequences: [data, ...state.sequences] }));
       return data;
