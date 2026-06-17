@@ -1,8 +1,8 @@
 // ============================================
 // HUNTLO SALES OS — TASKS PAGE
 // ============================================
-import { useState, useMemo } from 'react';
-import { Search, Plus, CheckCircle, Clock, AlertCircle, X, Loader, Filter } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Search, Plus, CheckCircle, Clock, AlertCircle, X, Loader, Filter, BookOpen } from 'lucide-react';
 import { formatDistanceToNow, format, isPast, isValid } from 'date-fns';
 import useDataStore from '../store/useDataStore';
 import { useKeyboard } from '../hooks/useKeyboard';
@@ -45,6 +45,12 @@ export default function Tasks() {
   const [formData, setFormData] = useState({ title: '', deal_id: '', priority: 'medium', type: 'follow-up', due: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  
+  const [scratchpad, setScratchpad] = useState(() => localStorage.getItem('huntlo_scratchpad') || '');
+
+  useEffect(() => {
+    localStorage.setItem('huntlo_scratchpad', scratchpad);
+  }, [scratchpad]);
 
   // Counts for each tab
   const pendingCount = tasks.filter(t => t.status !== 'completed').length;
@@ -126,8 +132,10 @@ export default function Tasks() {
   });
 
   return (
-    <div className="tasks-page">
-      <div className="page-header-row" style={{ padding: '24px 24px 12px' }}>
+    <div className="tasks-split-layout">
+      {/* Left Pane: Tasks */}
+      <div className="tasks-page">
+        <div className="page-header-row" style={{ padding: '24px 24px 12px' }}>
         <div>
           <h1 className="page-big-title" style={{ fontSize: 22 }}>Tasks</h1>
         </div>
@@ -306,6 +314,27 @@ export default function Tasks() {
           </form>
         </div>
       )}
+      </div>
+
+      {/* Right Pane: Daily Scratchpad */}
+      <div className="daily-scratchpad-pane">
+        <div className="scratchpad-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <BookOpen size={16} color="var(--accent-blue)" />
+            <h2>Daily Notes</h2>
+          </div>
+          <span className="scratchpad-date">{format(new Date(), 'EEEE, MMMM do')}</span>
+        </div>
+        <textarea
+          className="scratchpad-textarea"
+          value={scratchpad}
+          onChange={(e) => setScratchpad(e.target.value)}
+          placeholder="What's on your mind today? Write down meeting notes, ideas, or quick to-dos..."
+        />
+        <div className="scratchpad-footer">
+          <span className="save-indicator">✓ Saved just now</span>
+        </div>
+      </div>
     </div>
   );
 }

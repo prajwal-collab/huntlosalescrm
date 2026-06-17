@@ -5,7 +5,7 @@ import './DealDrawer.css';
 
 export default function NewDealDrawer({ onClose }) {
   const { companies, createDeal } = useDataStore();
-  const [formData, setFormData] = useState({ title: '', company_id: '', arr: '', urgency: 'medium' });
+  const [formData, setFormData] = useState({ title: '', company_id: '', plan: '', arr: '', urgency: 'medium' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -30,6 +30,17 @@ export default function NewDealDrawer({ onClose }) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handlePlanChange = (e) => {
+    const plan = e.target.value;
+    let arr = formData.arr;
+    if (plan === 'starter') arr = 99;
+    else if (plan === 'professional') arr = 299;
+    else if (plan === 'enterprise') arr = 999;
+    else if (plan === 'custom') arr = '';
+    
+    setFormData({ ...formData, plan, arr });
   };
 
   return (
@@ -59,9 +70,21 @@ export default function NewDealDrawer({ onClose }) {
             </select>
           </div>
           <div className="form-group">
-            <label className="label">ARR Estimate ($)</label>
-            <input className="input-base" type="number" required value={formData.arr} onChange={e => setFormData({...formData, arr: e.target.value})} />
+            <label className="label">Pricing Plan</label>
+            <select className="input-base" required value={formData.plan} onChange={handlePlanChange}>
+              <option value="">Select a Plan</option>
+              <option value="starter">Starter ($99/mo)</option>
+              <option value="professional">Professional ($299/mo)</option>
+              <option value="enterprise">Enterprise ($999/mo)</option>
+              <option value="custom">Custom Pricing</option>
+            </select>
           </div>
+          {formData.plan === 'custom' && (
+            <div className="form-group animate-fade-in">
+              <label className="label">Custom MRR ($)</label>
+              <input className="input-base" type="number" required value={formData.arr} onChange={e => setFormData({...formData, arr: e.target.value})} />
+            </div>
+          )}
           <div className="form-group">
             <label className="label">Urgency</label>
             <select className="input-base" value={formData.urgency} onChange={e => setFormData({...formData, urgency: e.target.value})}>

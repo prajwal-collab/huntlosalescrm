@@ -1,11 +1,21 @@
 /* ============================================
    TASKS — Premium Task Management
    ============================================ */
+.tasks-split-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+  height: 100%;
+  width: 100%;
+  background: var(--bg-surface-secondary);
+}
+
 .tasks-page {
   display: flex;
   flex-direction: column;
   height: 100%;
   position: relative;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--bg-border);
   animation: fade-in 0.25s ease;
 }
 
@@ -144,3 +154,66 @@
 .task-priority { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 550; width: 80px; }
 .task-due { font-size: 12px; color: var(--text-secondary); width: 120px; text-align: right; font-variant-numeric: tabular-nums; }
 .task-due.overdue { color: var(--danger); font-weight: 600; }
+
+/* Daily Scratchpad Pane */
+.daily-scratchpad-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-surface-secondary);
+  animation: fade-in 0.3s ease;
+}
+
+.scratchpad-header {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid var(--bg-border);
+  background: var(--bg-surface);
+}
+
+.scratchpad-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.scratchpad-date {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.scratchpad-textarea {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 24px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  resize: none;
+  outline: none;
+}
+
+.scratchpad-textarea::placeholder {
+  color: var(--text-tertiary);
+  opacity: 0.7;
+}
+
+.scratchpad-footer {
+  padding: 12px 24px;
+  border-top: 1px solid var(--bg-border);
+  display: flex;
+  justify-content: flex-end;
+  background: var(--bg-surface);
+}
+
+.save-indicator {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}

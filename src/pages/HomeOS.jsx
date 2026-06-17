@@ -91,7 +91,15 @@ export default function HomeOS() {
     if (!aiQuery.trim()) return;
     setAiLoading(true);
     try {
-      const res = await queryGemini(aiQuery);
+      const context = `
+        Total Pipeline MRR: $${totalARR}
+        Active Deals: ${deals.slice(0,10).map(d => `${d.title} (${d.stage}, $${d.arr || 0})`).join(' | ')}
+        Hot Leads: ${hotLeads.slice(0,10).map(l => l.company_name).join(', ')}
+        Stale Deals: ${staleDeals.slice(0,10).map(d => d.title).join(', ')}
+        Overdue Tasks: ${overdueTasks.slice(0,10).map(t => t.title).join(', ')}
+        Meetings Today: ${todayMeetings.slice(0,10).map(m => m.title).join(', ')}
+      `.trim();
+      const res = await queryGemini(aiQuery, context);
       setAiResponse(res);
     } finally {
       setAiLoading(false);
@@ -130,12 +138,12 @@ export default function HomeOS() {
       {/* Stats Row */}
       <section className="stats-row">
         <div className="stat-card">
-          <span className="stat-label">Pipeline ARR</span>
+          <span className="stat-label">Pipeline MRR</span>
           <span className="stat-value">${(totalARR / 1000).toFixed(0)}k</span>
           <span className="stat-delta up">Real-time total</span>
         </div>
         <div className="stat-card">
-          <span className="stat-label">Won ARR</span>
+          <span className="stat-label">Won MRR</span>
           <span className="stat-value">${(wonARR / 1000).toFixed(0)}k</span>
           <span className="stat-delta up">{closedThisMonth} closed recently</span>
         </div>

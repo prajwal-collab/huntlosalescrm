@@ -25,7 +25,7 @@ function DealCard({ deal, onClick }) {
           <span className="deal-arr" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
             👤 {deal.leadName}
           </span>
-          <span className="deal-arr">${((deal.arr || 0) / 1000).toFixed(0)}k ARR</span>
+          <span className="deal-arr">${((deal.arr || 0) / 1000).toFixed(0)}k MRR</span>
         </div>
         <div className="deal-urgency-dot" style={{ background: URGENCY_COLOR[deal.urgency] }} title={`Urgency: ${deal.urgency}`} />
       </div>
@@ -72,7 +72,7 @@ function DraggableDealCard({ deal, onClick }) {
   );
 }
 
-const PIPELINE_STAGES = ['Discovery', 'Qualification', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'];
+const PIPELINE_STAGES = ['Discovery', 'Qualification', 'Trial', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'];
 
 function KanbanColumn({ stage, deals, onDealClick, onDrop }) {
   const [dragOver, setDragOver] = useState(false);

@@ -62,7 +62,7 @@ export default function DealDrawer({ dealId, onClose }) {
             <h2 className="drawer-deal-name">{deal.company}</h2>
             <div className="drawer-deal-meta">
               <span className="badge badge-blue">{deal.stage}</span>
-              <span className="drawer-arr">${(deal.arr / 1000).toFixed(0)}k ARR</span>
+              <span className="drawer-arr">${(deal.arr / 1000).toFixed(0)}k MRR</span>
               <span className="drawer-owner" style={{ color: deal.ownerColor }}>● {deal.owner}</span>
             </div>
           </div>

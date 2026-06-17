@@ -191,7 +191,7 @@ export default function Reports() {
           {widgets.stats && (
             <div className="rep-stats-grid">
               <StatCard label="Total Pipeline Value" value={metrics.pipeline} trend="All Active Deals" isPositive={true} />
-              <StatCard label="Total Revenue Won" value={metrics.revenue} trend="Closed Won ARR" isPositive={true} />
+              <StatCard label="Total Revenue Won" value={metrics.revenue} trend="Closed Won MRR" isPositive={true} />
               <StatCard label="Win / Loss Ratio" value={metrics.winRate} trend="Won vs. Total Closed" isPositive={parseInt(metrics.winRate) >= 50} />
               <StatCard label="Tasks Done (30d)" value={metrics.tasksCompleted30d} trend="Last 30 days" isPositive={true} />
             </div>
