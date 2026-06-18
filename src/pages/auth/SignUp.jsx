@@ -109,7 +109,7 @@ export default function SignUp() {
             <div className="auth-brand-text">Huntlo<span> OS</span></div>
           </div>
           <div className="auth-value-prop">
-            <h2>{isInvited ? `Join the ${orgName} team.` : 'Start your workspace.'}</h2>
+            <h2>{isInvited ? `Join the ${orgName} team.` : 'Sign up to get started.'}</h2>
             <p>{isInvited ? 'Complete your profile to access shared pipelines and collaborate.' : 'Set up your admin account to bring your entire sales operation into one AI-driven platform.'}</p>
           </div>
         </div>
@@ -126,7 +126,7 @@ export default function SignUp() {
           </div>
 
           <h1 className="auth-heading">
-            {isInvited ? `Join ${orgName}` : 'Create workspace'}
+            {isInvited ? `Join ${orgName}` : 'Sign up'}
           </h1>
           <p className="auth-sub">
             {isInvited ? `Complete your profile to join as a ${invitedRole}` : 'No credit card required. Setup takes 2 minutes.'}
@@ -211,7 +211,7 @@ export default function SignUp() {
               disabled={loading}
               style={{ marginTop: '12px' }}
             >
-              {loading ? <><Loader size={16} className="cc-spinner" /> Processing...</> : isInvited ? 'Accept Invite & Join →' : 'Create workspace →'}
+              {loading ? <><Loader size={16} className="cc-spinner" /> Processing...</> : isInvited ? 'Accept Invite & Join →' : 'Sign up →'}
             </button>
           </form>
 
