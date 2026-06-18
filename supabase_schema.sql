@@ -307,13 +307,13 @@ CREATE TRIGGER set_tasks_org_id BEFORE INSERT ON public.tasks FOR EACH ROW EXECU
 CREATE TRIGGER set_meetings_org_id BEFORE INSERT ON public.meetings FOR EACH ROW EXECUTE PROCEDURE set_organization_id();
 CREATE TRIGGER set_documents_org_id BEFORE INSERT ON public.documents FOR EACH ROW EXECUTE PROCEDURE set_organization_id();
 CREATE TRIGGER set_sequences_org_id BEFORE INSERT ON public.sequences FOR EACH ROW EXECUTE PROCEDURE set_organization_id();
+CREATE TRIGGER set_leads_org_id BEFORE INSERT ON public.leads FOR EACH ROW EXECUTE PROCEDURE set_organization_id();
 CREATE TRIGGER set_invitations_org_id BEFORE INSERT ON public.invitations FOR EACH ROW EXECUTE PROCEDURE set_organization_id();
 
 
 -- 11. Trigger to automatically create a default organization and profile when a user signs up
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
-DECLARE
   target_org_id UUID;
   target_role TEXT;
 BEGIN

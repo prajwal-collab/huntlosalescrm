@@ -33,6 +33,12 @@ const TEMPLATE_DATA = {
     { id: '1', type: 'email', day: 0, subject: 'Market Insight: How top {{industry}} companies are winning outbound', content: 'Hi {{first_name}},\n\nWe analysed 500+ {{industry}} companies on outbound performance. One pattern emerged: the top 10% are using intent signals, not spray-and-pray.\n\nThought {{company_name}} would find this useful.' },
     { id: '2', type: 'reply', day: 5, subject: '', content: 'Following up — the full report is ready. Want me to send it over?' },
   ],
+  "FLOW 6 — VALUE-DRIVEN PRODUCT DISCOVERY": [
+    { id: '1', type: 'email', day: 0, subject: 'Quick question about {{company_name}}', content: 'Hi {{first_name}},\n\n[Lead with keywords that tell them what this is about].\n\nI noticed [Drop a recent move on their side, only if there is a real one].\n\nReaching out because [Make it clear why reaching out makes sense].\n\nLet me know if this topic fits, no pressure either way.\n\nBest,\n[Your Name]' },
+    { id: '2', type: 'reply', day: 3, subject: '', content: 'Hi {{first_name}},\n\nDid you get time to read my first email?\n\nCould any of this be useful on your side?\n\nLet me know if it ever becomes a need.\n\nThanks,\n[Your Name]' },
+    { id: '3', type: 'reply', day: 7, subject: '', content: 'Hi {{first_name}},\n\nTo add a bit more context, [Go deeper on what sets your setup apart from the rest].\n\nOften, staying with the current setup means [Name what they risk by staying with what they have].\n\nFor example, [Give one concrete detail that makes the difference real].\n\nBest,\n[Your Name]' },
+    { id: '4', type: 'reply', day: 14, subject: '', content: 'Hi {{first_name}},\n\nI understand the timing might not be right at the moment.\n\nI\'ll step back without pushing for an answer, but I want to keep the door open if things change on your end.\n\nI\'ll stay available if you ever want to challenge your current provider, even on pricing.\n\nThanks,\n[Your Name]' },
+  ],
 };
 
 const TEMPLATES = Object.keys(TEMPLATE_DATA);

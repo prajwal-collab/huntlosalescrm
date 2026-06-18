@@ -372,5 +372,60 @@ export const SEED_SEQUENCES = [
     channel: 'Email Only',
     nodes: [],
     created_at: new Date(Date.now() - 5 * 86400000).toISOString()
+  },
+  {
+    id: 'seq-3',
+    name: 'FLOW 6 — VALUE-DRIVEN PRODUCT DISCOVERY',
+    status: 'active',
+    steps: 7,
+    enrolled: 0,
+    reply_rate: 0,
+    channel: 'Email Only',
+    nodes: [
+      {
+        id: 'node-1',
+        type: 'email',
+        day: 1,
+        subject: 'Quick question about {{company}}',
+        content: 'Hi {{firstName}},\n\n[Lead with keywords that tell them what this is about].\n\nI noticed [Drop a recent move on their side, only if there is a real one].\n\nReaching out because [Make it clear why reaching out makes sense].\n\nLet me know if this topic fits, no pressure either way.\n\nBest,\n[Your Name]'
+      },
+      {
+        id: 'node-2',
+        type: 'delay',
+        label: 'Wait 2 days'
+      },
+      {
+        id: 'node-3',
+        type: 'email',
+        day: 3,
+        subject: 'Re: Quick question about {{company}}',
+        content: 'Hi {{firstName}},\n\nDid you get time to read my first email?\n\nCould any of this be useful on your side?\n\nLet me know if it ever becomes a need.\n\nThanks,\n[Your Name]'
+      },
+      {
+        id: 'node-4',
+        type: 'delay',
+        label: 'Wait 3 days'
+      },
+      {
+        id: 'node-5',
+        type: 'email',
+        day: 6,
+        subject: 'Re: Quick question about {{company}}',
+        content: 'Hi {{firstName}},\n\nTo add a bit more context, [Go deeper on what sets your setup apart from the rest].\n\nOften, staying with the current setup means [Name what they risk by staying with what they have].\n\nFor example, [Give one concrete detail that makes the difference real].\n\nBest,\n[Your Name]'
+      },
+      {
+        id: 'node-6',
+        type: 'delay',
+        label: 'Wait 4 days'
+      },
+      {
+        id: 'node-7',
+        type: 'email',
+        day: 10,
+        subject: 'Re: Quick question about {{company}}',
+        content: 'Hi {{firstName}},\n\nI understand the timing might not be right at the moment.\n\nI\'ll step back without pushing for an answer, but I want to keep the door open if things change on your end.\n\nI\'ll stay available if you ever want to challenge your current provider, even on pricing.\n\nThanks,\n[Your Name]'
+      }
+    ],
+    created_at: new Date().toISOString()
   }
 ];
