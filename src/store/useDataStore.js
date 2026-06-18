@@ -149,7 +149,21 @@ const useDataStore = create((set, get) => ({
 
     const channel = supabase
       .channel('org-data-sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const lead = payload.new;
+          const { user } = useAuthStore.getState();
+          if (lead.owner_id !== user?.id) {
+            useUIStore.getState().addNotification({
+              id: `lead-${lead.id}`,
+              title: lead.source === 'Webhook' ? 'Lead Automatically Created' : 'New Lead Added',
+              message: `${lead.contact_name || lead.email} from ${lead.company_name} was added.`,
+              type: 'system',
+              unread: true,
+              time: new Date().toISOString()
+            });
+          }
+        }
         get()._refreshTable('leads');
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deals' }, () => {

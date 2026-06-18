@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Copy, RefreshCw, CheckCircle2, AlertCircle, Link, Server, Activity, ArrowRight } from 'lucide-react';
 import useDataStore from '../../store/useDataStore';
 import { useDialog } from '../../context/DialogContext';
@@ -11,6 +11,7 @@ export default function WebhookSettings() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [expandedEvent, setExpandedEvent] = useState(null);
 
   const webhookUrl = config?.secret_token 
     ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/receive-webhook?token=${config.secret_token}`
@@ -192,29 +193,57 @@ export default function WebhookSettings() {
                       <th>Time</th>
                       <th>Source</th>
                       <th>Detail</th>
+                      <th>Insights</th>
                     </tr>
                   </thead>
                   <tbody>
                     {events.map(ev => (
-                      <tr key={ev.id}>
-                        <td>
-                          {ev.status === 'processed' && <span style={{ color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}><CheckCircle2 size={12}/> Processed</span>}
-                          {ev.status === 'failed' && <span style={{ color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}><AlertCircle size={12}/> Failed</span>}
-                          {ev.status === 'skipped' && <span style={{ color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}><ArrowRight size={12}/> Skipped</span>}
-                          {ev.status === 'received' && <span style={{ color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}><Activity size={12}/> Received</span>}
-                        </td>
-                        <td style={{ fontSize: 12 }}>{new Date(ev.created_at).toLocaleString()}</td>
-                        <td style={{ fontSize: 12, textTransform: 'capitalize' }}>{ev.source}</td>
-                        <td style={{ fontSize: 12 }}>
-                          {ev.error_message ? (
-                            <span style={{ color: 'var(--danger)' }}>{ev.error_message}</span>
-                          ) : ev.lead_id ? (
-                            <span style={{ color: 'var(--text-secondary)' }}>Lead connected</span>
-                          ) : (
-                            <span style={{ color: 'var(--text-tertiary)' }}>—</span>
-                          )}
-                        </td>
-                      </tr>
+                      <React.Fragment key={ev.id}>
+                        <tr>
+                          <td>
+                            {ev.status === 'processed' && <span style={{ color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}><CheckCircle2 size={12}/> Processed</span>}
+                            {ev.status === 'failed' && <span style={{ color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}><AlertCircle size={12}/> Failed</span>}
+                            {ev.status === 'skipped' && <span style={{ color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}><ArrowRight size={12}/> Skipped</span>}
+                            {ev.status === 'received' && <span style={{ color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}><Activity size={12}/> Received</span>}
+                          </td>
+                          <td style={{ fontSize: 12 }}>{new Date(ev.created_at).toLocaleString()}</td>
+                          <td style={{ fontSize: 12, textTransform: 'capitalize' }}>{ev.source}</td>
+                          <td style={{ fontSize: 12 }}>
+                            {ev.error_message ? (
+                              <span style={{ color: 'var(--danger)' }}>{ev.error_message}</span>
+                            ) : ev.lead_id ? (
+                              <span style={{ color: 'var(--text-secondary)' }}>Lead connected</span>
+                            ) : (
+                              <span style={{ color: 'var(--text-tertiary)' }}>—</span>
+                            )}
+                          </td>
+                          <td>
+                            <button 
+                              className="btn btn-ghost btn-sm" 
+                              onClick={() => setExpandedEvent(expandedEvent === ev.id ? null : ev.id)}
+                              style={{ fontSize: 11, padding: '4px 8px' }}
+                            >
+                              {expandedEvent === ev.id ? 'Hide Insights' : 'View Insights'}
+                            </button>
+                          </td>
+                        </tr>
+                        {expandedEvent === ev.id && ev.payload && (
+                          <tr>
+                            <td colSpan="5" style={{ padding: 0 }}>
+                              <div style={{ padding: '16px', background: 'var(--bg-base)', borderBottom: '1px solid var(--bg-border)', borderTop: '1px solid var(--bg-border-soft)' }}>
+                                <h5 style={{ margin: '0 0 8px 0', fontSize: 13, color: 'var(--text-primary)' }}>Raw Payload Insights</h5>
+                                <pre style={{ 
+                                  margin: 0, padding: '12px', background: 'var(--bg-surface)', 
+                                  border: '1px solid var(--bg-border)', borderRadius: '6px', 
+                                  fontSize: 11, overflowX: 'auto', color: 'var(--text-secondary)' 
+                                }}>
+                                  {JSON.stringify(ev.payload, null, 2)}
+                                </pre>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
