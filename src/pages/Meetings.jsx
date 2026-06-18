@@ -2,7 +2,7 @@
 // HUNTLO SALES OS — MEETINGS PAGE
 // ============================================
 import { useState } from 'react';
-import { Calendar, Clock, Video, Users, ExternalLink, CalendarIcon, Search, Plus, Sparkles, X, AlertCircle, Loader } from 'lucide-react';
+import { Calendar, Clock, Video, Users, ExternalLink, CalendarIcon, Search, Plus, Sparkles, X, AlertCircle, Loader, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import useDataStore from '../store/useDataStore';
 import { useDialog } from '../context/DialogContext';
@@ -51,6 +51,14 @@ export default function Meetings() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8; // showing 8 cards per page in the sidebar
+
+  const sortedMeetings = [...meetings].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const totalPages = Math.ceil(sortedMeetings.length / itemsPerPage) || 1;
+  const paginatedMeetings = sortedMeetings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.title || !formData.date) return;
@@ -91,16 +99,41 @@ export default function Meetings() {
       </div>
 
       <div className="meetings-layout">
-        <div className="meetings-list">
-          {meetings.sort((a, b) => new Date(b.date) - new Date(a.date)).map(m => (
-            <MeetingCard key={m.id} meeting={m} selected={selected?.id === m.id} onSelect={(meeting) => { setSelected(meeting); setIsAdding(false); }} ownerName={teamMembers?.find(tm => tm.id === m.owner_id)?.name || 'ME'} />
-          ))}
-          {meetings.length === 0 && (
-             <div className="empty-state" style={{ marginTop: 40 }}>
-               <Video size={32} />
-               <h3>No meetings yet</h3>
-               <p>Schedule your first meeting.</p>
-             </div>
+        <div className="meetings-list" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
+            {paginatedMeetings.map(m => (
+              <MeetingCard key={m.id} meeting={m} selected={selected?.id === m.id} onSelect={(meeting) => { setSelected(meeting); setIsAdding(false); }} ownerName={teamMembers?.find(tm => tm.id === m.owner_id)?.name || 'ME'} />
+            ))}
+            {meetings.length === 0 && (
+               <div className="empty-state" style={{ marginTop: 40 }}>
+                 <Video size={32} />
+                 <h3>No meetings yet</h3>
+                 <p>Schedule your first meeting.</p>
+               </div>
+            )}
+          </div>
+          
+          {/* Pagination */}
+          {meetings.length > 0 && (
+            <div className="pagination-bar" style={{ padding: '12px 16px', borderRadius: '12px', marginTop: '12px', flexShrink: 0, justifyContent: 'center', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)' }}>
+              <div className="pagination-controls">
+                <button 
+                  className="pagination-btn" 
+                  disabled={currentPage === 1} 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="pagination-info" style={{ fontSize: '12px' }}>Page {currentPage} of {totalPages}</span>
+                <button 
+                  className="pagination-btn" 
+                  disabled={currentPage === totalPages} 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
           )}
         </div>
 

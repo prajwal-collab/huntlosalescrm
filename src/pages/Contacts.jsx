@@ -1,11 +1,10 @@
 // ============================================
 // HUNTLO SALES OS — CONTACTS PAGE (Rich Grid)
 // ============================================
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Search, Mail, Plus, ExternalLink, MessageSquare, X,
-  Users, AlertCircle, Loader, Phone, ChevronDown,
-  SlidersHorizontal, Building2, Copy, Check
+  SlidersHorizontal, Building2, Copy, Check, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import CsvImporterModal from '../components/CsvImporterModal';
@@ -296,6 +295,10 @@ export default function Contacts() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [deleting, setDeleting] = useState(false);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
+
   const handleBulkDelete = async () => {
     const confirmed = await showConfirm(
       'Delete Selected Contacts',
@@ -328,6 +331,12 @@ export default function Contacts() {
       (comp?.name || '').toLowerCase().includes(q)
     );
   });
+
+  // Reset pagination when search changes
+  useMemo(() => setCurrentPage(1), [filtered.length, itemsPerPage]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+  const paginatedContacts = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -421,9 +430,8 @@ export default function Contacts() {
             <div className="cr-col cr-col-actions">Actions</div>
           </div>
 
-          {/* Rows */}
           <div className="contacts-list">
-            {filtered.map(c => {
+            {paginatedContacts.map(c => {
               const comp = companies.find(co => co.id === c.company_id);
               return (
                 <ContactRow
@@ -453,6 +461,44 @@ export default function Contacts() {
               </div>
             )}
           </div>
+          
+          {/* Pagination Bar */}
+          {filtered.length > 0 && (
+            <div className="pagination-bar">
+              <div className="pagination-left">
+                Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filtered.length)} to {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} contacts
+              </div>
+              <div className="pagination-right">
+                <select 
+                  value={itemsPerPage} 
+                  onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                  className="items-per-page-select"
+                >
+                  <option value={10}>10 per page</option>
+                  <option value={25}>25 per page</option>
+                  <option value={50}>50 per page</option>
+                  <option value={100}>100 per page</option>
+                </select>
+                <div className="pagination-controls">
+                  <button 
+                    className="pagination-btn" 
+                    disabled={currentPage === 1} 
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <span className="pagination-info">Page {currentPage} of {totalPages}</span>
+                  <button 
+                    className="pagination-btn" 
+                    disabled={currentPage === totalPages} 
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Panel */}

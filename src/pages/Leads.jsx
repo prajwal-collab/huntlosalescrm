@@ -5,7 +5,7 @@
 import { useState, useMemo } from 'react';
 import {
   Search, Plus, X, Zap, TrendingUp, Building2,
-  Mail, Link2, Phone, Globe, ChevronDown,
+  Mail, Link2, Phone, Globe, ChevronDown, ChevronLeft, ChevronRight,
   AlertCircle, Calendar, Target, DollarSign,
   Users, SlidersHorizontal, CheckCircle2
 } from 'lucide-react';
@@ -245,6 +245,10 @@ export default function Leads() {
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
+
   // Enrich each lead with computed score
   const enriched = useMemo(() =>
     leads.map(l => ({ ...l, _score: computeSignalScore(l) })),
@@ -266,6 +270,12 @@ export default function Leads() {
       (l.stage || '').toLowerCase().includes(q)
     );
   }, [viewFiltered, search]);
+
+  // Reset pagination when search or view changes
+  useMemo(() => setCurrentPage(1), [filtered.length, itemsPerPage]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+  const paginatedLeads = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const toggleSelect = (id) => {
     setSelectedIds(prev =>
@@ -347,7 +357,7 @@ export default function Leads() {
           <button
             key={view.id}
             className={`view-tab${activeView === view.id ? ' active' : ''}`}
-            onClick={() => { setActiveView(view.id); setSelectedIds([]); }}
+            onClick={() => { setActiveView(view.id); setSelectedIds([]); setCurrentPage(1); }}
           >
             {view.label}
             {viewCounts[view.id] > 0 && (
@@ -463,7 +473,7 @@ export default function Leads() {
                 )}
               </div>
             ) : (
-              filtered.map(lead => (
+              paginatedLeads.map(lead => (
                 <LeadRow
                   key={lead.id}
                   lead={lead}
@@ -477,6 +487,44 @@ export default function Leads() {
               ))
             )}
           </div>
+          
+          {/* Pagination Bar */}
+          {filtered.length > 0 && (
+            <div className="pagination-bar">
+              <div className="pagination-left">
+                Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filtered.length)} to {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} leads
+              </div>
+              <div className="pagination-right">
+                <select 
+                  value={itemsPerPage} 
+                  onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                  className="items-per-page-select"
+                >
+                  <option value={10}>10 per page</option>
+                  <option value={25}>25 per page</option>
+                  <option value={50}>50 per page</option>
+                  <option value={100}>100 per page</option>
+                </select>
+                <div className="pagination-controls">
+                  <button 
+                    className="pagination-btn" 
+                    disabled={currentPage === 1} 
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <span className="pagination-info">Page {currentPage} of {totalPages}</span>
+                  <button 
+                    className="pagination-btn" 
+                    disabled={currentPage === totalPages} 
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Drawer */}
