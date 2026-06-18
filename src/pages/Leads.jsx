@@ -249,6 +249,12 @@ export default function Leads() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
 
+  // Filter State
+  const [filterStage, setFilterStage] = useState('');
+  const [filterSource, setFilterSource] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+
   // Enrich each lead with computed score
   const enriched = useMemo(() =>
     leads.map(l => ({ ...l, _score: computeSignalScore(l) })),
@@ -259,17 +265,44 @@ export default function Leads() {
   const viewDef = VIEWS.find(v => v.id === activeView) || VIEWS[0];
   const viewFiltered = useMemo(() => enriched.filter(viewDef.filter), [enriched, viewDef]);
 
-  // Apply search
+  // Apply search and filters
   const filtered = useMemo(() => {
+    let result = viewFiltered;
+    
+    // Apply Stage Filter
+    if (filterStage) {
+      result = result.filter(l => l.stage === filterStage);
+    }
+    
+    // Apply Source Filter
+    if (filterSource) {
+      result = result.filter(l => (l.source || '').toLowerCase() === filterSource.toLowerCase());
+    }
+    
+    // Apply Date Range Filter
+    if (filterDateFrom) {
+      result = result.filter(l => new Date(l.created_at) >= new Date(filterDateFrom));
+    }
+    if (filterDateTo) {
+      // Add 1 day to include the end date fully
+      const toDate = new Date(filterDateTo);
+      toDate.setDate(toDate.getDate() + 1);
+      result = result.filter(l => new Date(l.created_at) < toDate);
+    }
+
+    // Apply Search
     const q = (search || '').toLowerCase();
-    if (!q) return viewFiltered;
-    return viewFiltered.filter(l =>
-      (l.company_name || '').toLowerCase().includes(q) ||
-      (l.contact_name || '').toLowerCase().includes(q) ||
-      (l.email || '').toLowerCase().includes(q) ||
-      (l.stage || '').toLowerCase().includes(q)
-    );
-  }, [viewFiltered, search]);
+    if (q) {
+      result = result.filter(l =>
+        (l.company_name || '').toLowerCase().includes(q) ||
+        (l.contact_name || '').toLowerCase().includes(q) ||
+        (l.email || '').toLowerCase().includes(q) ||
+        (l.stage || '').toLowerCase().includes(q)
+      );
+    }
+    
+    return result;
+  }, [viewFiltered, search, filterStage, filterSource, filterDateFrom, filterDateTo]);
 
   // Reset pagination when search or view changes
   useMemo(() => setCurrentPage(1), [filtered.length, itemsPerPage]);
@@ -375,8 +408,8 @@ export default function Leads() {
       </div>
 
       {/* Toolbar */}
-      <div className="leads-toolbar">
-        <div className="leads-search-wrap">
+      <div className="leads-toolbar" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="leads-search-wrap" style={{ minWidth: '200px' }}>
           <Search size={14} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
           <input
             placeholder="Search companies, contacts…"
@@ -388,6 +421,69 @@ export default function Leads() {
               onClick={() => setSearch('')} />
           )}
         </div>
+
+        {/* Filters */}
+        <select 
+          className="input-base" 
+          style={{ width: 'auto', fontSize: 12, padding: '6px 12px', height: '32px' }}
+          value={filterStage}
+          onChange={e => setFilterStage(e.target.value)}
+        >
+          <option value="">All Stages</option>
+          <option value="New Lead">New Lead</option>
+          <option value="Researching">Researching</option>
+          <option value="Ready for Outreach">Ready for Outreach</option>
+          <option value="Outreach Started">Outreach Started</option>
+          <option value="Engaged">Engaged</option>
+          <option value="Qualified">Qualified</option>
+          <option value="Demo Scheduled">Demo Scheduled</option>
+          <option value="Demo Complete">Demo Complete</option>
+          <option value="Customer">Customer</option>
+          <option value="Lost">Lost</option>
+        </select>
+        
+        <select 
+          className="input-base" 
+          style={{ width: 'auto', fontSize: 12, padding: '6px 12px', height: '32px' }}
+          value={filterSource}
+          onChange={e => setFilterSource(e.target.value)}
+        >
+          <option value="">All Sources</option>
+          <option value="Manual">Manual</option>
+          <option value="Import">Import</option>
+          <option value="Webhook">Webhook</option>
+          <option value="LinkedIn">LinkedIn</option>
+          <option value="Referral">Referral</option>
+        </select>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>From:</span>
+          <input 
+            type="date" 
+            className="input-base" 
+            style={{ width: 'auto', fontSize: 12, padding: '6px 12px', height: '32px' }}
+            value={filterDateFrom}
+            onChange={e => setFilterDateFrom(e.target.value)}
+          />
+          <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>To:</span>
+          <input 
+            type="date" 
+            className="input-base" 
+            style={{ width: 'auto', fontSize: 12, padding: '6px 12px', height: '32px' }}
+            value={filterDateTo}
+            onChange={e => setFilterDateTo(e.target.value)}
+          />
+        </div>
+        
+        {(filterStage || filterSource || filterDateFrom || filterDateTo) && (
+          <button 
+            className="btn btn-ghost btn-sm" 
+            onClick={() => { setFilterStage(''); setFilterSource(''); setFilterDateFrom(''); setFilterDateTo(''); }}
+            style={{ color: 'var(--danger)', fontSize: 12 }}
+          >
+            Clear Filters
+          </button>
+        )}
       </div>
 
       {/* Bulk action bar */}
