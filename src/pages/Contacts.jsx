@@ -4,9 +4,10 @@
 import { useState, useMemo } from 'react';
 import {
   Search, Mail, Plus, ExternalLink, MessageSquare, X,
-  SlidersHorizontal, Building2, Copy, Check, ChevronLeft, ChevronRight
+  SlidersHorizontal, Building2, Copy, Check, ChevronLeft, ChevronRight, Download
 } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
+import { exportToCsv } from '../utils/exportCsv';
 import CsvImporterModal from '../components/CsvImporterModal';
 import EnrollSequenceModal from '../components/sequences/EnrollSequenceModal';
 import BulkEditModal from '../components/BulkEditModal';
@@ -380,6 +381,9 @@ export default function Contacts() {
             </>
           ) : (
             <>
+              <button className="btn btn-ghost btn-sm" onClick={() => exportToCsv('contacts.csv', filtered)} style={{ gap: 6, fontSize: 13 }}>
+                <Download size={14} /> Export
+              </button>
               <button className="btn btn-ghost btn-sm" onClick={() => setIsImporterOpen(true)}>Import</button>
               <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>
                 <Plus size={14} /> Add Person

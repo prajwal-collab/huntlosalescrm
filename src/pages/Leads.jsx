@@ -7,10 +7,11 @@ import {
   Search, Plus, X, Zap, TrendingUp, Building2,
   Mail, Link2, Phone, Globe, ChevronDown, ChevronLeft, ChevronRight,
   AlertCircle, Calendar, Target, DollarSign,
-  Users, SlidersHorizontal, CheckCircle2
+  Users, SlidersHorizontal, CheckCircle2, Download
 } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import useAuthStore from '../store/useAuthStore';
+import { exportToCsv } from '../utils/exportCsv';
 import LeadDrawer from '../components/leads/LeadDrawer';
 import NewLeadForm from '../components/leads/NewLeadForm';
 import EnrollSequenceModal from '../components/sequences/EnrollSequenceModal';
@@ -366,6 +367,13 @@ export default function Leads() {
         <div className="leads-header-right">
           <button className="btn btn-ghost btn-sm" style={{ gap: 6, fontSize: 12 }}>
             <SlidersHorizontal size={14} /> Filter
+          </button>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => exportToCsv('leads.csv', filtered)}
+            style={{ gap: 6, fontSize: 13 }}
+          >
+            <Download size={14} /> Export
           </button>
           <button
             className="btn btn-ghost btn-sm"

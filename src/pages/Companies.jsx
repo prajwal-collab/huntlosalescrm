@@ -5,9 +5,10 @@ import { useState } from 'react';
 import {
   Search, ExternalLink, Building2, Users,
   Plus, X, AlertCircle, Loader, Globe,
-  SlidersHorizontal, ChevronDown, BarChart2, Copy, Check
+  SlidersHorizontal, ChevronDown, BarChart2, Copy, Check, Download
 } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
+import { exportToCsv } from '../utils/exportCsv';
 import CsvImporterModal from '../components/CsvImporterModal';
 import BulkEditModal from '../components/BulkEditModal';
 import { useDialog } from '../context/DialogContext';
@@ -447,6 +448,9 @@ export default function Companies() {
             </>
           ) : (
             <>
+              <button className="btn btn-ghost btn-sm" onClick={() => exportToCsv('companies.csv', filtered)} style={{ gap: 6, fontSize: 13 }}>
+                <Download size={14} /> Export
+              </button>
               <button className="btn btn-ghost btn-sm" onClick={() => setIsImporterOpen(true)}>Import</button>
               <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>
                 <Plus size={14} /> Add Company
