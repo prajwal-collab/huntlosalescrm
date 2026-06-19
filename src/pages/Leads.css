@@ -383,7 +383,7 @@
 
 .signal-icon:hover { transform: translateY(-2px) scale(1.15); box-shadow: 0 4px 8px rgba(0,0,0,0.08); z-index: 2; }
 .signal-icon.active-signal { filter: saturate(1); background: rgba(22, 163, 74, 0.08); border-color: rgba(22, 163, 74, 0.3); }
-.signal-icon.inactive { opacity: 0.15; }
+.signal-icon.inactive { opacity: 0.5; }
 
 /* ── Empty State ── */
 .leads-empty {
