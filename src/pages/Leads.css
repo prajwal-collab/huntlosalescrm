@@ -221,7 +221,7 @@
   box-shadow: 0 0 0 1px var(--accent-blue);
 }
 .lead-row.no-action { 
-  border-left: 4px solid var(--danger); 
+  /* Removed red border */
 }
 
 .lc {
@@ -663,12 +663,12 @@
 }
 
 .next-action-warning {
-  background: rgba(239, 68, 68, 0.04);
-  border: 1px dashed rgba(239, 68, 68, 0.25);
+  background: var(--bg-hover);
+  border: 1px dashed var(--bg-border);
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   font-size: 12px;
-  color: var(--danger);
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: 8px;

@@ -195,7 +195,7 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }
             )}
           </div>
         ) : (
-          <span style={{ fontSize: 12, color: 'var(--danger)', fontWeight: 600 }}>⚠ No action set</span>
+          <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>No action set</span>
         )}
       </div>
 

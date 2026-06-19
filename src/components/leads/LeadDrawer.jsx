@@ -267,8 +267,7 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
                 </div>
               ) : (
                 <div className="next-action-warning">
-                  <AlertCircle size={16} />
-                  No next action set. Every lead needs one.
+                  No next action set.
                 </div>
               )}
               {editMode && !form.next_action && (
