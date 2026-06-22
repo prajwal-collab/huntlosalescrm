@@ -9,6 +9,7 @@ import {
   Calendar, DollarSign, Target, Zap, TrendingUp,
   MessageCircle, Users, Building2
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useDialog } from '../../context/DialogContext';
 import useAuthStore from '../../store/useAuthStore';
 import { computeSignalScore } from '../../utils/leadScoring';
@@ -187,8 +188,24 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
             { id: 'outreach', label: '📨 Outreach' },
           ].map(t => (
             <button key={t.id} className={`drawer-tab${tab === t.id ? ' active' : ''}`}
+              style={{ position: 'relative', borderBottom: 'none' }}
               onClick={() => setTab(t.id)}>
               {t.label}
+              {tab === t.id && (
+                <motion.div
+                  layoutId="drawer-tab-indicator"
+                  style={{
+                    position: 'absolute',
+                    bottom: -2,
+                    left: 0,
+                    right: 0,
+                    height: 2,
+                    background: 'var(--accent-blue)',
+                    borderRadius: '2px 2px 0 0'
+                  }}
+                  transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                />
+              )}
             </button>
           ))}
         </div>
@@ -196,11 +213,19 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
 
       {/* Drawer Body */}
       <div className="drawer-body">
-
-        {/* ── INTELLIGENCE TAB ── */}
-        {tab === 'intelligence' && (
-          <>
-            {/* Score Ring */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.15 }}
+            style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}
+          >
+            {/* ── INTELLIGENCE TAB ── */}
+            {tab === 'intelligence' && (
+              <>
+                {/* Score Ring */}
             <div className="score-ring-wrap">
               <div>
                 <div className="score-number" style={{ color: scoreColor }}>{score}</div>
@@ -591,6 +616,8 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
             </div>
           </>
         )}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );

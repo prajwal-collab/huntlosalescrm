@@ -451,8 +451,26 @@ export default function Companies() {
               <button className="btn btn-ghost btn-sm" onClick={() => exportToCsv('companies.csv', filtered)} style={{ gap: 6, fontSize: 13 }}>
                 <Download size={14} /> Export
               </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => setIsImporterOpen(true)}>Import</button>
-              <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}>
+              <button className="btn btn-ghost btn-sm" onClick={async () => {
+                const confirmed = await showConfirm(
+                  'Import Accounts Directly?',
+                  'Accounts (Companies) are automatically generated from your Leads. Randomly uploading accounts without leads is not recommended. Do you still want to proceed?',
+                  'Yes, Import Accounts',
+                  'Cancel',
+                  'warning'
+                );
+                if (confirmed) setIsImporterOpen(true);
+              }}>Import</button>
+              <button className="btn btn-primary btn-sm" onClick={async () => {
+                const confirmed = await showConfirm(
+                  'Create Standalone Account?',
+                  'Accounts are normally created automatically from Leads to preserve signal intelligence and tracking. Are you sure you want to add an account manually?',
+                  'Yes, Add Manually',
+                  'Cancel',
+                  'warning'
+                );
+                if (confirmed) setIsAdding(true);
+              }}>
                 <Plus size={14} /> Add Company
               </button>
             </>
