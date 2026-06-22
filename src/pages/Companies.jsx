@@ -180,10 +180,9 @@ function CompanyRow({ company, contacts, onSelect, selected, isSelected, toggleS
   );
 }
 
-// ── Company Panel ──────────────────────────────────────────────
 function CompanyPanel({ company, contacts, onClose }) {
   const { updateCompany } = useDataStore();
-  const [isEditing, setIsEditing] = useState(false);
+  const saveTimeout = useRef(null);
   const [formData, setFormData] = useState({
     name: company.name || '',
     industry: company.industry || '',
@@ -200,26 +199,12 @@ function CompanyPanel({ company, contacts, onClose }) {
   const initial = (company.name || '?').charAt(0).toUpperCase();
   const contactsForCompany = contacts.filter(c => c.company_id === company.id);
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-    try {
-      await updateCompany(company.id, {
-        name: formData.name,
-        industry: formData.industry,
-        size: formData.size,
-        arr_estimate: Number(formData.arr_estimate) || 0,
-        website: formData.website,
-        linkedin: formData.linkedin,
-        notes: formData.notes
-      });
-      setIsEditing(false);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
+  const setField = (key, value) => {
+    setFormData(prev => ({ ...prev, [key]: value }));
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(() => {
+      updateCompany(company.id, { [key]: value }).catch(err => setError(err.message));
+    }, 400);
   };
 
   return (
@@ -230,63 +215,54 @@ function CompanyPanel({ company, contacts, onClose }) {
           {company.logo || initial}
         </div>
         <div className="cp-header-info">
-          {isEditing ? (
-            <input className="input-base" style={{ fontSize: 16, fontWeight: 600, padding: '4px 8px' }} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} autoFocus />
-          ) : (
-            <>
-              <h2 className="cp-name">{company.name}</h2>
-              <p className="cp-sub">
-                {[company.industry, company.size].filter(Boolean).join(' · ')}
-              </p>
-            </>
-          )}
+          <input 
+            style={{ fontSize: 16, fontWeight: 600, padding: '4px 8px', margin: '-4px -8px', background: 'transparent', border: '1px solid transparent', outline: 'none', width: '100%' }} 
+            value={formData.name} 
+            onChange={e => setField('name', e.target.value)} 
+          />
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input 
+              style={{ fontSize: 13, color: 'var(--text-secondary)', padding: '2px 4px', margin: '-2px -4px', background: 'transparent', border: '1px solid transparent', outline: 'none', width: '45%' }} 
+              placeholder="Industry"
+              value={formData.industry} 
+              onChange={e => setField('industry', e.target.value)} 
+            />
+            <select 
+              style={{ fontSize: 13, color: 'var(--text-secondary)', padding: '2px 4px', margin: '-2px -4px', background: 'transparent', border: '1px solid transparent', outline: 'none', width: '45%' }} 
+              value={formData.size} 
+              onChange={e => setField('size', e.target.value)}
+            >
+              <option value="">Size...</option>
+              {['1-10','11-50','51-200','201-1000','1000+'].map(s => <option key={s}>{s}</option>)}
+            </select>
+          </div>
         </div>
         <button className="drawer-close" onClick={onClose}><X size={16} /></button>
       </div>
 
-      {isEditing ? (
-        <form onSubmit={handleSave} className="cp-form" style={{ padding: '0 24px 24px' }}>
-          {error && <div className="cp-form-error" style={{ marginBottom: 12 }}><AlertCircle size={14} /> {error}</div>}
-          <div className="cp-form-group">
-            <label className="cp-form-label">Industry</label>
-            <input className="input-base" value={formData.industry} onChange={e => setFormData({...formData, industry: e.target.value})} />
+      <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {error && <div className="cp-form-error"><AlertCircle size={14} /> {error}</div>}
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)' }}>MRR Estimate</span>
+          <div style={{ display: 'flex', alignItems: 'center', background: 'transparent', border: '1px solid transparent' }}>
+            <span style={{ color: 'var(--success)', fontWeight: 600 }}>$</span>
+            <input type="number" style={{ width: '100%', fontSize: 13, padding: '4px 8px', outline: 'none', border: 'none', background: 'transparent', color: 'var(--success)', fontWeight: 600 }} value={formData.arr_estimate} onChange={e => setField('arr_estimate', Number(e.target.value))} />
           </div>
-          <div className="cp-form-group">
-            <label className="cp-form-label">Size</label>
-            <select className="input-base" value={formData.size} onChange={e => setFormData({...formData, size: e.target.value})}>
-              <option value="">Select size…</option>
-              {['1-10','11-50','51-200','201-1000','1000+'].map(s => <option key={s}>{s}</option>)}
-            </select>
-          </div>
-          <div className="cp-form-group">
-            <label className="cp-form-label">MRR Estimate ($)</label>
-            <input className="input-base" type="number" value={formData.arr_estimate} onChange={e => setFormData({...formData, arr_estimate: e.target.value})} />
-          </div>
-          <div className="cp-form-group">
-            <label className="cp-form-label">Website</label>
-            <input className="input-base" value={formData.website} onChange={e => setFormData({...formData, website: e.target.value})} />
-          </div>
-          <div className="cp-form-group">
-            <label className="cp-form-label">LinkedIn</label>
-            <input className="input-base" value={formData.linkedin} onChange={e => setFormData({...formData, linkedin: e.target.value})} />
-          </div>
-          <div className="cp-form-group">
-            <label className="cp-form-label">Notes</label>
-            <textarea className="input-base" rows={4} value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-            <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>
-              {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Changes'}
-            </button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setIsEditing(false)}>Cancel</button>
-          </div>
-        </form>
-      ) : (
-        <>
-          {/* Quick Actions */}
-          <div style={{ padding: '0 24px', display: 'flex', gap: 8, marginBottom: 16 }}>
-             <button className="btn btn-ghost btn-sm" onClick={() => setIsEditing(true)}>Edit Details</button>
-          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)' }}>Website</span>
+          <input style={{ width: '100%', fontSize: 13, padding: '4px 8px', background: 'transparent', border: '1px solid transparent', outline: 'none' }} value={formData.website} onChange={e => setField('website', e.target.value)} placeholder="example.com" />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)' }}>LinkedIn</span>
+          <input style={{ width: '100%', fontSize: 13, padding: '4px 8px', background: 'transparent', border: '1px solid transparent', outline: 'none' }} value={formData.linkedin} onChange={e => setField('linkedin', e.target.value)} placeholder="linkedin.com/company/..." />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)' }}>Notes</span>
+          <textarea style={{ width: '100%', fontSize: 13, padding: '8px', background: 'transparent', border: '1px solid transparent', outline: 'none', minHeight: 80, resize: 'vertical' }} value={formData.notes} onChange={e => setField('notes', e.target.value)} placeholder="Add internal notes..." />
+        </div>
+      </div>
 
           {/* Tags */}
           {(company.tags || []).length > 0 && (

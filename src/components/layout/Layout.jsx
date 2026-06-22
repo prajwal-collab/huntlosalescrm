@@ -14,7 +14,7 @@ import NotificationManager from './NotificationManager';
 import './Layout.css';
 
 export default function Layout({ children }) {
-  const { commandCenterOpen, toggleCommandCenter, closeCommandCenter } = useUIStore();
+  const { commandCenterOpen, toggleCommandCenter, closeCommandCenter, openNewLead } = useUIStore();
   const { fetchData } = useDataStore();
   const { fetchTeam } = useAuthStore();
   const [newDealOpen, setNewDealOpen] = useState(false);
@@ -28,6 +28,15 @@ export default function Layout({ children }) {
     'ctrl+k': () => toggleCommandCenter(),
     'cmd+k': () => toggleCommandCenter(),
     'escape': () => closeCommandCenter(),
+    'c': () => openNewLead(),
+    '/': (e) => {
+      // Focus the first search input on the page if available
+      const searchInput = document.querySelector('input[placeholder*="Search"]');
+      if (searchInput) {
+        e.preventDefault();
+        searchInput.focus();
+      }
+    }
   });
 
   return (

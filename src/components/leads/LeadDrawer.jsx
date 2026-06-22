@@ -2,7 +2,7 @@
 // HUNTLO — LEAD DRAWER
 // Right-side context panel for lead details
 // ============================================
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   X, Mail, Phone, Link2, Globe, Edit3, Trash2,
   Save, AlertCircle, ExternalLink, CheckCircle2,
@@ -54,7 +54,8 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
   const { team, user } = useAuthStore();
   const [tab, setTab] = useState('intelligence');
   const [saving, setSaving] = useState(false);
-  const [editMode, setEditMode] = useState(false);
+  const editMode = true; // Seamless inline editing always on
+  const saveTimeout = useRef(null);
   const [form, setForm] = useState({ ...lead });
 
   const isOwner = user?.id === lead.owner_id;
@@ -84,7 +85,13 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
     try { await onUpdate(lead.id, { stage }); } catch (_) {}
   };
 
-  const set = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
+  const set = (key, value) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(() => {
+      onUpdate(lead.id, { [key]: value });
+    }, 400);
+  };
 
   // score computation inline
   const score = computeSignalScore(form);
@@ -128,39 +135,18 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
-            {editMode ? (
-              <>
-                <button onClick={handleSave} disabled={saving}
-                  className="btn btn-primary btn-sm" style={{ gap: 4, fontSize: 12 }}>
-                  <Save size={13} />{saving ? 'Saving…' : 'Save'}
-                </button>
-                <button onClick={() => { setEditMode(false); setForm({ ...lead }); }}
-                  className="btn btn-ghost btn-sm" style={{ fontSize: 12 }}>
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <>
-                {isOwner && (
-                  <>
-                    <button onClick={() => setEditMode(true)} className="btn btn-ghost btn-sm"
-                      style={{ fontSize: 12, gap: 4 }}>
-                      <Edit3 size={13} /> Edit
-                    </button>
-                    <button onClick={async () => {
-                      const confirmed = await showConfirm(
-                        'Delete Lead',
-                        `Are you sure you want to permanently delete this lead from ${form.company_name || 'CRM'}?`
-                      );
-                      if (confirmed) onDelete(lead.id);
-                    }}
-                      className="btn btn-ghost btn-sm"
-                      style={{ fontSize: 12, color: 'var(--danger)' }}>
-                      <Trash2 size={13} />
-                    </button>
-                  </>
-                )}
-              </>
+            {isOwner && (
+              <button onClick={async () => {
+                const confirmed = await showConfirm(
+                  'Delete Lead',
+                  `Are you sure you want to permanently delete this lead from ${form.company_name || 'CRM'}?`
+                );
+                if (confirmed) onDelete(lead.id);
+              }}
+                className="btn btn-ghost btn-sm"
+                style={{ fontSize: 12, color: 'var(--danger)', gap: 4 }}>
+                <Trash2 size={13} /> Delete
+              </button>
             )}
             <button onClick={onClose} className="drawer-close"><X size={16} /></button>
           </div>
@@ -186,6 +172,7 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
             { id: 'intelligence', label: '⚡ Intelligence' },
             { id: 'qualification', label: '✅ Qualification' },
             { id: 'outreach', label: '📨 Outreach' },
+            { id: 'activity', label: '🕰️ Activity' },
           ].map(t => (
             <button key={t.id} className={`drawer-tab${tab === t.id ? ' active' : ''}`}
               style={{ position: 'relative', borderBottom: 'none' }}
@@ -615,6 +602,80 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
               </Field>
             </div>
           </>
+        )}
+
+        {/* ── ACTIVITY TAB ── */}
+        {tab === 'activity' && (
+          <div className="d-section" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div className="activity-composer" style={{ background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+              <textarea 
+                className="seamless-textarea" 
+                placeholder="Type a note... Use @ to mention team members" 
+                style={{ minHeight: 60, width: '100%', border: 'none', background: 'transparent', outline: 'none', fontSize: 13, resize: 'none' }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    const note = e.target.value.trim();
+                    if (note) {
+                      const newActivity = { 
+                        id: Date.now(), 
+                        type: 'note', 
+                        content: note, 
+                        author: user?.name || 'You', 
+                        timestamp: new Date().toISOString() 
+                      };
+                      const updatedActivities = [newActivity, ...(form.activities || [])];
+                      set('activities', updatedActivities);
+                      e.target.value = '';
+                    }
+                  }
+                }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, borderTop: '1px dashed var(--bg-border)', paddingTop: 8 }}>
+                <div style={{ display: 'flex', gap: 8, color: 'var(--text-tertiary)' }}>
+                  <button className="btn btn-ghost btn-sm" style={{ padding: '2px 6px', fontSize: 11, height: 'auto', gap: 4 }}><Users size={12} /> Mention</button>
+                  <button className="btn btn-ghost btn-sm" style={{ padding: '2px 6px', fontSize: 11, height: 'auto', gap: 4 }}><AlertCircle size={12} /> Log action</button>
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Press <strong>Enter</strong> to save</span>
+              </div>
+            </div>
+
+            <div className="activity-timeline" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {(form.activities || []).length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 12, padding: '20px 0' }}>
+                  No activity or notes yet.
+                </div>
+              ) : (
+                form.activities.map(act => (
+                  <div key={act.id} style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0 }}>
+                      {act.type === 'note' ? '📝' : '⚡'}
+                    </div>
+                    <div style={{ flex: 1, background: 'var(--bg-base)', border: '1px solid var(--bg-border)', borderRadius: 8, padding: '10px 12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600 }}>{act.author}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{new Date(act.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric' })}</span>
+                      </div>
+                      <div style={{ fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                        {act.content.split(/(@\w+)/g).map((part, i) => 
+                          part.startsWith('@') ? <span key={i} style={{ color: 'var(--accent-blue)', fontWeight: 600, background: 'rgba(37, 99, 235, 0.1)', padding: '2px 4px', borderRadius: 4 }}>{part}</span> : part
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+              {/* Automatic creation audit log */}
+              <div style={{ display: 'flex', gap: 12, opacity: 0.7 }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0 }}>
+                  🌱
+                </div>
+                <div style={{ flex: 1, padding: '4px 0', fontSize: 12, color: 'var(--text-tertiary)' }}>
+                  Lead automatically added to pipeline {form.created_at ? new Date(form.created_at).toLocaleDateString() : 'initially'}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
           </motion.div>
         </AnimatePresence>

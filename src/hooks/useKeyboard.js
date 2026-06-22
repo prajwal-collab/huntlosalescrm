@@ -6,6 +6,16 @@ import { useEffect } from 'react';
 export function useKeyboard(bindings) {
   useEffect(() => {
     const handler = (e) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl.tagName === 'INPUT' ||
+        activeEl.tagName === 'TEXTAREA' ||
+        activeEl.tagName === 'SELECT' ||
+        activeEl.isContentEditable
+      ) {
+        return;
+      }
+
       for (const [combo, fn] of Object.entries(bindings)) {
         const parts = combo.split('+');
         const key = parts[parts.length - 1].toLowerCase();

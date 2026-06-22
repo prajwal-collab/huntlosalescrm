@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import useAuthStore from '../store/useAuthStore';
+import useUIStore from '../store/useUIStore';
 import { exportToCsv } from '../utils/exportCsv';
 import LeadDrawer from '../components/leads/LeadDrawer';
 import NewLeadForm from '../components/leads/NewLeadForm';
@@ -232,16 +233,75 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }
   );
 }
 
+function DraggableLeadCard({ lead, onClick, team }) {
+  const [isDragging, setIsDragging] = useState(false);
+  const score = computeSignalScore(lead);
+  const scoreColor = score >= 70 ? '#dc2626' : score >= 35 ? '#d97706' : '#94a3b8';
+
+  return (
+    <div
+      draggable
+      onDragStart={e => {
+        setIsDragging(true);
+        e.dataTransfer.setData('leadId', lead.id);
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      onDragEnd={() => setIsDragging(false)}
+      className={`lead-board-card ${isDragging ? 'dragging-card' : ''}`}
+      onClick={() => onClick(lead)}
+    >
+      <div className="lbc-top">
+        <div className="lbc-company">{lead.company_name || 'Unknown'}</div>
+        <div className="lbc-score" style={{ color: scoreColor }}>{score}</div>
+      </div>
+      <div className="lbc-contact">{lead.contact_name || lead.designation || 'No contact'}</div>
+      {lead.next_action && (
+        <div className="lbc-action">→ {lead.next_action}</div>
+      )}
+      <div className="lbc-footer">
+        {lead.estimated_mrr > 0 ? (
+          <span className="lbc-mrr">${(lead.estimated_mrr / 1000).toFixed(0)}k</span>
+        ) : <span />}
+        <span className="lbc-time">{new Date(lead.created_at).toLocaleDateString()}</span>
+      </div>
+    </div>
+  );
+}
+
+function LeadKanbanColumn({ stage, leads, onLeadClick, onDrop, team }) {
+  const [dragOver, setDragOver] = useState(false);
+  
+  return (
+    <div
+      className={`lead-kanban-col ${dragOver ? 'drag-over' : ''}`}
+      onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={e => { e.preventDefault(); setDragOver(false); onDrop(e, stage); }}
+    >
+      <div className="lkc-header">
+        <div className="lkc-stage" style={{ color: STAGE_COLORS[stage]?.color || '#64748b' }}>{stage}</div>
+        <div className="lkc-count">{leads.length}</div>
+      </div>
+      <div className="lkc-cards">
+        {leads.map(lead => (
+          <DraggableLeadCard key={lead.id} lead={lead} onClick={onLeadClick} team={team} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ───────────────────────────────────────────────
 export default function Leads() {
   const { leads, deleteLead, bulkDeleteLeads, updateLead } = useDataStore();
   const { team, user } = useAuthStore();
   const { showConfirm } = useDialog();
   const [activeView, setActiveView] = useState('all');
+  const [viewMode, setViewMode] = useState('list'); // 'list' or 'board'
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
+  const { newLeadOpen, openNewLead, closeNewLead } = useUIStore();
   const [selectedLead, setSelectedLead] = useState(null);
-  const [showNewForm, setShowNewForm] = useState(false);
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
@@ -365,6 +425,22 @@ export default function Leads() {
           <span className="leads-count">{filtered.length}</span>
         </div>
         <div className="leads-header-right">
+          <div style={{ display: 'flex', background: 'var(--bg-hover)', borderRadius: '6px', padding: '2px' }}>
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ background: viewMode === 'list' ? 'var(--bg-surface)' : 'transparent', boxShadow: viewMode === 'list' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none' }}
+              onClick={() => setViewMode('list')}
+            >
+              List
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ background: viewMode === 'board' ? 'var(--bg-surface)' : 'transparent', boxShadow: viewMode === 'board' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none' }}
+              onClick={() => setViewMode('board')}
+            >
+              Board
+            </button>
+          </div>
           <button className="btn btn-ghost btn-sm" style={{ gap: 6, fontSize: 12 }}>
             <SlidersHorizontal size={14} /> Filter
           </button>
@@ -384,7 +460,7 @@ export default function Leads() {
           </button>
           <button
             className="btn btn-primary btn-sm"
-            onClick={() => setShowNewForm(true)}
+            onClick={() => openNewLead()}
             style={{ gap: 6, fontSize: 13 }}
           >
             <Plus size={15} /> New Lead
@@ -531,105 +607,123 @@ export default function Leads() {
 
       {/* Body */}
       <div className="leads-body">
-        <div className="leads-table-wrap">
-          {/* Head */}
-          <div className="leads-table-head">
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <input
-                type="checkbox"
-                checked={
-                  selectedIds.length > 0 &&
-                  selectedIds.length === filtered.length
-                }
-                onChange={toggleAll}
-                style={{ width: 15, height: 15, accentColor: 'var(--accent-blue)' }}
-              />
-            </div>
-            <span>Company / Contact</span>
-            <span>Owner</span>
-            <span>Stage</span>
-            <span>Signal Score</span>
-            <span>Priority</span>
-            <span>Active Signals</span>
-            <span>Next Action</span>
-            <span>Est. MRR</span>
-            <span>Notes / Remarks</span>
-          </div>
-
-          {/* Rows */}
-          <div className="leads-list">
-            {filtered.length === 0 ? (
-              <div className="leads-empty">
-                <Target size={36} style={{ opacity: 0.3 }} />
-                <h3>{search ? 'No leads match your search' : 'No leads in this view'}</h3>
-                <p>
-                  {search
-                    ? 'Try adjusting your search terms.'
-                    : activeView === 'all'
-                      ? 'Add your first lead to get started.'
-                      : `No leads match the "${viewDef.label}" filter yet.`
+        {viewMode === 'list' ? (
+          <div className="leads-table-wrap">
+            {/* Head */}
+            <div className="leads-table-head">
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={
+                    selectedIds.length > 0 &&
+                    selectedIds.length === filtered.length
                   }
-                </p>
-                {activeView === 'all' && !search && (
-                  <button className="btn btn-primary btn-sm" onClick={() => setShowNewForm(true)}>
-                    <Plus size={14} /> Add First Lead
-                  </button>
-                )}
-              </div>
-            ) : (
-              paginatedLeads.map(lead => (
-                <LeadRow
-                  key={lead.id}
-                  lead={lead}
-                  isSelected={selectedIds.includes(lead.id)}
-                  onSelect={toggleSelect}
-                  onClick={handleLeadClick}
-                  updateLead={updateLead}
-                  team={team}
-                  user={user}
+                  onChange={toggleAll}
+                  style={{ width: 15, height: 15, accentColor: 'var(--accent-blue)' }}
                 />
-              ))
-            )}
-          </div>
-          
-          {/* Pagination Bar */}
-          {filtered.length > 0 && (
-            <div className="pagination-bar">
-              <div className="pagination-left">
-                Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filtered.length)} to {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} leads
               </div>
-              <div className="pagination-right">
-                <select 
-                  value={itemsPerPage} 
-                  onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                  className="items-per-page-select"
-                >
-                  <option value={10}>10 per page</option>
-                  <option value={25}>25 per page</option>
-                  <option value={50}>50 per page</option>
-                  <option value={100}>100 per page</option>
-                </select>
-                <div className="pagination-controls">
-                  <button 
-                    className="pagination-btn" 
-                    disabled={currentPage === 1} 
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              <span>Company / Contact</span>
+              <span>Owner</span>
+              <span>Stage</span>
+              <span>Signal Score</span>
+              <span>Priority</span>
+              <span>Active Signals</span>
+              <span>Next Action</span>
+              <span>Est. MRR</span>
+              <span>Notes / Remarks</span>
+            </div>
+
+            {/* Rows */}
+            <div className="leads-list">
+              {filtered.length === 0 ? (
+                <div className="leads-empty">
+                  <Target size={36} style={{ opacity: 0.3 }} />
+                  <h3>{search ? 'No leads match your search' : 'No leads in this view'}</h3>
+                  <p>
+                    {search
+                      ? 'Try adjusting your search terms.'
+                      : activeView === 'all'
+                        ? 'Add your first lead to get started.'
+                        : `No leads match the "${viewDef.label}" filter yet.`
+                    }
+                  </p>
+                  {activeView === 'all' && !search && (
+                    <button className="btn btn-primary btn-sm" onClick={() => openNewLead()}>
+                      <Plus size={14} /> Add First Lead
+                    </button>
+                  )}
+                </div>
+              ) : (
+                paginatedLeads.map(lead => (
+                  <LeadRow
+                    key={lead.id}
+                    lead={lead}
+                    isSelected={selectedIds.includes(lead.id)}
+                    onSelect={toggleSelect}
+                    onClick={handleLeadClick}
+                    updateLead={updateLead}
+                    team={team}
+                    user={user}
+                  />
+                ))
+              )}
+            </div>
+            
+            {/* Pagination Bar */}
+            {filtered.length > 0 && (
+              <div className="pagination-bar">
+                <div className="pagination-left">
+                  Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filtered.length)} to {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} leads
+                </div>
+                <div className="pagination-right">
+                  <select 
+                    value={itemsPerPage} 
+                    onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                    className="items-per-page-select"
                   >
-                    <ChevronLeft size={16} />
-                  </button>
-                  <span className="pagination-info">Page {currentPage} of {totalPages}</span>
-                  <button 
-                    className="pagination-btn" 
-                    disabled={currentPage === totalPages} 
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  >
-                    <ChevronRight size={16} />
-                  </button>
+                    <option value={10}>10 per page</option>
+                    <option value={25}>25 per page</option>
+                    <option value={50}>50 per page</option>
+                    <option value={100}>100 per page</option>
+                  </select>
+                  <div className="pagination-controls">
+                    <button 
+                      className="pagination-btn" 
+                      disabled={currentPage === 1} 
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <span className="pagination-info">Page {currentPage} of {totalPages}</span>
+                    <button 
+                      className="pagination-btn" 
+                      disabled={currentPage === totalPages} 
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        ) : (
+          <div className="lead-board-wrap">
+            {Object.keys(STAGE_COLORS).map(stage => (
+              <LeadKanbanColumn
+                key={stage}
+                stage={stage}
+                leads={filtered.filter(l => l.stage === stage)}
+                team={team}
+                onLeadClick={handleLeadClick}
+                onDrop={(e, newStage) => {
+                  const leadId = e.dataTransfer.getData('leadId');
+                  if (leadId) updateLead(leadId, { stage: newStage });
+                }}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Right Drawer */}
         {selectedLead && (
@@ -646,8 +740,8 @@ export default function Leads() {
       </div>
 
       {/* New Lead Modal */}
-      {showNewForm && (
-        <NewLeadForm onClose={() => setShowNewForm(false)} />
+      {newLeadOpen && (
+        <NewLeadForm onClose={() => closeNewLead()} />
       )}
 
       {/* Enroll Sequence Modal */}

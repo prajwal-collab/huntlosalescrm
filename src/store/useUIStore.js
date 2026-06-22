@@ -14,6 +14,7 @@ const useUIStore = create(
     (set) => ({
       sidebarCollapsed: false,
       commandCenterOpen: false,
+      newLeadOpen: false,
       activeNotifications: 0,
       notifications: [], // array of notification objects
       theme: 'light', // Hardcoded to light
@@ -23,6 +24,8 @@ const useUIStore = create(
       openCommandCenter: () => set({ commandCenterOpen: true }),
       closeCommandCenter: () => set({ commandCenterOpen: false }),
       toggleCommandCenter: () => set(state => ({ commandCenterOpen: !state.commandCenterOpen })),
+      openNewLead: () => set({ newLeadOpen: true }),
+      closeNewLead: () => set({ newLeadOpen: false }),
       
       addNotification: (notif) => set(state => {
         // Prevent exact duplicates
