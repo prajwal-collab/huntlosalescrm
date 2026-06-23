@@ -342,8 +342,6 @@ function CompanyPanel({ company, contacts, onClose }) {
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{company.notes}</p>
             </div>
           )}
-        </>
-      )}
     </div>
   );
 }
