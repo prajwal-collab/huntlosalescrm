@@ -21,10 +21,6 @@ export default function WebhookSettings() {
     ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/receive-webhook?token=${config.secret_token}`
     : '';
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const loadData = async () => {
     setLoading(true);
     try {
@@ -41,6 +37,10 @@ export default function WebhookSettings() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleToggle = async () => {
     if (!config) return;

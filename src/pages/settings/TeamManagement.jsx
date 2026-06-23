@@ -2,7 +2,7 @@
 // HUNTLO SALES OS — TEAM MANAGEMENT COMPONENT
 // ============================================
 import { useState, useEffect } from 'react';
-import { Mail, Plus, Shield, Loader, CheckCircle } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import useAuthStore from '../../store/useAuthStore';
 import { sendTeamInvitation } from '../../lib/resend';
 import { useDialog } from '../../context/DialogContext';
@@ -10,13 +10,9 @@ import { supabase } from '../../lib/supabase';
 import InviteModal from '../../components/auth/InviteModal';
 
 export default function TeamManagement() {
-  const { team, inviteMember, removeMember, updateMemberRole, user, fetchTeam } = useAuthStore();
+  const { team, removeMember, updateMemberRole, user, fetchTeam } = useAuthStore();
   const { showSuccess, showError, showConfirm } = useDialog();
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState('Member');
-  const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState(null);
 
   useEffect(() => {
     fetchTeam();
