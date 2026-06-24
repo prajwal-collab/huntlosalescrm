@@ -289,7 +289,7 @@ const useDataStore = create((set, get) => ({
   createCompany: async (company) => {
     const { user } = useAuthStore.getState();
     const orgId = await get()._getOrgId();
-    const payload = { ...company, owner_id: user?.id, ...(orgId ? { organization_id: orgId } : {}) };
+    const payload = { ...company, ...(orgId ? { organization_id: orgId } : {}) };
     const { data, error } = await supabase.from('companies').insert(payload).select().single();
     if (error) {
       console.error('Supabase insert failed:', error.message);
@@ -338,7 +338,6 @@ const useDataStore = create((set, get) => ({
         size: c.employees, // map from employees
         arr_estimate: parseFloat(c.revenue) || 0, // map from revenue
         website: c.domain,
-        owner_id: user?.id,
         ...(orgId ? { organization_id: orgId } : {}),
         ...rest
       };
@@ -353,7 +352,7 @@ const useDataStore = create((set, get) => ({
   createContact: async (contact) => {
     const { user } = useAuthStore.getState();
     const orgId = await get()._getOrgId();
-    const payload = { ...contact, owner_id: user?.id, ...(orgId ? { organization_id: orgId } : {}) };
+    const payload = { ...contact, ...(orgId ? { organization_id: orgId } : {}) };
     const { data, error } = await supabase.from('contacts').insert(payload).select().single();
     if (error) {
       console.error('Supabase insert failed:', error.message);
@@ -406,7 +405,6 @@ const useDataStore = create((set, get) => ({
           industry: 'Unknown', 
           arr_estimate: 0, 
           engagement_score: 0,
-          owner_id: user?.id,
           ...(orgId ? { organization_id: orgId } : {})
         }))
       ).select();
@@ -429,7 +427,6 @@ const useDataStore = create((set, get) => ({
         whatsapp: c.phone, // map from phone
         linkedin: c.linkedin,
         company_id: company_id,
-        owner_id: user?.id,
         ...(orgId ? { organization_id: orgId } : {})
       };
     });
