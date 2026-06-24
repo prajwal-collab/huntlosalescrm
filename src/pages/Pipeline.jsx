@@ -6,6 +6,7 @@ import { Search, Filter, Plus, GripVertical, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import usePipelineStore from '../store/usePipelineStore';
 import useDataStore from '../store/useDataStore';
+import useAuthStore from '../store/useAuthStore';
 import DealDrawer from '../components/pipeline/DealDrawer';
 import NewDealDrawer from '../components/pipeline/NewDealDrawer';
 import './Pipeline.css';
@@ -21,11 +22,24 @@ function DealCard({ deal, onClick }) {
           {deal.logo}
         </div>
         <div className="deal-info">
-          <span className="deal-company">{deal.company}</span>
-          <span className="deal-arr" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-            👤 {deal.leadName}
-          </span>
-          <span className="deal-arr">${((deal.arr || 0) / 1000).toFixed(0)}k MRR</span>
+          <span className="deal-company">{deal.title || deal.company}</span>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <span className="deal-arr" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+              👤 {deal.leadName || 'No contact'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+            <span className="deal-arr">${((deal.arr || 0) / 1000).toFixed(0)}k MRR</span>
+            {(() => {
+              const owner = deal.owner;
+              if (!owner) return null;
+              return (
+                <div className="avatar" title={owner.name} style={{ width: 16, height: 16, fontSize: 8, background: owner.color || '#3b82f6', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {owner.initials}
+                </div>
+              );
+            })()}
+          </div>
         </div>
         <div className="deal-urgency-dot" style={{ background: URGENCY_COLOR[deal.urgency] }} title={`Urgency: ${deal.urgency}`} />
       </div>
@@ -53,28 +67,41 @@ function DealCard({ deal, onClick }) {
   );
 }
 
-function DraggableDealCard({ deal, onClick }) {
+function DraggableDealCard({ deal, onClick, user, team }) {
   const [isDragging, setIsDragging] = useState(false);
+
+  // Enrich deal with owner info
+  const owner = team?.find(t => t.id === deal.owner_id);
+  const dealWithOwner = { ...deal, owner };
+
+  const isOwner = user?.id === deal.owner_id;
+  const isAdmin = user?.email === 'prajwal@earlyjobs.in';
+  const canEdit = isOwner || isAdmin || !deal.owner_id;
 
   return (
     <div
-      draggable
+      draggable={canEdit}
       onDragStart={e => {
+        if (!canEdit) {
+          e.preventDefault();
+          return;
+        }
         setIsDragging(true);
         e.dataTransfer.setData('dealId', deal.id);
         e.dataTransfer.effectAllowed = 'move';
       }}
       onDragEnd={() => setIsDragging(false)}
       className={isDragging ? 'dragging-card' : ''}
+      style={{ cursor: canEdit ? 'grab' : 'pointer' }}
     >
-      <DealCard deal={deal} onClick={onClick} />
+      <DealCard deal={dealWithOwner} onClick={onClick} />
     </div>
   );
 }
 
 const PIPELINE_STAGES = ['Discovery', 'Qualification', 'Trial', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'];
 
-function KanbanColumn({ stage, deals, onDealClick, onDrop }) {
+function KanbanColumn({ stage, deals, onDealClick, onDrop, user, team }) {
   const [dragOver, setDragOver] = useState(false);
   const total = deals.reduce((s, d) => s + (d.arr || 0), 0);
 
@@ -94,7 +121,7 @@ function KanbanColumn({ stage, deals, onDealClick, onDrop }) {
       </div>
       <div className="kanban-cards">
         {deals.map(deal => (
-          <DraggableDealCard key={deal.id} deal={deal} onClick={onDealClick} />
+          <DraggableDealCard key={deal.id} deal={deal} onClick={onDealClick} user={user} team={team} />
         ))}
         {deals.length === 0 && (
           <div className="kanban-empty">Drop deals here</div>
@@ -107,6 +134,7 @@ function KanbanColumn({ stage, deals, onDealClick, onDrop }) {
 export default function Pipeline() {
   const { drawerOpen, selectedDealId, selectDeal, closeDrawer, moveDeal, setSearch, search, filter, setFilter, getFilteredDeals } = usePipelineStore();
   const { companies, createDeal } = useDataStore();
+  const { user, team } = useAuthStore();
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({ title: '', company_id: '', arr: '', urgency: 'medium' });
 
@@ -164,6 +192,8 @@ export default function Pipeline() {
             deals={filtered.filter(d => d.stage === stage)}
             onDealClick={selectDeal}
             onDrop={handleDrop}
+            user={user}
+            team={team}
           />
         ))}
       </div>

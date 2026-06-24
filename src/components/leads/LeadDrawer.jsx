@@ -54,11 +54,12 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
   const { team, user } = useAuthStore();
   const [tab, setTab] = useState('intelligence');
   const [saving, setSaving] = useState(false);
-  const editMode = true; // Seamless inline editing always on
   const saveTimeout = useRef(null);
   const [form, setForm] = useState({ ...lead });
 
   const isOwner = user?.id === lead.owner_id;
+  const isAdmin = user?.email === 'prajwal@earlyjobs.in';
+  const editMode = isOwner || isAdmin || !lead.owner_id;
   const signals = form.signals || {};
 
   const handleSignalToggle = (key) => {

@@ -51,7 +51,7 @@ export default function NewDealDrawer({ onClose }) {
             <X size={16}/>
           </button>
         </div>
-        <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '24px' }}>
+        <form onSubmit={handleAdd} className="drawer-body" style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '24px' }}>
           {error && (
             <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <AlertCircle size={14} /> {error}

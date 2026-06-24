@@ -114,21 +114,28 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }
       </div>
 
       {/* Owner */}
-      <div className="lc">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {(() => {
-            const owner = team?.find(t => t.id === lead.owner_id);
-            if (!owner) return <span style={{ color: 'var(--text-tertiary)' }}>Unassigned</span>;
-            return (
-              <>
-                <div className="avatar" style={{ width: 18, height: 18, fontSize: 9, background: owner.color || '#3b82f6', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {owner.initials}
-                </div>
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{owner.name}</span>
-              </>
-            );
-          })()}
-        </div>
+      <div className="lc" onClick={(e) => e.stopPropagation()}>
+        <select 
+          style={{ 
+            background: 'transparent',
+            color: 'var(--text-secondary)',
+            border: 'none', 
+            cursor: 'pointer',
+            outline: 'none',
+            fontSize: '12px',
+            width: '100%',
+            appearance: 'none'
+          }}
+          value={lead.owner_id || ''}
+          onChange={(e) => updateLead(lead.id, { owner_id: e.target.value || null })}
+        >
+          <option value="" style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>Unassigned</option>
+          {team?.map(t => (
+            <option key={t.id} value={t.id} style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>
+              {t.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Stage */}
@@ -233,22 +240,32 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }
   );
 }
 
-function DraggableLeadCard({ lead, onClick, team }) {
+function DraggableLeadCard({ lead, onClick, team, user }) {
   const [isDragging, setIsDragging] = useState(false);
   const score = computeSignalScore(lead);
   const scoreColor = score >= 70 ? '#dc2626' : score >= 35 ? '#d97706' : '#94a3b8';
 
+  // Determine if current user can edit/drag this lead
+  const isOwner = user?.id === lead.owner_id;
+  const isAdmin = user?.email === 'prajwal@earlyjobs.in'; // from useAuthStore mock logic
+  const canEdit = isOwner || isAdmin || !lead.owner_id;
+
   return (
     <div
-      draggable
+      draggable={canEdit}
       onDragStart={e => {
+        if (!canEdit) {
+          e.preventDefault();
+          return;
+        }
         setIsDragging(true);
         e.dataTransfer.setData('leadId', lead.id);
         e.dataTransfer.effectAllowed = 'move';
       }}
       onDragEnd={() => setIsDragging(false)}
-      className={`lead-board-card ${isDragging ? 'dragging-card' : ''}`}
+      className={`lead-board-card ${isDragging ? 'dragging-card' : ''} ${!canEdit ? 'disabled-drag' : ''}`}
       onClick={() => onClick(lead)}
+      style={{ cursor: canEdit ? 'grab' : 'pointer' }}
     >
       <div className="lbc-top">
         <div className="lbc-company">{lead.company_name || 'Unknown'}</div>
@@ -268,7 +285,7 @@ function DraggableLeadCard({ lead, onClick, team }) {
   );
 }
 
-function LeadKanbanColumn({ stage, leads, onLeadClick, onDrop, team }) {
+function LeadKanbanColumn({ stage, leads, onLeadClick, onDrop, team, user }) {
   const [dragOver, setDragOver] = useState(false);
   
   return (
@@ -284,7 +301,7 @@ function LeadKanbanColumn({ stage, leads, onLeadClick, onDrop, team }) {
       </div>
       <div className="lkc-cards">
         {leads.map(lead => (
-          <DraggableLeadCard key={lead.id} lead={lead} onClick={onLeadClick} team={team} />
+          <DraggableLeadCard key={lead.id} lead={lead} onClick={onLeadClick} team={team} user={user} />
         ))}
       </div>
     </div>
@@ -715,6 +732,7 @@ export default function Leads() {
                 stage={stage}
                 leads={filtered.filter(l => l.stage === stage)}
                 team={team}
+                user={user}
                 onLeadClick={handleLeadClick}
                 onDrop={(e, newStage) => {
                   const leadId = e.dataTransfer.getData('leadId');
