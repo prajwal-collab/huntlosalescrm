@@ -1,7 +1,7 @@
 // ============================================
 // HUNTLO SALES OS — COMPANIES PAGE (Rich Grid)
 // ============================================
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Search, ExternalLink, Building2, Users,
   Plus, X, AlertCircle, Loader, Globe,
