@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { X, AlertCircle, Loader } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { X, AlertCircle, Loader, Search, ChevronDown } from 'lucide-react';
 import useDataStore from '../../store/useDataStore';
 import './DealDrawer.css';
 
@@ -8,6 +8,23 @@ export default function NewDealDrawer({ onClose }) {
   const [formData, setFormData] = useState({ title: '', company_id: '', plan: '', arr: '', urgency: 'medium' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  const [companySearch, setCompanySearch] = useState('');
+  const [companyDropdownOpen, setCompanyDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setCompanyDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredCompanies = companies.filter(c => c.name.toLowerCase().includes(companySearch.toLowerCase()));
+  const selectedCompany = companies.find(c => c.id === formData.company_id);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -61,12 +78,61 @@ export default function NewDealDrawer({ onClose }) {
             <label className="label">Deal Title</label>
             <input className="input-base" autoFocus required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="e.g. Enterprise Q3 Expansion" />
           </div>
-          <div className="form-group">
+          <div className="form-group" ref={dropdownRef}>
             <label className="label">Company</label>
-            <select className="input-base" required value={formData.company_id} onChange={e => setFormData({...formData, company_id: e.target.value})}>
-              <option value="">Select Company</option>
-              {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <div className="relative">
+              <div 
+                className="input-base" 
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', minHeight: 38 }}
+                onClick={() => setCompanyDropdownOpen(!companyDropdownOpen)}
+              >
+                <span style={{ color: selectedCompany ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
+                  {selectedCompany ? selectedCompany.name : 'Select Company'}
+                </span>
+                <ChevronDown size={14} style={{ color: 'var(--text-tertiary)' }} />
+              </div>
+              
+              {companyDropdownOpen && (
+                <div 
+                  className="dropdown-menu animate-slide-down" 
+                  style={{ 
+                    position: 'absolute', top: '100%', left: 0, right: 0, 
+                    marginTop: 4, maxHeight: 240, overflowY: 'auto', zIndex: 100,
+                    padding: 8, display: 'flex', flexDirection: 'column', gap: 4
+                  }}
+                >
+                  <div className="search-box" style={{ marginBottom: 4, padding: '6px 10px' }}>
+                    <Search size={14} style={{ color: 'var(--text-tertiary)' }} />
+                    <input 
+                      autoFocus
+                      placeholder="Search companies..." 
+                      value={companySearch} 
+                      onChange={e => setCompanySearch(e.target.value)} 
+                      style={{ fontSize: 13 }}
+                    />
+                  </div>
+                  {filteredCompanies.length > 0 ? filteredCompanies.map(c => (
+                    <div 
+                      key={c.id} 
+                      className="dropdown-item" 
+                      onClick={() => {
+                        setFormData({ ...formData, company_id: c.id });
+                        setCompanyDropdownOpen(false);
+                        setCompanySearch('');
+                      }}
+                    >
+                      {c.name}
+                    </div>
+                  )) : (
+                    <div style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-tertiary)', textAlign: 'center' }}>
+                      No companies found
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            {/* Hidden input for native form validation */}
+            <input type="text" required value={formData.company_id} style={{ position: 'absolute', opacity: 0, height: 0, width: 0, pointerEvents: 'none' }} onChange={() => {}} tabIndex={-1} />
           </div>
           <div className="form-group">
             <label className="label">Pricing Plan</label>
