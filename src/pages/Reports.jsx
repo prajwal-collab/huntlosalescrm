@@ -116,7 +116,7 @@ export default function Reports() {
   }, [meetings, tasks]);
 
   const funnelData = useMemo(() => {
-    const stages = { 'Lead': 0, 'Demo': 0, 'Proposal': 0, 'Negotiation': 0, 'Closed Won': 0 };
+    const stages = { 'Discovery': 0, 'Qualification': 0, 'Trial': 0, 'Proposal': 0, 'Negotiation': 0, 'Closed Won': 0 };
     deals.forEach(d => { if (stages[d.stage] !== undefined) stages[d.stage]++; });
     return Object.keys(stages).map(k => ({ name: k, value: stages[k] })).filter(s => s.value > 0);
   }, [deals]);
@@ -204,10 +204,10 @@ export default function Reports() {
                   <h3>Revenue Growth</h3>
                   <span className="badge badge-blue">Won vs Pipeline (k)</span>
                 </div>
-                <div className="rep-chart-area">
+                <div className="rep-chart-body" style={{ height: 250, width: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-border)" vertical={false} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--bg-border)" />
                       <XAxis dataKey="month" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} />
                       <YAxis stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} />
                       <Tooltip cursor={{ fill: 'var(--bg-elevated)' }} contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: '8px' }} />
@@ -225,10 +225,10 @@ export default function Reports() {
                   <h3>Sales Activity</h3>
                   <span className="badge badge-gray">Demos & Emails</span>
                 </div>
-                <div className="rep-chart-area">
+                <div className="rep-chart-body" style={{ height: 250, width: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={activityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-border)" vertical={false} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--bg-border)" />
                       <XAxis dataKey="week" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} />
                       <YAxis stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} />
                       <Tooltip contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: '8px' }} />
@@ -246,7 +246,7 @@ export default function Reports() {
                   <h3>Pipeline Funnel</h3>
                   <span className="badge badge-gray">Active Deals</span>
                 </div>
-                <div className="rep-chart-area">
+                <div className="rep-chart-body" style={{ height: 250, width: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie data={funnelData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
@@ -265,10 +265,10 @@ export default function Reports() {
                   <h3>Lead Sources</h3>
                   <span className="badge badge-gray">Distribution</span>
                 </div>
-                <div className="rep-chart-area">
+                <div className="rep-chart-body" style={{ height: 250, width: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={sourceData} layout="vertical" margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-border)" horizontal={false} />
+                    <BarChart data={sourceData} layout="vertical" margin={{ top: 10, right: 30, left: 30, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--bg-border)" />
                       <XAxis type="number" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} />
                       <YAxis dataKey="name" type="category" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} />
                       <Tooltip cursor={{ fill: 'var(--bg-elevated)' }} contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: '8px' }} />
@@ -285,7 +285,7 @@ export default function Reports() {
                   <h3>Task Completion</h3>
                   <span className="badge badge-gray">Completed vs Missed</span>
                 </div>
-                <div className="rep-chart-area">
+                <div className="rep-chart-area" style={{ height: 250, width: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={taskCompletion} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} stackOffset="sign">
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-border)" vertical={false} />

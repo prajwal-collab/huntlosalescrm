@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import {
   Search, Mail, Plus, ExternalLink, MessageSquare, X,
   SlidersHorizontal, Building2, Copy, Check, ChevronLeft, ChevronRight, Download,
-  Phone, Users
+  Phone, Users, ChevronDown, AlertCircle, Loader
 } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import { exportToCsv } from '../utils/exportCsv';

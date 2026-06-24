@@ -52,6 +52,7 @@ const usePipelineStore = create((set, get) => ({
     // 1. Create O(1) hash maps for quick lookups
     const companyMap = new Map(companies.map(c => [c.id, c]));
     const teamMap = new Map((teamMembers || []).map(tm => [tm.id, tm]));
+    const contactsMap = new Map(contacts.map(c => [c.id, c]));
     
     // Group contacts by company_id to avoid repeated filtering
     const contactsByCompany = new Map();
@@ -84,7 +85,22 @@ const usePipelineStore = create((set, get) => ({
     let mapped = filteredDeals.map(d => {
       const company = companyMap.get(d.company_id);
       const companyContacts = contactsByCompany.get(d.company_id) || [];
-      const leadName = companyContacts.length > 0 ? companyContacts[0].name : 'No Lead assigned';
+      
+      let leadName = 'No Lead assigned';
+      let specificContactId = null;
+      
+      // Parse assigned lead from notes if present
+      if (d.notes && d.notes.includes('Assigned Lead: ')) {
+        const match = d.notes.match(/Assigned Lead:\s*([0-9a-fA-F-]+)/);
+        if (match) specificContactId = match[1];
+      }
+
+      if (specificContactId && contactsMap.has(specificContactId)) {
+        leadName = contactsMap.get(specificContactId).name;
+      } else if (companyContacts.length > 0) {
+        leadName = companyContacts[0].name;
+      }
+
       const owner = teamMap.get(d.owner_id);
       const ownerName = owner?.name || 'Me';
       return { 

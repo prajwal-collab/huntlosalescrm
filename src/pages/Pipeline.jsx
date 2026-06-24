@@ -14,28 +14,31 @@ import './Pipeline.css';
 const URGENCY_COLOR = { urgent: 'var(--danger)', high: 'var(--warning)', medium: 'var(--accent-blue)', low: 'var(--text-tertiary)' };
 
 function DealCard({ deal, onClick }) {
+  const getInitials = (name) => name ? name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : '?';
+
   return (
     <div className="deal-card" onClick={() => onClick(deal.id)} id={`deal-${deal.id}`}>
       <div className="deal-card-top">
         <div className="deal-drag-handle" title="Drag to move"><GripVertical size={14} /></div>
-        <div className="deal-logo" style={{ background: deal.color + '22', color: deal.color }}>
+        <div className="deal-logo" style={{ background: deal.color + '1A', color: deal.color, border: `1px solid ${deal.color}33` }}>
           {deal.logo}
         </div>
         <div className="deal-info">
           <span className="deal-company">{deal.title || deal.company}</span>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <span className="deal-arr" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-              👤 {deal.leadName || 'No contact'}
+          <div className="deal-lead-row">
+            <span className="deal-lead-name">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              {deal.leadName || 'No contact'}
             </span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+          <div className="deal-metrics-row">
             <span className="deal-arr">${((deal.arr || 0) / 1000).toFixed(0)}k MRR</span>
             {(() => {
               const owner = deal.owner;
               if (!owner) return null;
               return (
-                <div className="avatar" title={owner.name} style={{ width: 16, height: 16, fontSize: 8, background: owner.color || '#3b82f6', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {owner.initials}
+                <div className="avatar" title={`Owner: ${owner.name}`} style={{ background: owner.color || '#3b82f6' }}>
+                  {owner.initials || getInitials(owner.name)}
                 </div>
               );
             })()}
@@ -57,7 +60,9 @@ function DealCard({ deal, onClick }) {
       </div>
 
       {deal.nextStep && (
-        <div className="deal-next-step">→ {deal.nextStep}</div>
+        <div className="deal-next-step">
+          <span className="step-arrow">→</span> {deal.nextStep}
+        </div>
       )}
 
       <div className="deal-card-footer">

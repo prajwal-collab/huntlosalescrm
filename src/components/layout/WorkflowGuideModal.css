@@ -1,38 +1,51 @@
 /* ==========================================
    WORKFLOW GUIDE MODAL
+   World-Class Dark Mode UI & Responsive
    ========================================== */
 
 .wfg-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 16px;
 }
 
 .wfg-modal {
+  /* Enforce stunning dark mode theme */
+  --bg-base: #0b1121;
+  --bg-surface: #101828;
+  --bg-elevated: #1e293b;
+  --bg-hover: #1e293b;
+  --bg-border: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --accent-blue: #6366f1;
+  --accent-blue-glow: rgba(99, 102, 241, 0.15);
+  
   width: 100%;
   max-width: 800px;
   background: var(--bg-surface);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.05);
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  color: var(--text-primary);
 }
 
 .wfg-close {
   position: absolute;
   top: 20px;
   right: 20px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--bg-border);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -46,8 +59,8 @@
 }
 
 .wfg-close:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
   transform: scale(1.05);
 }
 
@@ -57,37 +70,38 @@
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  background: linear-gradient(to right, rgba(79, 110, 247, 0.05), transparent);
+  background: linear-gradient(to right, rgba(99, 102, 241, 0.1), transparent);
 }
 
 .wfg-header-icon {
   width: 48px;
   height: 48px;
-  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  background: linear-gradient(135deg, #4f46e5, #ec4899);
   border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  box-shadow: 0 4px 12px rgba(79, 110, 247, 0.3);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+  flex-shrink: 0;
 }
 
 .wfg-header h2 {
-  font-size: var(--text-2xl);
+  font-size: 22px;
   font-weight: 800;
-  color: var(--text-primary);
+  color: #ffffff;
   margin-bottom: 4px;
   letter-spacing: -0.02em;
 }
 
 .wfg-header p {
   color: var(--text-secondary);
-  font-size: var(--text-md);
+  font-size: 15px;
 }
 
 .wfg-body {
   display: flex;
-  height: 400px;
+  min-height: 380px;
 }
 
 .wfg-sidebar {
@@ -99,6 +113,7 @@
   flex-direction: column;
   gap: 4px;
   overflow-y: auto;
+  flex-shrink: 0;
 }
 
 .wfg-tab {
@@ -108,25 +123,26 @@
   padding: 12px 16px;
   border: none;
   background: transparent;
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   color: var(--text-secondary);
-  font-size: var(--text-sm);
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   text-align: left;
   transition: all 0.2s;
   position: relative;
+  white-space: nowrap;
 }
 
 .wfg-tab:hover {
   background: var(--bg-hover);
-  color: var(--text-primary);
+  color: #fff;
 }
 
 .wfg-tab.active {
   color: var(--accent-blue);
   background: var(--bg-surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .wfg-tab-indicator {
@@ -171,24 +187,25 @@
   align-items: center;
   justify-content: center;
   color: var(--accent-blue);
+  flex-shrink: 0;
 }
 
 .wfg-content-header h3 {
-  font-size: var(--text-xl);
+  font-size: 20px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #fff;
 }
 
 .wfg-content-inner h4 {
-  font-size: var(--text-lg);
+  font-size: 18px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #e2e8f0;
   margin-bottom: 12px;
 }
 
 .wfg-content-inner p {
   color: var(--text-secondary);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.6;
   max-width: 480px;
 }
@@ -197,26 +214,29 @@
   margin-top: auto;
   display: flex;
   justify-content: flex-start;
+  padding-top: 32px;
 }
 
 .wfg-go-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
-  font-size: 14px;
-  border-radius: var(--radius-full);
-  background: var(--text-primary);
-  color: white;
+  padding: 12px 24px;
+  font-size: 15px;
+  border-radius: 999px;
+  background: #fff;
+  color: #000;
   border: none;
-  font-weight: 600;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.1);
+  transition: all 0.2s;
+  cursor: pointer;
 }
 
 .wfg-go-btn:hover {
-  background: #000;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.3);
+  background: #f1f5f9;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.2);
 }
 
 .wfg-footer {
@@ -226,4 +246,65 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+/* ==========================================
+   RESPONSIVE LAYOUT
+   ========================================== */
+@media (max-width: 768px) {
+  .wfg-header {
+    padding: 24px 20px;
+  }
+  
+  .wfg-header-icon {
+    display: none;
+  }
+
+  .wfg-body {
+    flex-direction: column;
+  }
+
+  .wfg-sidebar {
+    width: 100%;
+    flex-direction: row;
+    border-right: none;
+    border-bottom: 1px solid var(--bg-border);
+    padding: 12px 16px;
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .wfg-sidebar::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
+
+  .wfg-tab {
+    padding: 8px 16px;
+  }
+
+  .wfg-tab-indicator {
+    left: 50%;
+    top: auto;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 3px;
+    border-radius: 4px 4px 0 0;
+  }
+
+  .wfg-content-area {
+    padding: 24px 20px;
+  }
+
+  .wfg-content-inner p {
+    font-size: 15px;
+  }
+  
+  .wfg-content-actions {
+    margin-top: 24px;
+  }
+  
+  .wfg-footer {
+    padding: 12px 20px;
+  }
 }

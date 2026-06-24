@@ -4,8 +4,8 @@ import useDataStore from '../../store/useDataStore';
 import './DealDrawer.css';
 
 export default function NewDealDrawer({ onClose }) {
-  const { companies, createDeal } = useDataStore();
-  const [formData, setFormData] = useState({ title: '', company_id: '', plan: '', arr: '', urgency: 'medium' });
+  const { companies, contacts, createDeal } = useDataStore();
+  const [formData, setFormData] = useState({ title: '', company_id: '', contact_id: '', plan: '', arr: '', urgency: 'medium' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -38,7 +38,8 @@ export default function NewDealDrawer({ onClose }) {
         arr: Number(formData.arr),
         stage: 'Discovery',
         urgency: formData.urgency,
-        engagement_score: 0
+        engagement_score: 0,
+        notes: formData.contact_id ? `Assigned Lead: ${formData.contact_id}` : ''
       });
       onClose();
     } catch (err) {
@@ -134,6 +135,19 @@ export default function NewDealDrawer({ onClose }) {
             {/* Hidden input for native form validation */}
             <input type="text" required value={formData.company_id} style={{ position: 'absolute', opacity: 0, height: 0, width: 0, pointerEvents: 'none' }} onChange={() => {}} tabIndex={-1} />
           </div>
+
+          {formData.company_id && (
+            <div className="form-group">
+              <label className="label">Primary Contact (Lead)</label>
+              <select className="input-base" value={formData.contact_id} onChange={e => setFormData({ ...formData, contact_id: e.target.value })}>
+                <option value="">Select a contact...</option>
+                {contacts.filter(c => c.company_id === formData.company_id).map(c => (
+                  <option key={c.id} value={c.id}>{c.name} {c.designation ? `(${c.designation})` : ''}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="form-group">
             <label className="label">Pricing Plan</label>
             <select className="input-base" required value={formData.plan} onChange={handlePlanChange}>
