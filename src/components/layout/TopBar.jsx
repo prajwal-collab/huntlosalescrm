@@ -2,7 +2,7 @@
 // HUNTLO SALES OS — TOP BAR
 // ============================================
 import { useState, useEffect } from 'react';
-import { Search, Bell, Plus, Command } from 'lucide-react';
+import { Search, Bell, Plus, Command, Moon, Sun } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import useUIStore from '../../store/useUIStore';
 import useAuthStore from '../../store/useAuthStore';
@@ -28,6 +28,19 @@ export default function TopBar({ onNewDeal }) {
   const location = useLocation();
   const [searchFocused, setSearchFocused] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    return localStorage.getItem('huntlo_theme') === 'dark';
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark-mode');
+      localStorage.setItem('huntlo_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark-mode');
+      localStorage.setItem('huntlo_theme', 'light');
+    }
+  }, [isDark]);
 
   const title = PAGE_TITLES[location.pathname] || 'Huntlo OS';
 
@@ -64,6 +77,14 @@ export default function TopBar({ onNewDeal }) {
       </div>
 
       <div className="topbar-right">
+        <button 
+          className="icon-btn" 
+          onClick={() => setIsDark(!isDark)} 
+          title="Toggle Theme"
+          style={{ marginRight: 8 }}
+        >
+          {isDark ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
         <button className="btn btn-sm btn-primary" onClick={onNewDeal}>
           <Plus size={13} />
           New Deal
