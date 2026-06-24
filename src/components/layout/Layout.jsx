@@ -11,6 +11,7 @@ import useAuthStore from '../../store/useAuthStore';
 import { useKeyboard } from '../../hooks/useKeyboard';
 import NewDealDrawer from '../pipeline/NewDealDrawer';
 import NotificationManager from './NotificationManager';
+import WorkflowGuideModal from './WorkflowGuideModal';
 import './Layout.css';
 
 export default function Layout({ children }) {
@@ -18,11 +19,31 @@ export default function Layout({ children }) {
   const { fetchData } = useDataStore();
   const { fetchTeam } = useAuthStore();
   const [newDealOpen, setNewDealOpen] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     fetchData();
     fetchTeam();
   }, [fetchData, fetchTeam]);
+
+  useEffect(() => {
+    const lastSeenStr = localStorage.getItem('huntlo_workflow_guide_last_seen');
+    if (!lastSeenStr) {
+      setShowGuide(true);
+    } else {
+      const lastSeen = new Date(lastSeenStr);
+      const diffTime = Math.abs(new Date() - lastSeen);
+      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+      if (diffDays >= 2) {
+        setShowGuide(true);
+      }
+    }
+  }, []);
+
+  const handleCloseGuide = () => {
+    localStorage.setItem('huntlo_workflow_guide_last_seen', new Date().toISOString());
+    setShowGuide(false);
+  };
 
   useKeyboard({
     'ctrl+k': () => toggleCommandCenter(),
@@ -54,6 +75,12 @@ export default function Layout({ children }) {
       )}
       {newDealOpen && (
         <NewDealDrawer onClose={() => setNewDealOpen(false)} />
+      )}
+      {showGuide && (
+        <WorkflowGuideModal 
+          onClose={handleCloseGuide} 
+          onSkip={handleCloseGuide} 
+        />
       )}
     </div>
   );
