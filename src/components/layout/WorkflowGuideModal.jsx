@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
-  X, LayoutDashboard, Target, LayoutKanban, 
+  X, LayoutDashboard, Target, Kanban, 
   Video, CheckSquare, FileText, FastForward,
   ChevronRight, Sparkles
 } from 'lucide-react';
@@ -28,7 +28,7 @@ const TABS = [
   {
     id: 'pipeline',
     label: 'Pipeline',
-    icon: LayoutKanban,
+    icon: Kanban,
     path: '/pipeline',
     title: 'Deal progression & management.',
     content: 'Once a lead\'s interested, it becomes a Deal on the Kanban board. Drag cards across stages as things progress. Click a card to open the Deal Drawer for notes, history, and AI-drafted follow-ups. No activity for 5+ days = flagged Stale, so keep deals moving.'
