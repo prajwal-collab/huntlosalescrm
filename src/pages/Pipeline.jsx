@@ -1,8 +1,8 @@
 // ============================================
-// HUNTLO SALES OS — PIPELINE PAGE
+// HUNTLO SALES OS — PIPELINE PAGE (INR)
 // ============================================
 import { useState } from 'react';
-import { Search, Filter, Plus, GripVertical, X } from 'lucide-react';
+import { Search, Filter, Plus, GripVertical, X, IndianRupee } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import usePipelineStore from '../store/usePipelineStore';
 import useDataStore from '../store/useDataStore';
@@ -10,6 +10,15 @@ import useAuthStore from '../store/useAuthStore';
 import DealDrawer from '../components/pipeline/DealDrawer';
 import NewDealDrawer from '../components/pipeline/NewDealDrawer';
 import './Pipeline.css';
+
+// ── INR Formatter ─────────────────────────────────────────────
+function fmtINR(amount) {
+  const n = Number(amount) || 0;
+  if (n >= 10000000) return `₹${(n/10000000).toFixed(2)}Cr`;
+  if (n >= 100000)   return `₹${(n/100000).toFixed(1)}L`;
+  if (n >= 1000)     return `₹${(n/1000).toFixed(0)}k`;
+  return `₹${n}`;
+}
 
 const URGENCY_COLOR = { urgent: 'var(--danger)', high: 'var(--warning)', medium: 'var(--accent-blue)', low: 'var(--text-tertiary)' };
 
@@ -32,7 +41,7 @@ function DealCard({ deal, onClick }) {
             </span>
           </div>
           <div className="deal-metrics-row">
-            <span className="deal-arr">${((deal.arr || 0) / 1000).toFixed(0)}k MRR</span>
+            <span className="deal-arr">{fmtINR(deal.arr || 0)} MRR</span>
             {(() => {
               const owner = deal.owner;
               if (!owner) return null;
@@ -124,7 +133,7 @@ function KanbanColumn({ stage, deals, onDealClick, onDrop, user, team }) {
         <span className="kanban-stage">{stage}</span>
         <div className="kanban-meta">
           <span className="kanban-count">{deals.length}</span>
-          {total > 0 && <span className="kanban-arr">${(total / 1000).toFixed(0)}k</span>}
+          {total > 0 && <span className="kanban-arr">{fmtINR(total)}</span>}
         </div>
       </div>
       <div className="kanban-cards">

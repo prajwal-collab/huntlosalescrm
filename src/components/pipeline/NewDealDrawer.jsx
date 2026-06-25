@@ -53,8 +53,9 @@ export default function NewDealDrawer({ onClose }) {
   const handlePlanChange = (e) => {
     const plan = e.target.value;
     let arr = formData.arr;
-    if (plan === 'trial') arr = 0;
-    else if (plan === 'starter') arr = 99;
+    if (plan === 'trial')   arr = 0;
+    else if (plan === 'starter') arr = 8299;
+    else if (plan === 'growth')  arr = 24999;
     else if (plan === 'enterprise') arr = '';
     
     setFormData({ ...formData, plan, arr });
@@ -152,15 +153,16 @@ export default function NewDealDrawer({ onClose }) {
             <label className="label">Pricing Plan</label>
             <select className="input-base" required value={formData.plan} onChange={handlePlanChange}>
               <option value="">Select a Plan</option>
-              <option value="trial">7-Day Free Trial ($0/mo)</option>
-              <option value="starter">Starter ($99/mo)</option>
+              <option value="trial">7-Day Free Trial (₹0/mo)</option>
+              <option value="starter">Starter (₹8,299/mo)</option>
+              <option value="growth">Growth (₹24,999/mo)</option>
               <option value="enterprise">Enterprise (Custom Pricing)</option>
             </select>
           </div>
           {formData.plan === 'enterprise' && (
             <div className="form-group animate-fade-in">
-              <label className="label">Custom MRR ($)</label>
-              <input className="input-base" type="number" required value={formData.arr} onChange={e => setFormData({...formData, arr: e.target.value})} />
+              <label className="label">Custom MRR (₹)</label>
+              <input className="input-base" type="number" required value={formData.arr} onChange={e => setFormData({...formData, arr: e.target.value})} placeholder="e.g. 50000" />
             </div>
           )}
           <div className="form-group">

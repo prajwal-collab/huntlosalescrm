@@ -167,6 +167,23 @@
 }
 .activity-item:hover { background: var(--bg-hover); }
 .activity-icon { font-size: 15px; margin-top: 1px; }
-.activity-body { display: flex; flex-direction: column; gap: 3px; }
-.activity-text { font-size: var(--text-sm); color: var(--text-primary); font-weight: 450; }
+.activity-body { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.activity-text { font-size: var(--text-sm); color: var(--text-primary); font-weight: 450; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.activity-footer { display: flex; align-items: center; gap: 8px; }
+.activity-owner {
+  font-size: 10.5px; font-weight: 700;
+  color: var(--accent-blue);
+  background: var(--accent-blue-muted);
+  padding: 1px 7px; border-radius: 20px;
+  border: 1px solid rgba(79,110,247,0.15);
+  flex-shrink: 0;
+}
 .activity-time { font-size: var(--text-xs); color: var(--text-tertiary); }
+
+/* ── Priority card urgency modifiers ── */
+.priority-card.priority-urgent  { border-left: 3px solid var(--danger);  }
+.priority-card.priority-warning { border-left: 3px solid var(--warning); }
+.priority-card.priority-high    { border-left: 3px solid var(--accent-blue); }
+.priority-card.priority-medium  { border-left: 3px solid var(--warning); }
+.priority-card.priority-low     { border-left: 3px solid var(--text-muted); }
+.priority-card.priority-positive{ border-left: 3px solid var(--success); }

@@ -154,25 +154,100 @@ const useDataStore = create((set, get) => ({
           const lead = payload.new;
           const { user } = useAuthStore.getState();
           if (lead.owner_id !== user?.id) {
+            const { teamMembers } = get();
+            const owner = teamMembers?.find(tm => tm.id === lead.owner_id);
+            const ownerName = owner?.name || 'A teammate';
             useUIStore.getState().addNotification({
               id: `lead-${lead.id}`,
-              title: lead.source === 'Webhook' ? 'Lead Automatically Created' : 'New Lead Added',
-              message: `${lead.contact_name || lead.email} from ${lead.company_name} was added.`,
-              type: 'system',
+              type: 'lead',
+              title: lead.source === 'Webhook' ? '🤖 Lead Auto-Created' : '👤 New Lead Added',
+              message: `${ownerName} added ${lead.contact_name || lead.email || 'a contact'} from ${lead.company_name || 'a company'}.`,
+              route: '/leads',
               unread: true,
-              time: new Date().toISOString()
+              time: new Date().toISOString(),
             });
           }
         }
         get()._refreshTable('leads');
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'deals' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deals' }, (payload) => {
+        const { user } = useAuthStore.getState();
+        if (payload.eventType === 'INSERT') {
+          const deal = payload.new;
+          if (deal.owner_id !== user?.id) {
+            const { teamMembers } = get();
+            const owner = teamMembers?.find(tm => tm.id === deal.owner_id);
+            const ownerName = owner?.name || 'A teammate';
+            useUIStore.getState().addNotification({
+              id: `deal-new-${deal.id}`,
+              type: 'deal',
+              title: '💼 New Deal Created',
+              message: `${ownerName} added "${deal.title || 'a new deal'}" to the pipeline.`,
+              route: '/pipeline',
+              unread: true,
+              time: new Date().toISOString(),
+            });
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const deal = payload.new;
+          const old = payload.old;
+          if (deal.stage && deal.stage !== old?.stage && deal.owner_id !== user?.id) {
+            const { teamMembers } = get();
+            const owner = teamMembers?.find(tm => tm.id === deal.owner_id);
+            const ownerName = owner?.name || 'A teammate';
+            useUIStore.getState().addNotification({
+              id: `deal-stage-${deal.id}-${Date.now()}`,
+              type: 'deal',
+              title: '💼 Deal Stage Updated',
+              message: `${ownerName} moved "${deal.title}" → ${deal.stage}.`,
+              route: '/pipeline',
+              unread: true,
+              time: new Date().toISOString(),
+            });
+          }
+        }
         get()._refreshTable('deals');
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'meetings' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'meetings' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const meeting = payload.new;
+          const { user } = useAuthStore.getState();
+          if (meeting.owner_id !== user?.id) {
+            const { teamMembers } = get();
+            const owner = teamMembers?.find(tm => tm.id === meeting.owner_id);
+            const ownerName = owner?.name || 'A teammate';
+            useUIStore.getState().addNotification({
+              id: `meeting-new-${meeting.id}`,
+              type: 'meeting',
+              title: '📅 Meeting Scheduled',
+              message: `${ownerName} scheduled "${meeting.title}" on ${meeting.date ? new Date(meeting.date).toLocaleDateString() : 'an upcoming date'}.`,
+              route: '/meetings',
+              unread: true,
+              time: new Date().toISOString(),
+            });
+          }
+        }
         get()._refreshTable('meetings');
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const task = payload.new;
+          const { user } = useAuthStore.getState();
+          if (task.owner_id !== user?.id) {
+            const { teamMembers } = get();
+            const creator = teamMembers?.find(tm => tm.id === task.owner_id);
+            const creatorName = creator?.name || 'A teammate';
+            useUIStore.getState().addNotification({
+              id: `task-new-${task.id}`,
+              type: 'task',
+              title: '✅ New Task Created',
+              message: `${creatorName} added task: "${task.title}".`,
+              route: '/tasks',
+              unread: true,
+              time: new Date().toISOString(),
+            });
+          }
+        }
         get()._refreshTable('tasks');
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'documents' }, (payload) => {

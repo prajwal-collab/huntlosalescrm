@@ -7,10 +7,20 @@ import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import usePipelineStore from '../store/usePipelineStore';
 import useDataStore from '../store/useDataStore';
+import useAuthStore from '../store/useAuthStore';
 import { queryGemini } from '../lib/gemini';
 import { useDialog } from '../context/DialogContext';
 import { computeSignalScore } from '../utils/leadScoring';
 import './HomeOS.css';
+
+// ── INR Formatter ─────────────────────────────────────────
+function fmtINR(val) {
+  const n = Number(val) || 0;
+  if (n >= 10000000) return `₹${(n/10000000).toFixed(2)}Cr`;
+  if (n >= 100000)   return `₹${(n/100000).toFixed(1)}L`;
+  if (n >= 1000)     return `₹${(n/1000).toFixed(0)}k`;
+  return `₹${n.toLocaleString('en-IN')}`;
+}
 
 
 function PriorityCard({ icon: Icon, label, count, urgency, color, onClick }) {
@@ -28,6 +38,7 @@ function PriorityCard({ icon: Icon, label, count, urgency, color, onClick }) {
 
 export default function HomeOS() {
   const { deals, tasks, meetings, leads, documents } = useDataStore();
+  const { team } = useAuthStore();
   const { showAlert } = useDialog();
   const navigate = useNavigate();
   const [aiQuery, setAiQuery] = useState('');
@@ -61,13 +72,40 @@ export default function HomeOS() {
 
   const activityFeed = useMemo(() => {
     const feed = [];
-    deals.forEach(d => feed.push({ icon: '💼', text: `Deal: ${d.title} updated to ${d.stage}`, time: d.updated_at || d.created_at }));
-    meetings.forEach(m => feed.push({ icon: '📅', text: `Meeting: ${m.title} scheduled`, time: m.created_at }));
-    tasks.forEach(t => feed.push({ icon: '✅', text: `Task: ${t.title} ${t.status}`, time: t.updated_at || t.created_at }));
-    documents.forEach(doc => feed.push({ icon: '📄', text: `Document: ${doc.name} added`, time: doc.created_at }));
-    leads.forEach(l => feed.push({ icon: '👤', text: `Lead: ${l.company_name} added`, time: l.created_at }));
-    return feed.sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 10);
-  }, [deals, meetings, tasks, documents, leads]);
+    const teamMap = new Map((team || []).map(m => [m.id, m.name || m.email]));
+    const ownerName = (id) => teamMap.get(id) || 'Team';
+    deals.forEach(d => feed.push({
+      icon: '💼',
+      text: `Deal: ${d.title} → ${d.stage}`,
+      owner: ownerName(d.owner_id),
+      time: d.updated_at || d.created_at
+    }));
+    meetings.forEach(m => feed.push({
+      icon: '📅',
+      text: `Meeting: ${m.title} scheduled`,
+      owner: ownerName(m.owner_id),
+      time: m.created_at
+    }));
+    tasks.forEach(t => feed.push({
+      icon: '✅',
+      text: `Task: ${t.title} — ${t.status}`,
+      owner: ownerName(t.owner_id),
+      time: t.updated_at || t.created_at
+    }));
+    documents.forEach(doc => feed.push({
+      icon: '📄',
+      text: `Document: ${doc.name} added`,
+      owner: ownerName(doc.owner_id),
+      time: doc.created_at
+    }));
+    leads.forEach(l => feed.push({
+      icon: '👤',
+      text: `Lead: ${l.company_name} added`,
+      owner: ownerName(l.owner_id),
+      time: l.created_at
+    }));
+    return feed.sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 12);
+  }, [deals, meetings, tasks, documents, leads, team]);
 
   const aiInsights = useMemo(() => {
     const insights = [];
@@ -92,8 +130,8 @@ export default function HomeOS() {
     setAiLoading(true);
     try {
       const context = `
-        Total Pipeline MRR: $${totalARR}
-        Active Deals: ${deals.slice(0,10).map(d => `${d.title} (${d.stage}, $${d.arr || 0})`).join(' | ')}
+        Total Pipeline MRR: ${fmtINR(totalARR)}
+        Active Deals: ${deals.slice(0,10).map(d => `${d.title} (${d.stage}, ${fmtINR(d.arr || 0)})`).join(' | ')}
         Hot Leads: ${hotLeads.slice(0,10).map(l => l.company_name).join(', ')}
         Stale Deals: ${staleDeals.slice(0,10).map(d => d.title).join(', ')}
         Overdue Tasks: ${overdueTasks.slice(0,10).map(t => t.title).join(', ')}
@@ -139,12 +177,12 @@ export default function HomeOS() {
       <section className="stats-row">
         <div className="stat-card">
           <span className="stat-label">Pipeline MRR</span>
-          <span className="stat-value">${(totalARR / 1000).toFixed(0)}k</span>
+          <span className="stat-value">{fmtINR(totalARR)}</span>
           <span className="stat-delta up">Real-time total</span>
         </div>
         <div className="stat-card">
           <span className="stat-label">Won MRR</span>
-          <span className="stat-value">${(wonARR / 1000).toFixed(0)}k</span>
+          <span className="stat-value">{fmtINR(wonARR)}</span>
           <span className="stat-delta up">{closedThisMonth} closed recently</span>
         </div>
         <div className="stat-card">
@@ -200,9 +238,12 @@ export default function HomeOS() {
                 <span className="activity-icon">{item.icon}</span>
                 <div className="activity-body">
                   <span className="activity-text">{item.text}</span>
-                  <span className="activity-time">
-                    {item.time ? formatDistanceToNow(new Date(item.time), { addSuffix: true }) : 'Just now'}
-                  </span>
+                  <div className="activity-footer">
+                    {item.owner && <span className="activity-owner">{item.owner}</span>}
+                    <span className="activity-time">
+                      {item.time ? formatDistanceToNow(new Date(item.time), { addSuffix: true }) : 'Just now'}
+                    </span>
+                  </div>
                 </div>
               </div>
             )) : (

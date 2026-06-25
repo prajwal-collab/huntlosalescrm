@@ -110,7 +110,7 @@
 /* ── Table Head ── */
 .cg-table-head {
   display: grid;
-  grid-template-columns: 40px minmax(200px,2fr) 160px 200px 140px 120px 120px 120px;
+  grid-template-columns: 40px minmax(180px,2fr) 150px 180px 130px 110px 130px 110px;
   align-items: center;
   height: 38px;
   padding: 0 8px 0 0;
@@ -134,7 +134,7 @@
 
 .cr-row {
   display: grid;
-  grid-template-columns: 40px minmax(200px,2fr) 160px 200px 140px 120px 120px 120px;
+  grid-template-columns: 40px minmax(180px,2fr) 150px 180px 130px 110px 130px 110px;
   align-items: center;
   min-height: 52px;
   padding: 0;

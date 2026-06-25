@@ -28,9 +28,9 @@ const useUIStore = create(
       closeNewLead: () => set({ newLeadOpen: false }),
       
       addNotification: (notif) => set(state => {
-        // Prevent exact duplicates
+        // Prevent exact duplicates by ID
         if (state.notifications.some(n => n.id === notif.id)) return state;
-        const newNotifs = [notif, ...state.notifications].slice(0, 50); // keep last 50
+        const newNotifs = [{ ...notif, time: notif.time || new Date().toISOString() }, ...state.notifications].slice(0, 60); // keep last 60
         const unreadCount = newNotifs.filter(n => n.unread).length;
         return { notifications: newNotifs, activeNotifications: unreadCount };
       }),
@@ -45,11 +45,24 @@ const useUIStore = create(
         activeNotifications: 0
       })),
 
-      clearNotifications: () => set({ activeNotifications: 0 }),
+      deleteNotification: (id) => set(state => {
+        const updated = state.notifications.filter(n => n.id !== id);
+        return { notifications: updated, activeNotifications: updated.filter(n => n.unread).length };
+      }),
+
+      clearNotifications: () => set({ notifications: [], activeNotifications: 0 }),
+
       // Toggle theme does nothing now as we are locking to light
       toggleTheme: () => {}, 
     }),
-    { name: 'huntlo-ui', partialize: (s) => ({ sidebarCollapsed: s.sidebarCollapsed, theme: 'light' }) }
+    { 
+      name: 'huntlo-ui', 
+      partialize: (s) => ({ 
+        sidebarCollapsed: s.sidebarCollapsed, 
+        theme: 'light',
+        notifications: s.notifications.slice(0, 30), // persist last 30 notifications
+      }) 
+    }
   )
 );
 

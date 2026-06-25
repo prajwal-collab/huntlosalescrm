@@ -8,6 +8,15 @@ import './Reports.css';
 
 const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#64748b'];
 
+// ── INR formatter ─────────────────────────────────────────
+function fmtINR(val) {
+  const n = Number(val) || 0;
+  if (n >= 10000000) return `₹${(n/10000000).toFixed(2)}Cr`;
+  if (n >= 100000)   return `₹${(n/100000).toFixed(1)}L`;
+  if (n >= 1000)     return `₹${(n/1000).toFixed(1)}k`;
+  return `₹${n.toLocaleString('en-IN')}`;
+}
+
 function StatCard({ label, value, trend, isPositive }) {
   return (
     <div className="rep-stat-card">
@@ -78,8 +87,8 @@ export default function Reports() {
       return t.status === 'completed' && new Date(t.due || t.created_at) >= cutoff;
     }).length;
     return {
-      revenue: `$${(totalRevenue / 1000).toFixed(1)}k`,
-      pipeline: `$${(pipelineValue / 1000).toFixed(1)}k`,
+      revenue: fmtINR(totalRevenue),
+      pipeline: fmtINR(pipelineValue),
       winRate: `${winRate}%`,
       tasksCompleted30d
     };
@@ -209,7 +218,7 @@ export default function Reports() {
                     <BarChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--bg-border)" />
                       <XAxis dataKey="month" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} />
-                      <YAxis stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} />
+                      <YAxis stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `₹${v}k`} />
                       <Tooltip cursor={{ fill: 'var(--bg-elevated)' }} contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: '8px' }} />
                       <Bar dataKey="won" name="Closed Won" fill="var(--success)" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="pipeline" name="Pipeline" fill="var(--accent-blue-muted)" stroke="var(--accent-blue)" radius={[4, 4, 0, 0]} />
@@ -333,7 +342,7 @@ export default function Reports() {
                     <td>{member.addedContacts}</td>
                     <td>{member.setMeetings}</td>
                     <td style={{ color: 'var(--success)', fontWeight: 600 }}>
-                      ${(member.wonRevenue / 1000).toFixed(1)}k
+                      {fmtINR(member.wonRevenue)}
                     </td>
                   </tr>
                 )) : (
