@@ -68,10 +68,13 @@ export default function NewLeadForm({ onClose }) {
     setSaving(true);
     setError('');
     try {
+      const { signals, ...rest } = form;
       const payload = {
-        ...form,
-        recruiter_team_size: form.recruiter_team_size ? parseInt(form.recruiter_team_size) : null,
-        estimated_mrr: form.estimated_mrr ? parseInt(form.estimated_mrr) : 0,
+        ...rest,
+        // Spread signal booleans flat into their own columns
+        ...signals,
+        recruiter_team_size: rest.recruiter_team_size ? parseInt(rest.recruiter_team_size) : null,
+        estimated_mrr: rest.estimated_mrr ? parseInt(rest.estimated_mrr) : 0,
         signal_score: 0,
       };
       
@@ -80,6 +83,8 @@ export default function NewLeadForm({ onClose }) {
       if (!payload.next_action_due) delete payload.next_action_due;
       if (!payload.next_action_owner) delete payload.next_action_owner;
       if (!payload.buying_potential) payload.buying_potential = 'Unknown';
+      // Remove any computed/display-only fields that don't exist as DB columns
+      delete payload.priority;
       
       await createLead(payload);
       onClose();
@@ -212,8 +217,7 @@ export default function NewLeadForm({ onClose }) {
             <div className="form-section-title" style={{ marginTop: 4 }}>Initial Signals</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
               {SIGNALS_CONFIG.map(({ key, emoji, label }) => (
-                <div key={key} 
-                  onClick={() => setSignal(key, !form.signals[key])}
+                <label key={key}
                   style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '7px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 500,
@@ -222,16 +226,16 @@ export default function NewLeadForm({ onClose }) {
                   color: form.signals[key] ? '#16a34a' : 'var(--text-secondary)',
                   transition: 'all 0.15s',
                 }}>
-                <label className="toggle-switch">
+                <span className="toggle-switch">
                   <input type="checkbox" checked={form.signals[key]}
                     onChange={e => setSignal(key, e.target.checked)} />
                   <span className="toggle-slider"></span>
-                </label>
+                </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: 14 }}>{emoji}</span>
                   {label}
                 </div>
-                </div>
+                </label>
               ))}
             </div>
 
