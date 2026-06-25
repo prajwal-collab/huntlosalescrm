@@ -17,7 +17,7 @@ function MeetingCard({ meeting, onSelect, selected, ownerName }) {
   return (
     <div className={`meeting-card ${selected ? 'selected' : ''} ${isPast ? 'past' : ''}`} onClick={() => onSelect(meeting)}>
       <div className="mc-time">
-        <span className="mc-time-hour">{format(date, 'h:mm a')}</span>
+        <span className="mc-time-hour">{format(date, 'h:mm a')} IST</span>
         <span className="mc-time-date">{format(date, 'MMM d')}</span>
       </div>
       
@@ -70,7 +70,7 @@ export default function Meetings() {
         title: formData.title,
         deal_id: formData.deal_id || null,
         type: formData.type,
-        date: formData.date,
+        date: new Date(formData.date).toISOString(),
         duration: Number(formData.duration),
         platform: formData.platform,
         meeting_link: formData.meeting_link,
@@ -144,7 +144,7 @@ export default function Meetings() {
                 <h2 className="md-title">{selected.title}</h2>
                 <div className="md-meta">
                   <span className="badge badge-gray">{selected.type}</span>
-                  <span>{format(new Date(selected.date), 'MMMM d, yyyy • h:mm a')}</span>
+                  <span>{format(new Date(selected.date), 'MMMM d, yyyy • h:mm a')} IST</span>
                   <span>{selected.duration} min</span>
                   <span>{selected.platform}</span>
                   {selected.meeting_link && (
