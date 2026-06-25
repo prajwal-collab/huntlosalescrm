@@ -68,21 +68,59 @@ export default function NewLeadForm({ onClose }) {
     setSaving(true);
     setError('');
     try {
+      // Build payload explicitly — every field named individually.
+      // `signals` stays as a JSONB object (single `signals jsonb` column in DB).
       const payload = {
-        ...form,
-        // signals stays as a JSONB object — the DB has a single `signals jsonb` column
+        // ── Company ───────────────────────────────────────────────────
+        company_name:        form.company_name.trim(),
+        website:             form.website.trim()             || null,
+        linkedin_url:        form.linkedin_url.trim()        || null,
+        industry:            form.industry.trim()            || null,
+        location:            form.location.trim()            || null,
+        employee_size:       form.employee_size.trim()       || null,
         recruiter_team_size: form.recruiter_team_size ? parseInt(form.recruiter_team_size) : null,
-        estimated_mrr: form.estimated_mrr ? parseInt(form.estimated_mrr) : 0,
+        // Only send company_type if a valid value was chosen
+        ...(form.company_type ? { company_type: form.company_type } : {}),
+
+        // ── Primary Contact ───────────────────────────────────────────
+        contact_name:     form.contact_name.trim()     || null,
+        designation:      form.designation.trim()      || null,
+        email:            form.email.trim()            || null,
+        phone:            form.phone.trim()            || null,
+        contact_linkedin: form.contact_linkedin.trim() || null,
+
+        // ── Lead Stage ────────────────────────────────────────────────
+        stage: form.stage || 'New Lead',
+
+        // ── Signals — kept as a JSONB object ──────────────────────────
+        signals: {
+          hiring_activity:     form.signals.hiring_activity     || false,
+          recruiter_hiring:    form.signals.recruiter_hiring    || false,
+          funding_activity:    form.signals.funding_activity    || false,
+          linkedin_activity:   form.signals.linkedin_activity   || false,
+          job_posting_activity:form.signals.job_posting_activity|| false,
+          company_growth:      form.signals.company_growth      || false,
+        },
+
+        // ── Computed scores ───────────────────────────────────────────
         signal_score: 0,
-        priority: 'Cold',
+        priority:     'Cold',
+
+        // ── Next Action ───────────────────────────────────────────────
+        next_action:          form.next_action.trim()       || null,
+        next_action_priority: form.next_action_priority     || 'Medium',
+        ...(form.next_action_due    ? { next_action_due: form.next_action_due }       : {}),
+        ...(form.next_action_owner  ? { next_action_owner: form.next_action_owner }   : {}),
+
+        // ── Revenue ───────────────────────────────────────────────────
+        estimated_mrr:    form.estimated_mrr ? parseInt(form.estimated_mrr) : 0,
+        buying_potential: form.buying_potential || 'Unknown',
+
+        // ── Notes ─────────────────────────────────────────────────────
+        notes: form.notes.trim() || null,
       };
-      
-      // Sanitize empty strings to avoid Postgres constraint errors
-      if (!payload.company_type) delete payload.company_type;
-      if (!payload.next_action_due) delete payload.next_action_due;
-      if (!payload.next_action_owner) delete payload.next_action_owner;
-      if (!payload.buying_potential) payload.buying_potential = 'Unknown';
-      
+
+      console.log('[NewLeadForm] Submitting payload:', payload);
       await createLead(payload);
       onClose();
     } catch (err) {
