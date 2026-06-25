@@ -73,7 +73,6 @@ export default function NewLeadForm({ onClose }) {
         recruiter_team_size: form.recruiter_team_size ? parseInt(form.recruiter_team_size) : null,
         estimated_mrr: form.estimated_mrr ? parseInt(form.estimated_mrr) : 0,
         signal_score: 0,
-        priority: 'Cold',
       };
       
       // Sanitize empty strings to avoid Postgres constraint errors
