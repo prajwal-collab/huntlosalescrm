@@ -75,9 +75,12 @@ function DealCard({ deal, onClick }) {
 function DraggableDealCard({ deal, onClick, user, team }) {
   const [isDragging, setIsDragging] = useState(false);
 
-  // Enrich deal with owner info
-  const owner = team?.find(t => t.id === deal.owner_id);
-  const dealWithOwner = { ...deal, owner };
+  // Use owner from deal (populated by store) or fallback to team search
+  let ownerObj = deal.owner;
+  if (!ownerObj || typeof ownerObj !== 'object') {
+    ownerObj = team?.find(t => t.id === deal.owner_id) || { name: 'Unknown', color: '#3b82f6', initials: 'UN' };
+  }
+  const dealWithOwner = { ...deal, owner: ownerObj };
 
   const isOwner = user?.id === deal.owner_id;
   const isAdmin = user?.email === 'prajwal@earlyjobs.in';

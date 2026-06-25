@@ -11,7 +11,8 @@ import './Meetings.css';
 function MeetingCard({ meeting, onSelect, selected, ownerName }) {
   const date = new Date(meeting.date);
   const isPast = meeting.status === 'completed';
-  const initials = ownerName !== 'ME' ? ownerName.substring(0, 2).toUpperCase() : 'ME';
+  const nameToUse = ownerName || 'Unknown';
+  const initials = nameToUse.substring(0, 2).toUpperCase();
 
   return (
     <div className={`meeting-card ${selected ? 'selected' : ''} ${isPast ? 'past' : ''}`} onClick={() => onSelect(meeting)}>
@@ -33,7 +34,7 @@ function MeetingCard({ meeting, onSelect, selected, ownerName }) {
         </div>
       </div>
       
-      <div className="mc-owner" title={ownerName !== 'ME' ? ownerName : undefined}>
+      <div className="mc-owner" title={`Owner: ${nameToUse}`}>
         <div className="avatar avatar-sm" style={{ background: 'var(--accent-blue)', color: '#fff', fontSize: '10px' }}>
           {initials}
         </div>
@@ -102,7 +103,7 @@ export default function Meetings() {
         <div className="meetings-list" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
             {paginatedMeetings.map(m => (
-              <MeetingCard key={m.id} meeting={m} selected={selected?.id === m.id} onSelect={(meeting) => { setSelected(meeting); setIsAdding(false); }} ownerName={teamMembers?.find(tm => tm.id === m.owner_id)?.name || 'ME'} />
+              <MeetingCard key={m.id} meeting={m} selected={selected?.id === m.id} onSelect={(meeting) => { setSelected(meeting); setIsAdding(false); }} ownerName={teamMembers?.find(tm => tm.id === m.owner_id)?.name || 'Unknown User'} />
             ))}
             {meetings.length === 0 && (
                <div className="empty-state" style={{ marginTop: 40 }}>

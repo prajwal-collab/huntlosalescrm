@@ -25,15 +25,18 @@ const usePipelineStore = create((set, get) => ({
     const company = companies.find(c => c.id === rawDeal.company_id);
     const dealContacts = contacts.filter(c => c.company_id === rawDeal.company_id).map(c => c.name);
     const owner = teamMembers?.find(tm => tm.id === rawDeal.owner_id);
-    const ownerName = owner?.name || 'Me';
+    const ownerName = owner?.name || 'Unknown';
     
     return {
       ...rawDeal,
       company: company?.name || 'Unknown',
       logo: company?.name?.charAt(0) || 'U',
       color: '#3b82f6',
-      owner: ownerName,
-      ownerColor: owner?.color || '#3b82f6',
+      owner: {
+        name: ownerName,
+        color: owner?.color || '#3b82f6',
+        initials: (owner?.initials || ownerName.substring(0, 2)).toUpperCase()
+      },
       contacts: dealContacts,
       activities: [], // Mock activities
       engagementScore: rawDeal.engagement_score || 0,
@@ -102,15 +105,18 @@ const usePipelineStore = create((set, get) => ({
       }
 
       const owner = teamMap.get(d.owner_id);
-      const ownerName = owner?.name || 'Me';
+      const ownerName = owner?.name || 'Unknown';
       return { 
         ...d, 
         company: company?.name || 'Unknown', 
         leadName,
         logo: (company?.name || 'U').charAt(0).toUpperCase(),
         color: '#3b82f6',
-        owner: ownerName,
-        ownerColor: owner?.color || '#3b82f6',
+        owner: {
+          name: ownerName,
+          color: owner?.color || '#3b82f6',
+          initials: (owner?.initials || ownerName.substring(0, 2)).toUpperCase()
+        },
         engagementScore: d.engagement_score || 0
       };
     });
