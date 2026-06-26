@@ -30,6 +30,7 @@ import Sequences from './pages/Sequences';
 import Documents from './pages/Documents';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import Team from './pages/Team';
 
 export default function App() {
   const { initialize } = useAuthStore();
@@ -74,6 +75,7 @@ export default function App() {
             <Route element={<Layout><Documents /></Layout>} path="/documents" />
             <Route element={<Layout><Reports /></Layout>} path="/reports" />
             <Route element={<Layout><Settings /></Layout>} path="/settings" />
+            <Route element={<Layout><Team /></Layout>} path="/team" />
           </Route>
 
           {/* Fallback */}

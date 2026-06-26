@@ -62,6 +62,11 @@
   grid-template-columns: repeat(4, 1fr);
   gap: var(--space-4);
 }
+.stats-row.stats-row-6 {
+  grid-template-columns: repeat(6, 1fr);
+}
+@media (max-width: 1400px) { .stats-row.stats-row-6 { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 900px)  { .stats-row.stats-row-6 { grid-template-columns: repeat(2, 1fr); } }
 
 /* Section */
 .section { display: flex; flex-direction: column; gap: var(--space-4); }
@@ -79,9 +84,11 @@
 /* Priority cards */
 .priorities-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-3);
 }
+@media (max-width: 1300px) { .priorities-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 900px)  { .priorities-grid { grid-template-columns: repeat(2, 1fr); } }
 
 .priority-card {
   display: flex;

@@ -1,11 +1,11 @@
 // ============================================
-// HUNTLO SALES OS — DEAL DRAWER (v2 — INR + Proposals)
+// HUNTLO SALES OS — DEAL DRAWER (v3 — Intelligent)
 // ============================================
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   X, Mail, Sparkles, Plus, CheckSquare, Calendar, FileText,
   Send, Clock, CheckCircle2, AlertCircle, IndianRupee, TrendingUp,
-  Edit3, Trash2, ExternalLink, Copy, Check
+  Edit3, Trash2, ExternalLink, Copy, Check, Phone, User
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import usePipelineStore from '../../store/usePipelineStore';
@@ -360,6 +360,7 @@ function ProposalsTab({ deal, showAlert, showSuccess }) {
 // ── Main DealDrawer ────────────────────────────
 export default function DealDrawer({ dealId, onClose }) {
   const { getSelectedDeal, updateDeal, addActivity } = usePipelineStore();
+  const { contacts, tasks, createTask, updateTask, deleteTask } = useDataStore();
   const { showAlert, showSuccess } = useDialog();
   const deal = getSelectedDeal();
   const [activeTab, setActiveTab] = useState('Overview');
@@ -370,9 +371,58 @@ export default function DealDrawer({ dealId, onClose }) {
   const [saving, setSaving] = useState(false);
   const [editedNotes, setEditedNotes] = useState('');
 
+  // Task form state
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskDue, setNewTaskDue] = useState('');
+  const [taskSaving, setTaskSaving] = useState(false);
+
   if (!deal) return null;
 
+  // ── Linked contacts from contacts table by company_id ────────────
+  const linkedContacts = useMemo(() => {
+    if (!deal.company_id) return [];
+    return contacts.filter(c => c.company_id === deal.company_id);
+  }, [contacts, deal.company_id]);
+
+  // ── Deal tasks filtered from all tasks ────────────────────────────
+  const dealTasks = useMemo(() => {
+    return tasks.filter(t => t.deal_id === deal.id);
+  }, [tasks, deal.id]);
+
+  const handleAddTask = async () => {
+    if (!newTaskTitle.trim()) return;
+    setTaskSaving(true);
+    try {
+      await createTask({
+        title: newTaskTitle,
+        deal_id: deal.id,
+        due: newTaskDue || null,
+        status: 'pending',
+        type: 'deal-task',
+      });
+      setNewTaskTitle('');
+      setNewTaskDue('');
+    } catch (err) {
+      showAlert('Error', 'Failed to create task.');
+    } finally {
+      setTaskSaving(false);
+    }
+  };
+
+  const handleToggleTask = async (task) => {
+    try {
+      await updateTask(task.id, { status: task.status === 'completed' ? 'pending' : 'completed' });
+    } catch (_) {}
+  };
+
+  const handleDeleteTask = (taskId) => {
+    showAlert('Delete Task', 'Delete this task?', async () => {
+      try { await deleteTask(taskId); } catch (_) {}
+    });
+  };
+
   const ownerInfo = typeof deal.owner === 'object' ? deal.owner : { name: deal.owner || 'Unknown', color: '#3b82f6', initials: 'UN' };
+
 
   const handleGenerateInsight = async () => {
     setAiLoading(true);
@@ -558,18 +608,41 @@ export default function DealDrawer({ dealId, onClose }) {
           {/* ── Contacts ── */}
           {activeTab === 'Contacts' && (
             <div className="drawer-contacts">
-              {deal.contacts && deal.contacts.length > 0 ? deal.contacts.map((c, i) => (
-                <div key={i} className="contact-row">
-                  <div className="avatar avatar-sm" style={{ background: `hsl(${i * 60}, 60%, 50%)`, color: '#fff' }}>
-                    {c.slice(0, 2).toUpperCase()}
+              {linkedContacts.length > 0 ? linkedContacts.map((c, i) => (
+                <div key={c.id || i} className="contact-row">
+                  <div className="avatar avatar-sm" style={{ background: `hsl(${(c.name?.charCodeAt(0) || i * 40) * 7}, 55%, 48%)`, color: '#fff', flexShrink: 0 }}>
+                    {(c.name || '?').slice(0, 2).toUpperCase()}
                   </div>
-                  <div className="contact-info">
-                    <span className="contact-name">{c}</span>
-                    <span className="contact-role">Contact</span>
+                  <div className="contact-info" style={{ flex: 1 }}>
+                    <span className="contact-name">{c.name || '—'}</span>
+                    <span className="contact-role" style={{ color: 'var(--text-tertiary)' }}>{c.designation || 'Contact'}</span>
+                    {c.email && (
+                      <span style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                        <Mail size={10} /> {c.email}
+                      </span>
+                    )}
+                    {(c.whatsapp || c.phone) && (
+                      <span style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Phone size={10} /> {c.whatsapp || c.phone}
+                      </span>
+                    )}
                   </div>
-                  <button className="icon-btn" onClick={() => showAlert('Draft Email', `Drafting email to ${c}`)}><Mail size={13} /></button>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {c.email && (
+                      <a href={`mailto:${c.email}`} className="icon-btn" title={`Email ${c.name}`}><Mail size={13} /></a>
+                    )}
+                    {(c.whatsapp || c.phone) && (
+                      <a href={`https://wa.me/${(c.whatsapp||c.phone).replace(/\D/g,'')}`} target="_blank" rel="noopener noreferrer" className="icon-btn" title="WhatsApp"><Phone size={13} /></a>
+                    )}
+                  </div>
                 </div>
-              )) : <p className="text-secondary" style={{ padding: 'var(--space-4)' }}>No contacts linked to this deal.</p>}
+              )) : (
+                <div className="empty-state" style={{ padding: 'var(--space-8)' }}>
+                  <User size={28} />
+                  <h3>No Contacts Linked</h3>
+                  <p>Create a Lead for this company to auto-generate a contact, or add one via the Contacts page.</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -598,14 +671,82 @@ export default function DealDrawer({ dealId, onClose }) {
           {/* ── Tasks ── */}
           {activeTab === 'Tasks' && (
             <div className="drawer-tasks">
-              <button className="btn btn-ghost btn-sm" style={{ marginBottom: 12 }}>
-                <Plus size={13} /> Add Task
-              </button>
-              <div className="empty-state">
-                <CheckSquare size={28} />
-                <h3>No tasks yet</h3>
-                <p>Add tasks to track next steps for this deal</p>
+              {/* Add task row */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                <input
+                  className="input-base"
+                  style={{ flex: 1, minWidth: 160 }}
+                  placeholder="New task title..."
+                  value={newTaskTitle}
+                  onChange={e => setNewTaskTitle(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAddTask()}
+                />
+                <input
+                  className="input-base"
+                  type="date"
+                  style={{ width: 140 }}
+                  value={newTaskDue}
+                  onChange={e => setNewTaskDue(e.target.value)}
+                />
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={handleAddTask}
+                  disabled={taskSaving || !newTaskTitle.trim()}
+                >
+                  {taskSaving ? <Clock size={13} className="cc-spinner" /> : <><Plus size={13} /> Add</>}
+                </button>
               </div>
+
+              {/* Task list */}
+              {dealTasks.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {dealTasks.map(task => (
+                    <div
+                      key={task.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 12px', borderRadius: 8,
+                        background: 'var(--bg-raised)',
+                        border: '1px solid var(--bg-border)',
+                        opacity: task.status === 'completed' ? 0.6 : 1,
+                      }}
+                    >
+                      <button
+                        onClick={() => handleToggleTask(task)}
+                        style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                      >
+                        {task.status === 'completed'
+                          ? <CheckCircle2 size={18} style={{ color: 'var(--success)' }} />
+                          : <CheckSquare size={18} style={{ color: 'var(--text-tertiary)' }} />}
+                      </button>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 500, textDecoration: task.status === 'completed' ? 'line-through' : 'none', color: 'var(--text-primary)' }}>
+                          {task.title}
+                        </div>
+                        {task.due && (
+                          <div style={{ fontSize: 11, color: new Date(task.due) < new Date() && task.status !== 'completed' ? 'var(--danger)' : 'var(--text-tertiary)', marginTop: 2 }}>
+                            <Clock size={10} style={{ display: 'inline', marginRight: 3 }} />
+                            {format(new Date(task.due), 'MMM d, yyyy')}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        className="prop-action-btn danger"
+                        onClick={() => handleDeleteTask(task.id)}
+                        title="Delete task"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <CheckSquare size={28} />
+                  <h3>No tasks yet</h3>
+                  <p>Add tasks above to track next steps for this deal</p>
+                </div>
+              )}
             </div>
           )}
 

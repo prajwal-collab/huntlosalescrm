@@ -1,0 +1,273 @@
+/* ============================================
+   HUNTLO — TEAM COORDINATION PAGE
+   Visibility · Accountability · Tracking
+   ============================================ */
+
+.team-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  animation: fade-in 0.25s ease;
+}
+
+/* ── KPI Row ────────────────────────────────── */
+.tc-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1400px) { .tc-kpi-row { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 900px)  { .tc-kpi-row { grid-template-columns: repeat(2, 1fr); } }
+
+.tc-kpi-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: var(--shadow-xs);
+  transition: var(--transition-base);
+}
+.tc-kpi-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.tc-kpi-label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; }
+.tc-kpi-value { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; line-height: 1; }
+.tc-kpi-sub   { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+
+/* ── Main Grid ──────────────────────────────── */
+.tc-main-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 18px;
+  min-height: 0;
+}
+@media (max-width: 1100px) { .tc-main-grid { grid-template-columns: 1fr; } }
+
+/* ── Members Column ─────────────────────────── */
+.tc-members-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tc-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding: 0 2px 4px;
+  border-bottom: 1px solid var(--bg-border);
+  margin-bottom: 4px;
+}
+
+.tc-members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Member Card ────────────────────────────── */
+.tc-member-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+  transition: var(--transition-base);
+}
+.tc-member-card:hover { box-shadow: var(--shadow-sm); }
+.tc-member-card.expanded { border-color: rgba(59,130,246,0.25); box-shadow: 0 0 0 2px rgba(59,130,246,0.08); }
+
+.tc-member-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  cursor: pointer;
+  user-select: none;
+}
+.tc-member-header:hover { background: var(--bg-hover); }
+
+.tc-member-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+}
+
+.tc-avatar-wrap { position: relative; flex-shrink: 0; }
+.tc-status-dot {
+  position: absolute;
+  bottom: 1px; right: 1px;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-surface);
+}
+
+.tc-member-info { display: flex; flex-direction: column; gap: 2px; }
+.tc-member-name  { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.tc-member-email { font-size: 11px; color: var(--text-tertiary); }
+.tc-member-role  { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.tc-activity-label { font-size: 11px; font-weight: 600; }
+
+.tc-member-stats {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.tc-expand-btn {
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ── Stat Pill ──────────────────────────────── */
+.tc-stat-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--bg-border);
+  border-radius: 8px;
+  min-width: 64px;
+}
+.tc-stat-value { font-size: 15px; font-weight: 800; line-height: 1; }
+.tc-stat-label { font-size: 9px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; }
+
+/* ── Expanded Detail ────────────────────────── */
+.tc-member-detail {
+  border-top: 1px solid var(--bg-border);
+  background: var(--bg-elevated);
+  padding: 16px 18px;
+}
+
+.tc-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+@media (max-width: 900px) { .tc-detail-grid { grid-template-columns: 1fr; } }
+
+.tc-detail-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.tc-ds-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--bg-border);
+}
+
+.tc-item-list { display: flex; flex-direction: column; gap: 6px; }
+.tc-item-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  transition: var(--transition-fast);
+}
+.tc-item-row:hover { background: var(--bg-hover); }
+.tc-item-main { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tc-item-name { font-size: 12px; font-weight: 600; color: var(--text-primary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tc-item-sub  { font-size: 11px; color: var(--text-tertiary); padding-left: 4px; }
+.tc-item-more { font-size: 11px; color: var(--accent-blue); text-align: center; padding: 4px; }
+.tc-empty-mini { font-size: 12px; color: var(--text-tertiary); text-align: center; padding: 12px 0; }
+
+/* ── Right Column ───────────────────────────── */
+.tc-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tc-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Leaderboard ────────────────────────────── */
+.tc-leaderboard { display: flex; flex-direction: column; gap: 6px; }
+.tc-lb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  transition: var(--transition-fast);
+}
+.tc-lb-row:hover { background: var(--bg-hover); }
+.tc-lb-rank  { font-size: 16px; width: 28px; text-align: center; flex-shrink: 0; }
+.tc-lb-info  { flex: 1; min-width: 0; }
+.tc-lb-name  { font-size: 13px; font-weight: 700; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tc-lb-sub   { font-size: 11px; color: var(--text-tertiary); }
+.tc-lb-mrr   { font-size: 14px; font-weight: 800; flex-shrink: 0; }
+
+/* ── Alert Cards ────────────────────────────── */
+.tc-alert-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(245,158,11,0.06);
+  border: 1px solid rgba(245,158,11,0.2);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.tc-alert-card:hover { background: rgba(245,158,11,0.1); }
+.tc-alert-card.danger { background: rgba(220,38,38,0.06); border-color: rgba(220,38,38,0.2); }
+.tc-alert-card.danger:hover { background: rgba(220,38,38,0.1); }
+.tc-alert-title { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.tc-alert-sub   { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+/* ── Activity Feed ──────────────────────────── */
+.tc-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.tc-feed-item {
+  display: flex;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--bg-border);
+  transition: var(--transition-fast);
+}
+.tc-feed-item:last-child { border-bottom: none; }
+.tc-feed-item:hover { background: var(--bg-hover); border-radius: 6px; }
+.tc-feed-icon { font-size: 14px; margin-top: 2px; width: 20px; text-align: center; flex-shrink: 0; }
+.tc-feed-body { flex: 1; min-width: 0; }
+.tc-feed-text { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tc-feed-owner { font-size: 12px; font-weight: 700; color: var(--text-primary); }
+.tc-feed-action { font-size: 12px; color: var(--text-secondary); }
+.tc-feed-time  { font-size: 10px; color: var(--text-tertiary); margin-top: 2px; }

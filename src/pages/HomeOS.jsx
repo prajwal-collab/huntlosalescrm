@@ -2,7 +2,7 @@
 // HUNTLO SALES OS — HOME OS PAGE
 // ============================================
 import { useState, useMemo } from 'react';
-import { Sparkles, AlertCircle, Calendar, FileText, Clock, TrendingUp, ArrowRight, Zap, Activity } from 'lucide-react';
+import { Sparkles, AlertCircle, Calendar, FileText, Clock, TrendingUp, ArrowRight, Zap, Activity, Users, BarChart3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import usePipelineStore from '../store/usePipelineStore';
@@ -37,7 +37,7 @@ function PriorityCard({ icon: Icon, label, count, urgency, color, onClick }) {
 }
 
 export default function HomeOS() {
-  const { deals, tasks, meetings, leads, documents } = useDataStore();
+  const { deals, tasks, meetings, leads, documents, contacts } = useDataStore();
   const { team } = useAuthStore();
   const { showAlert } = useDialog();
   const navigate = useNavigate();
@@ -48,16 +48,43 @@ export default function HomeOS() {
   
   const pendingTasks = tasks.filter(t => t.status !== 'completed');
   const overdueTasks = tasks.filter(t => t.status !== 'completed' && new Date(t.due).getTime() < now);
+  const tasksDueToday = tasks.filter(t => {
+    if (t.status === 'completed') return false;
+    const d = new Date(t.due);
+    return d.toDateString() === new Date(now).toDateString();
+  });
   const todayMeetings = meetings.filter(m => {
     const d = new Date(m.date);
     const today = new Date(now);
     return d.toDateString() === today.toDateString() || m.status === 'scheduled';
+  });
+  const meetingsThisWeek = meetings.filter(m => {
+    const d = new Date(m.date).getTime();
+    return d >= now && d <= now + 7 * 86400000;
   });
   const hotLeads = leads.filter(l => computeSignalScore(l) >= 70 && l.stage !== 'Lost');
   const staleDeals = deals.filter(d => {
     const days = (now - new Date(d.updated_at).getTime()) / 86400000;
     return days > 5 && d.stage !== 'Closed Won' && d.stage !== 'Closed Lost';
   });
+
+  // Count proposals from localStorage across all deals
+  const proposalStats = useMemo(() => {
+    let total = 0, sent = 0, accepted = 0, totalValue = 0;
+    deals.forEach(d => {
+      try {
+        const props = JSON.parse(localStorage.getItem(`huntlo_proposals_${d.id}`) || '[]');
+        total += props.length;
+        sent += props.filter(p => p.status !== 'draft').length;
+        accepted += props.filter(p => p.status === 'accepted').length;
+        totalValue += props.filter(p => p.status === 'accepted').reduce((s, p) => s + (p.amount || 0), 0);
+      } catch (_) {}
+    });
+    return { total, sent, accepted, totalValue };
+  }, [deals]);
+
+  // Lead-to-Deal conversion rate
+  const conversionRate = leads.length > 0 ? Math.round((deals.length / leads.length) * 100) : 0;
 
   const totalARR = deals
     .filter(d => d.stage !== 'Closed Lost')
@@ -69,6 +96,7 @@ export default function HomeOS() {
 
   const newDealsThisWeek = deals.filter(d => (now - new Date(d.created_at).getTime()) < 7 * 86400000).length;
   const closedThisMonth = deals.filter(d => d.stage === 'Closed Won' && (now - new Date(d.updated_at || d.created_at).getTime()) < 30 * 86400000).length;
+
 
   const activityFeed = useMemo(() => {
     const feed = [];
@@ -173,8 +201,8 @@ export default function HomeOS() {
         )}
       </section>
 
-      {/* Stats Row */}
-      <section className="stats-row">
+      {/* Stats Row — 6 cards */}
+      <section className="stats-row stats-row-6">
         <div className="stat-card">
           <span className="stat-label">Pipeline MRR</span>
           <span className="stat-value">{fmtINR(totalARR)}</span>
@@ -183,7 +211,7 @@ export default function HomeOS() {
         <div className="stat-card">
           <span className="stat-label">Won MRR</span>
           <span className="stat-value">{fmtINR(wonARR)}</span>
-          <span className="stat-delta up">{closedThisMonth} closed recently</span>
+          <span className="stat-delta up">{closedThisMonth} closed this month</span>
         </div>
         <div className="stat-card">
           <span className="stat-label">Active Deals</span>
@@ -195,6 +223,16 @@ export default function HomeOS() {
           <span className="stat-value">{hotLeads.length}</span>
           <span className="stat-delta up">Score ≥ 70</span>
         </div>
+        <div className="stat-card">
+          <span className="stat-label">Proposals Out</span>
+          <span className="stat-value">{proposalStats.sent}</span>
+          <span className="stat-delta up">{proposalStats.accepted} accepted · {fmtINR(proposalStats.totalValue)} won</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Lead → Deal Rate</span>
+          <span className="stat-value">{conversionRate}%</span>
+          <span className="stat-delta up">{leads.length} leads · {deals.length} deals</span>
+        </div>
       </section>
 
       {/* Today's Priorities */}
@@ -203,10 +241,12 @@ export default function HomeOS() {
         <div className="priorities-grid">
           <PriorityCard icon={AlertCircle} label="Overdue Tasks" count={overdueTasks.length} urgency="urgent" color="var(--danger)" onClick={() => navigate('/tasks')} />
           <PriorityCard icon={Calendar} label="Demos Today" count={todayMeetings.length} urgency="high" color="var(--accent-blue)" onClick={() => navigate('/meetings')} />
-          <PriorityCard icon={Clock} label="Pending Tasks" count={pendingTasks.length} urgency="medium" color="var(--warning)" onClick={() => navigate('/tasks')} />
-          <PriorityCard icon={FileText} label="Proposals Out" count={deals.filter(d => d.stage === 'Proposal').length} urgency="low" color="var(--accent-purple)" onClick={() => navigate('/pipeline')} />
+          <PriorityCard icon={Clock} label="Due Today" count={tasksDueToday.length} urgency="medium" color="var(--warning)" onClick={() => navigate('/tasks')} />
+          <PriorityCard icon={FileText} label="Proposals Out" count={proposalStats.sent} urgency="low" color="var(--accent-purple)" onClick={() => navigate('/pipeline')} />
           <PriorityCard icon={TrendingUp} label="Stale Deals" count={staleDeals.length} urgency="warning" color="var(--orange)" onClick={() => navigate('/pipeline')} />
           <PriorityCard icon={Zap} label="Hot Leads" count={hotLeads.length} urgency="positive" color="var(--success)" onClick={() => navigate('/leads')} />
+          <PriorityCard icon={BarChart3} label="Meetings This Week" count={meetingsThisWeek.length} urgency="medium" color="var(--accent-blue)" onClick={() => navigate('/meetings')} />
+          <PriorityCard icon={Users} label="Total Contacts" count={contacts?.length || 0} urgency="low" color="var(--text-secondary)" onClick={() => navigate('/contacts')} />
         </div>
       </section>
 

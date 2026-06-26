@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BarChart3, Building2, Users, CheckSquare,
   Calendar, Zap, FileText, Settings, Bell, ChevronLeft,
   ChevronRight, LogOut, Sun, Moon, TrendingUp,
-  ChevronDown, Target
+  ChevronDown, Target, BookOpen
 } from 'lucide-react';
 import useUIStore from '../../store/useUIStore';
 import useAuthStore from '../../store/useAuthStore';
@@ -35,6 +35,7 @@ const NAV_GROUPS = [
       { to: '/sequences', icon: Zap, label: 'Sequences' },
       { to: '/documents', icon: FileText, label: 'Documents' },
       { to: '/reports', icon: TrendingUp, label: 'Reports' },
+      { to: '/team', icon: Users, label: 'Team View', badge: '●' },
     ]
   }
 ];
@@ -62,10 +63,11 @@ function NavGroup({ group, sidebarCollapsed }) {
       </div>
       {expanded && (
         <div className="group-items">
-          {group.items.map(({ to, icon: Icon, label }) => (
+          {group.items.map(({ to, icon: Icon, label, badge }) => (
             <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
               <Icon size={16} />
               <span>{label}</span>
+              {badge && <span style={{ fontSize: 8, color: '#16a34a', marginLeft: 'auto' }}>{badge}</span>}
             </NavLink>
           ))}
         </div>
@@ -113,6 +115,10 @@ export default function Sidebar() {
         <button className="nav-item" onClick={() => navigate('/settings?tab=notifications')}>
           <Bell size={16} />
           {!sidebarCollapsed && <span>Notifications</span>}
+        </button>
+        <button className="nav-item" onClick={() => navigate('/settings?tab=guide')}>
+          <BookOpen size={16} />
+          {!sidebarCollapsed && <span>User Guide</span>}
         </button>
         <button className="nav-item" onClick={() => navigate('/settings')}>
           <Settings size={16} />

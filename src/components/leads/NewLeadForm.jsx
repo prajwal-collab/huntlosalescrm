@@ -1,9 +1,9 @@
 // ============================================
 // HUNTLO — NEW LEAD FORM
-// Minimal data entry modal
+// Intelligent data entry — auto-links Company + Contact
 // ============================================
-import { useState } from 'react';
-import { X, Building2, User, Zap } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { X, Building2, User, Zap, Info, Link2 } from 'lucide-react';
 import useDataStore from '../../store/useDataStore';
 
 const COMPANY_TYPES = ['Recruitment Agency', 'Staffing Firm', 'Startup', 'Enterprise', 'Other'];
@@ -23,7 +23,7 @@ const defaultSignals = {
 };
 
 export default function NewLeadForm({ onClose }) {
-  const { createLead } = useDataStore();
+  const { createLead, companies } = useDataStore();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
@@ -54,6 +54,20 @@ export default function NewLeadForm({ onClose }) {
   const set = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
   const setSignal = (key, value) =>
     setForm(prev => ({ ...prev, signals: { ...prev.signals, [key]: value } }));
+
+  // Detect if company already exists
+  const existingCompany = useMemo(() => {
+    if (!form.company_name.trim()) return null;
+    return companies.find(c => c.name?.toLowerCase() === form.company_name.trim().toLowerCase()) || null;
+  }, [form.company_name, companies]);
+
+  // Will auto-create info
+  const willAutoCreate = useMemo(() => {
+    const items = [];
+    if (form.company_name.trim() && !existingCompany) items.push('Company account');
+    if ((form.contact_name.trim() || form.email.trim())) items.push('Contact record');
+    return items;
+  }, [form.company_name, form.contact_name, form.email, existingCompany]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -157,12 +171,27 @@ export default function NewLeadForm({ onClose }) {
 
             {/* Company Info */}
             <div className="form-section-title">Company</div>
+
+            {/* Auto-link banner */}
+            {willAutoCreate.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 12px', borderRadius: 8, background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.2)', fontSize: 12, color: 'var(--accent-blue)', marginBottom: 4 }}>
+                <Link2 size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+                <span><strong>Auto-link:</strong> Will automatically create {willAutoCreate.join(' + ')} linked to this lead — no re-entry needed.</span>
+              </div>
+            )}
+
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Company Name *</label>
                 <input className="form-input" placeholder="Acme Recruiting"
                   value={form.company_name}
                   onChange={e => set('company_name', e.target.value)} required />
+                {existingCompany && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4, fontSize: 11, color: '#16a34a' }}>
+                    <Info size={11} />
+                    <span>Existing account found — lead will link to <strong>{existingCompany.name}</strong></span>
+                  </div>
+                )}
               </div>
               <div className="form-group">
                 <label className="form-label">Company Type</label>

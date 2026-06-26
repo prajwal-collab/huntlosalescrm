@@ -317,7 +317,75 @@ const useDataStore = create((set, get) => ({
       throw error;
     }
     set(state => ({ leads: [data, ...state.leads] }));
+
+    // ── Auto-link: silently create/match Company + Contact ──────────────
+    try {
+      await get()._autoLinkLeadToEntities(data, orgId);
+    } catch (linkErr) {
+      console.warn('[DataStore] Auto-link failed (non-fatal):', linkErr.message);
+    }
+
     return data;
+  },
+
+  // Auto-creates or matches a Company record and a Contact record for a lead
+  _autoLinkLeadToEntities: async (lead, orgId) => {
+    if (!lead.company_name) return;
+    const state = get();
+
+    // ── 1. Find or create Company ──────────────────────────────────────
+    let company = state.companies.find(
+      c => c.name?.toLowerCase() === lead.company_name?.toLowerCase()
+    );
+
+    if (!company) {
+      const companyPayload = {
+        name: lead.company_name,
+        website: lead.website || null,
+        industry: lead.industry || null,
+        size: lead.employee_size || null,
+        lead_id: lead.id,
+        ...(orgId ? { organization_id: orgId } : {}),
+      };
+      const { data: newComp, error: compErr } = await supabase
+        .from('companies')
+        .insert(companyPayload)
+        .select()
+        .single();
+      if (!compErr && newComp) {
+        company = newComp;
+        set(state => ({ companies: [newComp, ...state.companies] }));
+      }
+    }
+
+    // ── 2. Find or create Contact ──────────────────────────────────────
+    if (lead.contact_name || lead.email) {
+      const existingContact = state.contacts.find(
+        c => (lead.email && c.email?.toLowerCase() === lead.email?.toLowerCase()) ||
+             (lead.contact_name && c.name?.toLowerCase() === lead.contact_name?.toLowerCase() && c.company_id === company?.id)
+      );
+
+      if (!existingContact) {
+        const contactPayload = {
+          name: lead.contact_name || null,
+          email: lead.email || null,
+          whatsapp: lead.phone || null,
+          designation: lead.designation || null,
+          linkedin: lead.contact_linkedin || null,
+          company_id: company?.id || null,
+          lead_id: lead.id,
+          ...(orgId ? { organization_id: orgId } : {}),
+        };
+        const { data: newContact, error: contactErr } = await supabase
+          .from('contacts')
+          .insert(contactPayload)
+          .select()
+          .single();
+        if (!contactErr && newContact) {
+          set(state => ({ contacts: [newContact, ...state.contacts] }));
+        }
+      }
+    }
   },
 
   updateLead: async (id, updates) => {

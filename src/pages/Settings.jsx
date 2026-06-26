@@ -3,11 +3,12 @@
 // ============================================
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { User, Key, Bell, Shield, Mail, Calendar, RefreshCw, Trash2, Eye, EyeOff, Lock } from 'lucide-react';
+import { User, Key, Bell, Shield, Mail, Calendar, RefreshCw, Trash2, Eye, EyeOff, Lock, BookOpen, Users } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import TeamManagement from './settings/TeamManagement';
 import EmailSettingsForm from './settings/EmailSettingsForm';
 import WebhookSettings from './settings/WebhookSettings';
+import UserGuide from './settings/UserGuide';
 import { isGeminiConfigured } from '../lib/gemini';
 import { supabase } from '../lib/supabase';
 import { useDialog } from '../context/DialogContext';
@@ -18,6 +19,7 @@ const TABS = [
   { id: 'team', icon: Shield, label: 'Team & Workspace' },
   { id: 'integrations', icon: Key, label: 'Integrations' },
   { id: 'notifications', icon: Bell, label: 'Notifications' },
+  { id: 'guide', icon: BookOpen, label: 'User Guide', badge: 'New' },
 ];
 
 export default function Settings() {
@@ -166,6 +168,7 @@ export default function Settings() {
             >
               <tab.icon size={16} />
               {tab.label}
+              {tab.badge && <span className="settings-nav-badge">{tab.badge}</span>}
             </button>
           ))}
         </div>
@@ -399,6 +402,9 @@ export default function Settings() {
                  <h3>All caught up</h3>
                </div>
              </div>
+          )}
+          {currentTab === 'guide' && (
+            <UserGuide />
           )}
         </div>
       </div>

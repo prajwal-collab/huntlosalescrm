@@ -15,6 +15,7 @@ import useUIStore from '../store/useUIStore';
 import { exportToCsv } from '../utils/exportCsv';
 import LeadDrawer from '../components/leads/LeadDrawer';
 import NewLeadForm from '../components/leads/NewLeadForm';
+import NewDealDrawer from '../components/pipeline/NewDealDrawer';
 import EnrollSequenceModal from '../components/sequences/EnrollSequenceModal';
 import CsvImporterModal from '../components/CsvImporterModal';
 import BulkEditModal from '../components/BulkEditModal';
@@ -58,8 +59,8 @@ const VIEWS = [
   { id: 'highMRR',     label: '💰 High MRR Potential',dot: '#16a34a', filter: l => (l.estimated_mrr || 0) >= 500 },
 ];
 
-// ── Lead Row ────────────────────────────────────────────────
-function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }) {
+// ── Lead Row ────────────────────────────────────────────
+function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user, onConvertToDeal }) {
   const score = useMemo(() => computeSignalScore(lead), [lead]);
   const priority = getPriority(score);
   const signals = lead.signals || {};
@@ -236,6 +237,25 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user }
           </span>
         )}
       </div>
+
+      {/* Convert to Deal Quick Action */}
+      <div className="lc" style={{ width: 90, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+        <button
+          title="Convert this lead to a Deal"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+            background: 'rgba(59,130,246,0.1)', color: 'var(--accent-blue)',
+            border: '1px solid rgba(59,130,246,0.25)', cursor: 'pointer',
+            whiteSpace: 'nowrap', transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.18)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.1)'; }}
+          onClick={() => onConvertToDeal(lead)}
+        >
+          → Deal
+        </button>
+      </div>
     </div>
   );
 }
@@ -322,6 +342,7 @@ export default function Leads() {
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
+  const [convertLead, setConvertLead] = useState(null); // lead being converted to deal
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -648,6 +669,7 @@ export default function Leads() {
               <span>Next Action</span>
               <span>Est. MRR</span>
               <span>Notes / Remarks</span>
+              <span>Action</span>
             </div>
 
             {/* Rows */}
@@ -681,6 +703,7 @@ export default function Leads() {
                     updateLead={updateLead}
                     team={team}
                     user={user}
+                    onConvertToDeal={(l) => setConvertLead(l)}
                   />
                 ))
               )}
@@ -760,6 +783,14 @@ export default function Leads() {
       {/* New Lead Modal */}
       {newLeadOpen && (
         <NewLeadForm onClose={() => closeNewLead()} />
+      )}
+
+      {/* Convert Lead → Deal Modal */}
+      {convertLead && (
+        <NewDealDrawer
+          prefilledLead={convertLead}
+          onClose={() => setConvertLead(null)}
+        />
       )}
 
       {/* Enroll Sequence Modal */}
