@@ -700,7 +700,7 @@ const useDataStore = create((set, get) => ({
     // Iterate all deals in local state
     const deals = get().deals;
     for (const deal of deals) {
-      const localKey = \`huntlo_proposals_\${deal.id}\`;
+      const localKey = `huntlo_proposals_${deal.id}`;
       const localData = localStorage.getItem(localKey);
       if (localData) {
         try {

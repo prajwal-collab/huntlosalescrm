@@ -74,15 +74,6 @@ function ProposalsTab({ deal, showAlert, showSuccess }) {
     items: [{ description: '', amount: '' }],
   });
 
-  const [form, setForm] = useState({
-    title: '',
-    amount: '',
-    validity: '30',
-    status: 'draft',
-    notes: '',
-    items: [{ description: '', amount: '' }],
-  });
-
   const handleAddItem = () => {
     setForm(f => ({ ...f, items: [...f.items, { description: '', amount: '' }] }));
   };
