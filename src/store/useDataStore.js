@@ -16,6 +16,7 @@ const useDataStore = create((set, get) => ({
   sequences: [],
   leads: [],
   teamMembers: [],
+  proposals: [],
   loading: false,
   error: null,
   _realtimeChannel: null,
@@ -110,9 +111,10 @@ const useDataStore = create((set, get) => ({
         supabase.from('sequences').select('*').order('created_at', { ascending: false }),
         supabase.from('leads').select('*').order('created_at', { ascending: false }),
         supabase.from('team_members').select('*'),
+        supabase.from('proposals').select('*').order('created_at', { ascending: false }),
       ]);
 
-      const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes, leadsRes, teamRes] = results;
+      const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes, leadsRes, teamRes, proposalsRes] = results;
 
       // Helper to safely extract data from allSettled results
       const extract = (res) => (res.status === 'fulfilled' && !res.value.error) ? res.value.data : [];
@@ -127,6 +129,7 @@ const useDataStore = create((set, get) => ({
         sequences: extract(seqRes),
         leads: extract(leadsRes),
         teamMembers: extract(teamRes),
+        proposals: extract(proposalsRes),
         loading: false,
         error: null
       });
@@ -653,6 +656,86 @@ const useDataStore = create((set, get) => ({
     const { error } = await supabase.from('tasks').delete().eq('id', id);
     if (error) throw error;
     set(state => ({ tasks: state.tasks.filter(t => t.id !== id) }));
+  },
+
+  // ── Proposals ──────────────────────────────
+  createProposal: async (proposal) => {
+    const { user } = useAuthStore.getState();
+    const orgId = await get()._getOrgId();
+    const newProposal = { ...proposal, owner_id: user?.id, ...(orgId ? { organization_id: orgId } : {}) };
+    
+    // Ensure line_items is properly stringified JSON if it's an object, or let Supabase handle it if JS object
+    // Supabase JS client handles arrays automatically for JSONB
+    
+    const { data, error } = await supabase.from('proposals').insert(newProposal).select().single();
+    if (error) throw error;
+    
+    set(state => ({ proposals: [data, ...state.proposals] }));
+    return data;
+  },
+
+  updateProposal: async (id, updates) => {
+    const { data, error } = await supabase.from('proposals').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    
+    set(state => ({ proposals: state.proposals.map(p => p.id === id ? data : p) }));
+    return data;
+  },
+
+  deleteProposal: async (id) => {
+    const { error } = await supabase.from('proposals').delete().eq('id', id);
+    if (error) throw error;
+    
+    set(state => ({ proposals: state.proposals.filter(p => p.id !== id) }));
+  },
+
+  migrateLocalProposals: async () => {
+    // Utility to run once to migrate localStorage proposals to Supabase
+    const { user } = useAuthStore.getState();
+    const orgId = await get()._getOrgId();
+    if (!user || !orgId) return;
+
+    let totalMigrated = 0;
+    
+    // Iterate all deals in local state
+    const deals = get().deals;
+    for (const deal of deals) {
+      const localKey = \`huntlo_proposals_\${deal.id}\`;
+      const localData = localStorage.getItem(localKey);
+      if (localData) {
+        try {
+          const parsed = JSON.parse(localData);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            // Found local proposals
+            for (const p of parsed) {
+              const newProp = {
+                deal_id: deal.id,
+                title: p.title || 'Untitled Proposal',
+                status: p.status || 'draft',
+                amount: p.amount || 0,
+                valid_until: p.validUntil || null,
+                notes: p.notes || '',
+                line_items: p.lineItems || [],
+                owner_id: user.id,
+                organization_id: orgId
+              };
+              
+              const { data, error } = await supabase.from('proposals').insert(newProp).select().single();
+              if (!error && data) {
+                totalMigrated++;
+                // Add to local state immediately
+                set(state => ({ proposals: [...state.proposals, data] }));
+              }
+            }
+            // Clear localStorage so we don't migrate again
+            localStorage.removeItem(localKey);
+          }
+        } catch (e) {
+          console.error('Failed to parse local proposals for deal', deal.id, e);
+        }
+      }
+    }
+    return totalMigrated;
   },
 
   // ── Meetings ──────────────────────────────

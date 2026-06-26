@@ -59,11 +59,9 @@ function ProposalStatusBadge({ status }) {
 
 // ── Proposals Tab ──────────────────────────────
 function ProposalsTab({ deal, showAlert, showSuccess }) {
-  const [proposals, setProposals] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(`huntlo_proposals_${deal.id}`) || '[]');
-    } catch { return []; }
-  });
+  const { proposals: allProposals, createProposal, updateProposal, deleteProposal } = useDataStore();
+  const proposals = useMemo(() => allProposals.filter(p => p.deal_id === deal.id), [allProposals, deal.id]);
+  
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
   const [copied, setCopied] = useState(null);
@@ -76,10 +74,14 @@ function ProposalsTab({ deal, showAlert, showSuccess }) {
     items: [{ description: '', amount: '' }],
   });
 
-  const saveProposals = (updated) => {
-    setProposals(updated);
-    localStorage.setItem(`huntlo_proposals_${deal.id}`, JSON.stringify(updated));
-  };
+  const [form, setForm] = useState({
+    title: '',
+    amount: '',
+    validity: '30',
+    status: 'draft',
+    notes: '',
+    items: [{ description: '', amount: '' }],
+  });
 
   const handleAddItem = () => {
     setForm(f => ({ ...f, items: [...f.items, { description: '', amount: '' }] }));
@@ -99,40 +101,71 @@ function ProposalsTab({ deal, showAlert, showSuccess }) {
 
   const totalAmount = form.items.reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.title) return;
-    const proposal = {
-      id: editId || `prop-${Date.now()}`,
-      ...form,
-      amount: totalAmount || Number(form.amount) || 0,
-      createdAt: editId ? proposals.find(p => p.id === editId)?.createdAt : new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    const updated = editId
-      ? proposals.map(p => p.id === editId ? proposal : p)
-      : [proposal, ...proposals];
-    saveProposals(updated);
-    setShowForm(false);
-    setEditId(null);
-    setForm({ title: '', amount: '', validity: '30', status: 'draft', notes: '', items: [{ description: '', amount: '' }] });
-    showSuccess('Proposal Saved', `"${proposal.title}" has been saved.`);
+    const amount = totalAmount || Number(form.amount) || 0;
+    
+    try {
+      if (editId) {
+        await updateProposal(editId, {
+          title: form.title,
+          amount,
+          valid_until: form.validity ? new Date(Date.now() + Number(form.validity) * 86400000).toISOString() : null,
+          status: form.status,
+          notes: form.notes,
+          line_items: form.items
+        });
+      } else {
+        await createProposal({
+          deal_id: deal.id,
+          title: form.title,
+          amount,
+          valid_until: form.validity ? new Date(Date.now() + Number(form.validity) * 86400000).toISOString() : null,
+          status: form.status,
+          notes: form.notes,
+          line_items: form.items
+        });
+      }
+      
+      setShowForm(false);
+      setEditId(null);
+      setForm({ title: '', amount: '', validity: '30', status: 'draft', notes: '', items: [{ description: '', amount: '' }] });
+      showSuccess('Proposal Saved', `"${form.title}" has been saved.`);
+    } catch (err) {
+      showAlert('Error', 'Failed to save proposal.');
+    }
   };
 
   const handleEdit = (p) => {
     setEditId(p.id);
-    setForm({ ...p, items: p.items?.length ? p.items : [{ description: '', amount: '' }] });
+    const validityDays = p.valid_until ? Math.ceil((new Date(p.valid_until).getTime() - new Date(p.created_at || Date.now()).getTime()) / 86400000) : '30';
+    setForm({ 
+      title: p.title || '',
+      amount: p.amount || '',
+      status: p.status || 'draft',
+      validity: validityDays.toString(),
+      notes: p.notes || '',
+      items: Array.isArray(p.line_items) && p.line_items.length > 0 ? p.line_items : [{ description: '', amount: '' }] 
+    });
     setShowForm(true);
   };
 
   const handleDelete = (id) => {
-    showAlert('Delete Proposal', 'Are you sure you want to delete this proposal?', () => {
-      saveProposals(proposals.filter(p => p.id !== id));
+    showAlert('Delete Proposal', 'Are you sure you want to delete this proposal?', async () => {
+      try {
+        await deleteProposal(id);
+      } catch (err) {
+        showAlert('Error', 'Failed to delete proposal.');
+      }
     });
   };
 
-  const handleStatusChange = (id, status) => {
-    const updated = proposals.map(p => p.id === id ? { ...p, status, updatedAt: new Date().toISOString() } : p);
-    saveProposals(updated);
+  const handleStatusChange = async (id, status) => {
+    try {
+      await updateProposal(id, { status });
+    } catch (err) {
+      showAlert('Error', 'Failed to update status.');
+    }
   };
 
   const handleCopyLink = (id) => {
@@ -296,30 +329,30 @@ function ProposalsTab({ deal, showAlert, showSuccess }) {
                   <div className="prop-card-meta">
                     <ProposalStatusBadge status={p.status} />
                     <span className="prop-card-date">
-                      {p.createdAt ? `Created ${formatDistanceToNow(new Date(p.createdAt), { addSuffix: true })}` : ''}
+                      {p.created_at ? `Created ${formatDistanceToNow(new Date(p.created_at), { addSuffix: true })}` : ''}
                     </span>
                   </div>
                 </div>
                 <div className="prop-card-amount">{formatINR(p.amount)}</div>
               </div>
 
-              {p.items?.length > 0 && (
+              {Array.isArray(p.line_items) && p.line_items.length > 0 && (
                 <div className="prop-card-items">
-                  {p.items.slice(0, 3).map((item, i) => (
+                  {p.line_items.slice(0, 3).map((item, i) => (
                     <div key={i} className="prop-item-preview">
                       <span className="prop-item-preview-desc">{item.description || 'Item'}</span>
                       <span className="prop-item-preview-amount">{formatINR(item.amount)}</span>
                     </div>
                   ))}
-                  {p.items.length > 3 && (
-                    <span className="prop-more-items">+{p.items.length - 3} more items</span>
+                  {p.line_items.length > 3 && (
+                    <span className="prop-more-items">+{p.line_items.length - 3} more items</span>
                   )}
                 </div>
               )}
 
-              {p.validity && (
+              {p.valid_until && (
                 <div className="prop-card-validity">
-                  <Clock size={11} /> Valid for {p.validity} days
+                  <Clock size={11} /> Valid until {new Date(p.valid_until).toLocaleDateString()}
                   {p.status === 'draft' && <span style={{ color: 'var(--text-tertiary)' }}> · Not yet sent</span>}
                 </div>
               )}

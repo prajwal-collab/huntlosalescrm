@@ -12,6 +12,7 @@ import { queryGemini } from '../lib/gemini';
 import { useDialog } from '../context/DialogContext';
 import { computeSignalScore } from '../utils/leadScoring';
 import './HomeOS.css';
+import { useEffect } from 'react';
 
 // ── INR Formatter ─────────────────────────────────────────
 function fmtINR(val) {
@@ -37,7 +38,7 @@ function PriorityCard({ icon: Icon, label, count, urgency, color, onClick }) {
 }
 
 export default function HomeOS() {
-  const { deals, tasks, meetings, leads, documents, contacts } = useDataStore();
+  const { deals, tasks, meetings, leads, documents, contacts, proposals, migrateLocalProposals } = useDataStore();
   const { team } = useAuthStore();
   const { showAlert } = useDialog();
   const navigate = useNavigate();
@@ -45,6 +46,11 @@ export default function HomeOS() {
   const [aiResponse, setAiResponse] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [now] = useState(() => Date.now());
+
+  useEffect(() => {
+    // Automatically migrate local proposals to Supabase if any exist
+    migrateLocalProposals().catch(console.error);
+  }, [migrateLocalProposals]);
   
   const pendingTasks = tasks.filter(t => t.status !== 'completed');
   const overdueTasks = tasks.filter(t => t.status !== 'completed' && new Date(t.due).getTime() < now);
@@ -68,20 +74,17 @@ export default function HomeOS() {
     return days > 5 && d.stage !== 'Closed Won' && d.stage !== 'Closed Lost';
   });
 
-  // Count proposals from localStorage across all deals
+  // Count proposals from Supabase across all deals
   const proposalStats = useMemo(() => {
     let total = 0, sent = 0, accepted = 0, totalValue = 0;
-    deals.forEach(d => {
-      try {
-        const props = JSON.parse(localStorage.getItem(`huntlo_proposals_${d.id}`) || '[]');
-        total += props.length;
-        sent += props.filter(p => p.status !== 'draft').length;
-        accepted += props.filter(p => p.status === 'accepted').length;
-        totalValue += props.filter(p => p.status === 'accepted').reduce((s, p) => s + (p.amount || 0), 0);
-      } catch (_) {}
-    });
+    if (proposals) {
+      total = proposals.length;
+      sent = proposals.filter(p => p.status !== 'draft').length;
+      accepted = proposals.filter(p => p.status === 'accepted').length;
+      totalValue = proposals.filter(p => p.status === 'accepted').reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    }
     return { total, sent, accepted, totalValue };
-  }, [deals]);
+  }, [proposals]);
 
   // Lead-to-Deal conversion rate
   const conversionRate = leads.length > 0 ? Math.round((deals.length / leads.length) * 100) : 0;
