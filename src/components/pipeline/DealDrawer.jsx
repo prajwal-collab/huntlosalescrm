@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import {
   X, Mail, Sparkles, Plus, CheckSquare, Calendar, FileText,
   Send, Clock, CheckCircle2, AlertCircle, IndianRupee, TrendingUp,
-  Edit3, Trash2, ExternalLink, Copy, Check, Phone, User
+  Edit3, Trash2, ExternalLink, Copy, Check, Phone, User, Save
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import usePipelineStore from '../../store/usePipelineStore';
@@ -383,8 +383,8 @@ function ProposalsTab({ deal, showAlert, showSuccess }) {
 
 // ── Main DealDrawer ────────────────────────────
 export default function DealDrawer({ dealId, onClose }) {
-  const { getSelectedDeal, updateDeal, addActivity } = usePipelineStore();
-  const { contacts, tasks, createTask, updateTask, deleteTask } = useDataStore();
+  const { getSelectedDeal, addActivity } = usePipelineStore();
+  const { contacts, tasks, createTask, updateTask, deleteTask, updateDeal, teamMembers } = useDataStore();
   const { showAlert, showSuccess } = useDialog();
   const deal = getSelectedDeal();
   const [activeTab, setActiveTab] = useState('Overview');
@@ -394,6 +394,39 @@ export default function DealDrawer({ dealId, onClose }) {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [editedNotes, setEditedNotes] = useState('');
+
+  const [isEditingHeader, setIsEditingHeader] = useState(false);
+  const [headerForm, setHeaderForm] = useState({ title: '', arr: '', stage: '', urgency: '', owner_id: '' });
+
+  const handleEditHeaderClick = () => {
+    setHeaderForm({
+      title: deal.title || deal.company || '',
+      arr: deal.arr || 0,
+      stage: deal.stage || 'Discovery',
+      urgency: deal.urgency || 'medium',
+      owner_id: deal.owner_id || ''
+    });
+    setIsEditingHeader(true);
+  };
+
+  const handleSaveHeader = async () => {
+    setSaving(true);
+    try {
+      await updateDeal(deal.id, {
+        title: headerForm.title,
+        arr: Number(headerForm.arr),
+        stage: headerForm.stage,
+        urgency: headerForm.urgency,
+        owner_id: headerForm.owner_id
+      });
+      setIsEditingHeader(false);
+      showSuccess('Deal Updated', 'Deal details saved successfully.');
+    } catch (e) {
+      showAlert('Error', 'Failed to update deal.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Task form state
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -491,23 +524,67 @@ export default function DealDrawer({ dealId, onClose }) {
       <div className="deal-drawer animate-slide-right">
         {/* Header */}
         <div className="drawer-header">
-          <div className="drawer-deal-logo" style={{ background: (deal.color || '#3b82f6') + '22', color: deal.color || '#3b82f6' }}>
-            {deal.logo || deal.company?.charAt(0) || 'D'}
-          </div>
-          <div className="drawer-deal-info">
-            <h2 className="drawer-deal-name">{deal.company || deal.title}</h2>
-            <div className="drawer-deal-meta">
-              <span className="badge badge-blue">{deal.stage}</span>
-              <span className="drawer-arr">
-                <IndianRupee size={12} style={{ display: 'inline', verticalAlign: 'middle' }} />
-                {deal.arr ? (deal.arr >= 100000 ? `${(deal.arr/100000).toFixed(1)}L` : `${(deal.arr/1000).toFixed(0)}k`) : '0'} MRR
-              </span>
-              <div className="drawer-owner-chip" style={{ background: (ownerInfo.color || '#3b82f6') + '18' }}>
-                <div className="owner-dot" style={{ background: ownerInfo.color || '#3b82f6' }} />
-                <span>{ownerInfo.name || 'Unknown'}</span>
+          {isEditingHeader ? (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, paddingRight: 24 }}>
+              <input
+                className="input-base"
+                style={{ fontSize: 18, fontWeight: 600, padding: '8px 12px' }}
+                value={headerForm.title}
+                onChange={e => setHeaderForm({ ...headerForm, title: e.target.value })}
+                placeholder="Deal Name"
+              />
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <select className="input-base" style={{ flex: 1, minWidth: 120 }} value={headerForm.stage} onChange={e => setHeaderForm({ ...headerForm, stage: e.target.value })}>
+                  {['Discovery', 'Qualification', 'Trial', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'].map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 120, position: 'relative' }}>
+                  <IndianRupee size={14} style={{ position: 'absolute', left: 10, color: 'var(--text-tertiary)' }} />
+                  <input className="input-base" style={{ paddingLeft: 30, width: '100%' }} type="number" placeholder="MRR" value={headerForm.arr} onChange={e => setHeaderForm({ ...headerForm, arr: e.target.value })} />
+                </div>
+                <select className="input-base" style={{ flex: 1, minWidth: 120 }} value={headerForm.urgency} onChange={e => setHeaderForm({ ...headerForm, urgency: e.target.value })}>
+                  <option value="low">Low Urgency</option>
+                  <option value="medium">Medium Urgency</option>
+                  <option value="high">High Urgency</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+                <select className="input-base" style={{ flex: 1, minWidth: 120 }} value={headerForm.owner_id} onChange={e => setHeaderForm({ ...headerForm, owner_id: e.target.value })}>
+                  <option value="">Unassigned</option>
+                  {(teamMembers || []).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-primary btn-sm" onClick={handleSaveHeader} disabled={saving}>
+                  {saving ? 'Saving...' : <><Save size={13} /> Save</>}
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setIsEditingHeader(false)}>Cancel</button>
               </div>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="drawer-deal-logo" style={{ background: (deal.color || '#3b82f6') + '22', color: deal.color || '#3b82f6' }}>
+                {deal.logo || deal.company?.charAt(0) || 'D'}
+              </div>
+              <div className="drawer-deal-info">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <h2 className="drawer-deal-name">{deal.company || deal.title}</h2>
+                  <button className="icon-btn" onClick={handleEditHeaderClick} title="Edit Deal">
+                    <Edit3 size={14} />
+                  </button>
+                </div>
+                <div className="drawer-deal-meta">
+                  <span className="badge badge-blue">{deal.stage}</span>
+                  <span className="drawer-arr">
+                    <IndianRupee size={12} style={{ display: 'inline', verticalAlign: 'middle' }} />
+                    {deal.arr ? (deal.arr >= 100000 ? `${(deal.arr/100000).toFixed(1)}L` : `${(deal.arr/1000).toFixed(0)}k`) : '0'} MRR
+                  </span>
+                  <div className="drawer-owner-chip" style={{ background: (ownerInfo.color || '#3b82f6') + '18' }}>
+                    <div className="owner-dot" style={{ background: ownerInfo.color || '#3b82f6' }} />
+                    <span>{ownerInfo.name || 'Unknown'}</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
           <button className="drawer-close" onClick={onClose}><X size={16} /></button>
         </div>
 
