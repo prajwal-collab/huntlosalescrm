@@ -42,6 +42,15 @@ CREATE POLICY "Users can delete proposals in their organization"
     SELECT organization_id FROM public.profiles WHERE id = auth.uid()
   ));
 
+-- Create function if it doesn't exist
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Create trigger for updated_at
 CREATE TRIGGER update_proposals_updated_at
   BEFORE UPDATE ON public.proposals
