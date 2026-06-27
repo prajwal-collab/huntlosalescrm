@@ -535,7 +535,7 @@ export default function Companies() {
                 <h2 className="cp-name">Add Company</h2>
                 <p className="cp-sub" style={{ marginTop: 4 }}>Create a new account record.</p>
               </div>
-              <button className="drawer-close" onClick={() => setIsAdding(false)}><X size={16} /></button>
+              <button className="drawer-close" onClick={() => { setIsAdding(false); setFormData({ name: '', industry: '', size: '', website: '', linkedin: '' }); }}><X size={16} /></button>
             </div>
             <form onSubmit={handleAdd} className="cp-form">
               {error && (
@@ -566,7 +566,7 @@ export default function Companies() {
                 </div>
               </div>
               <div className="cp-form-footer">
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setIsAdding(false)}>Cancel</button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setIsAdding(false); setFormData({ name: '', industry: '', size: '', website: '', linkedin: '' }); }}>Cancel</button>
                 <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>
                   {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Company'}
                 </button>

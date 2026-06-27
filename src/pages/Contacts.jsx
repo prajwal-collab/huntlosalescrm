@@ -521,7 +521,7 @@ export default function Contacts() {
                 <h2 className="cd-name">Add Contact</h2>
                 <p className="cd-title" style={{ marginTop: 4 }}>Create a new person record.</p>
               </div>
-              <button className="drawer-close" onClick={() => setIsAdding(false)}><X size={16} /></button>
+              <button className="drawer-close" onClick={() => { setIsAdding(false); setFormData({ name: '', email: '', designation: '', whatsapp: '', linkedin: '', company_id: '' }); }}><X size={16} /></button>
             </div>
             <form onSubmit={handleAdd} className="cd-form">
               {error && (
@@ -559,7 +559,7 @@ export default function Contacts() {
                 </div>
               </div>
               <div className="cd-form-footer">
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setIsAdding(false)}>Cancel</button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setIsAdding(false); setFormData({ name: '', email: '', designation: '', whatsapp: '', linkedin: '', company_id: '' }); }}>Cancel</button>
                 <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>
                   {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Contact'}
                 </button>

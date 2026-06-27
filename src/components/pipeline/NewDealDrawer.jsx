@@ -94,7 +94,6 @@ export default function NewDealDrawer({ onClose, prefilledLead = null }) {
       await createDeal({
         title: formData.title,
         company_id: formData.company_id,
-        contact_id: realContactId,
         arr: Number(formData.arr) || 0,
         stage: 'Discovery',
         urgency: formData.urgency,
