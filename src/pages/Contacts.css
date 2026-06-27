@@ -108,7 +108,7 @@
 /* ── Table Head ── */
 .cg-table-head {
   display: grid;
-  grid-template-columns: 40px minmax(180px,2fr) 150px 180px 130px 110px 130px 110px;
+  grid-template-columns: 40px minmax(180px,2fr) 150px 180px 130px 110px 130px 110px 100px;
   align-items: center;
   height: 38px;
   padding: 0 8px 0 0;
@@ -134,7 +134,7 @@
 
 .cr-row {
   display: grid;
-  grid-template-columns: 40px minmax(180px,2fr) 150px 180px 130px 110px 130px 110px;
+  grid-template-columns: 40px minmax(180px,2fr) 150px 180px 130px 110px 130px 110px 100px;
   align-items: center;
   min-height: 52px;
   padding: 0;
