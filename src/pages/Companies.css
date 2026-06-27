@@ -7,21 +7,19 @@
   flex-direction: column;
   height: 100%;
   background: var(--bg-base);
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 /* ── Layout ── */
 .companies-layout {
   display: flex;
   flex: 1;
-  overflow: hidden;
 }
 
 .companies-table-wrap {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   background: var(--bg-surface);
 }
 
@@ -40,12 +38,14 @@
   color: var(--text-tertiary);
   flex-shrink: 0;
   background: var(--bg-surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 /* ── Company Row ── */
 .companies-list {
   flex: 1;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
@@ -223,8 +223,11 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  gap: 0;
+  position: sticky;
+  top: 0;
+  height: calc(100vh - 56px);
 }
-
 .cp-header {
   display: flex;
   align-items: flex-start;

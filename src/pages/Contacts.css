@@ -7,7 +7,7 @@
   flex-direction: column;
   height: 100%;
   background: var(--bg-base);
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 /* ── Shared Header ── */
@@ -96,14 +96,12 @@
 .contacts-layout {
   display: flex;
   flex: 1;
-  overflow: hidden;
 }
 
 .contacts-table-wrap {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   background: var(--bg-surface);
 }
 
@@ -122,12 +120,14 @@
   color: var(--text-tertiary);
   flex-shrink: 0;
   background: var(--bg-surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 /* ── Contact Row ── */
 .contacts-list {
   flex: 1;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
@@ -301,6 +301,9 @@
   flex-direction: column;
   overflow-y: auto;
   gap: 0;
+  position: sticky;
+  top: 0;
+  height: calc(100vh - 56px);
 }
 
 .cd-header {
