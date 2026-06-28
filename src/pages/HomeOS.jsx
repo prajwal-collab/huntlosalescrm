@@ -74,6 +74,15 @@ export default function HomeOS() {
     return days > 5 && d.stage !== 'Closed Won' && d.stage !== 'Closed Lost';
   });
 
+  // GAP 5 — Trials Needing Review: deals in Trial with no meeting in last 7 days
+  const trialsNeedingReview = deals.filter(d => {
+    if (d.stage !== 'Trial') return false;
+    const recentMeeting = meetings.find(m => {
+      if (m.deal_id !== d.id) return false;
+      return (now - new Date(m.date).getTime()) < 7 * 86400000;
+    });
+    return !recentMeeting;
+  });
   // Count proposals from Supabase across all deals
   const proposalStats = useMemo(() => {
     let total = 0, sent = 0, accepted = 0, totalValue = 0;
@@ -142,6 +151,9 @@ export default function HomeOS() {
     const insights = [];
     if (staleDeals.length > 0) {
       insights.push({ type: 'warning', icon: '⚠️', text: `You have ${staleDeals.length} stale deals needing attention.`, action: 'View Deals', onClick: () => navigate('/pipeline') });
+    }
+    if (trialsNeedingReview.length > 0) {
+      insights.push({ type: 'danger', icon: '🔔', text: `${trialsNeedingReview.length} trial deal${trialsNeedingReview.length > 1 ? 's' : ''} have had no success review in 7 days.`, action: 'Schedule Review', onClick: () => navigate('/meetings') });
     }
     if (hotLeads.length > 0) {
       insights.push({ type: 'success', icon: '🔥', text: `${hotLeads.length} hot leads are ready for outreach.`, action: 'Contact Now', onClick: () => navigate('/leads') });
@@ -248,7 +260,7 @@ export default function HomeOS() {
           <PriorityCard icon={FileText} label="Proposals Out" count={proposalStats.sent} urgency="low" color="var(--accent-purple)" onClick={() => navigate('/pipeline')} />
           <PriorityCard icon={TrendingUp} label="Stale Deals" count={staleDeals.length} urgency="warning" color="var(--orange)" onClick={() => navigate('/pipeline')} />
           <PriorityCard icon={Zap} label="Hot Leads" count={hotLeads.length} urgency="positive" color="var(--success)" onClick={() => navigate('/leads')} />
-          <PriorityCard icon={BarChart3} label="Meetings This Week" count={meetingsThisWeek.length} urgency="medium" color="var(--accent-blue)" onClick={() => navigate('/meetings')} />
+          <PriorityCard icon={BarChart3} label="Trials Needing Review" count={trialsNeedingReview.length} urgency={trialsNeedingReview.length > 0 ? 'urgent' : 'low'} color={trialsNeedingReview.length > 0 ? 'var(--danger)' : 'var(--text-secondary)'} onClick={() => navigate('/pipeline')} />
           <PriorityCard icon={Users} label="Total Contacts" count={contacts?.length || 0} urgency="low" color="var(--text-secondary)" onClick={() => navigate('/contacts')} />
         </div>
       </section>

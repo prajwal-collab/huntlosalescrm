@@ -252,7 +252,22 @@ function ContactDetail({ contact, onClose }) {
 
       <div className="cd-section">
         <div className="cd-section-label">Role & Engagement</div>
-        <div className="cd-field"><span className="cd-fl">Role</span><span className="cd-fv">{contact.role || '—'}</span></div>
+        <div className="cd-field"><span className="cd-fl">Role</span>
+          {contact.role ? (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+              background: contact.role === 'Champion' ? 'rgba(34,197,94,0.12)' :
+                contact.role === 'Economic Buyer' ? 'rgba(59,130,246,0.12)' :
+                contact.role === 'CEO' ? 'rgba(139,92,246,0.12)' : 'rgba(100,116,139,0.12)',
+              color: contact.role === 'Champion' ? '#16a34a' :
+                contact.role === 'Economic Buyer' ? '#2563eb' :
+                contact.role === 'CEO' ? '#7c3aed' : '#64748b',
+            }}>
+              {contact.role === 'Champion' ? '⭐ ' : contact.role === 'Economic Buyer' ? '💰 ' : ''}{contact.role}
+            </span>
+          ) : <span className="cd-fv empty">—</span>}
+        </div>
         <div className="cd-field"><span className="cd-fl">Timezone</span><span className="cd-fv">{contact.timezone || '—'}</span></div>
         <div className="cd-field">
           <span className="cd-fl">Engagement</span>
@@ -291,7 +306,7 @@ export default function Contacts() {
   const [isImporterOpen, setIsImporterOpen] = useState(false);
   const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', designation: '', company_id: '', linkedin: '', whatsapp: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', designation: '', role: '', company_id: '', linkedin: '', whatsapp: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -351,7 +366,7 @@ export default function Contacts() {
     try {
       await createContact({ ...formData, company_id: formData.company_id || null, tags: [], engagement_score: 0, sentiment: 'neutral' });
       setIsAdding(false);
-      setFormData({ name: '', email: '', designation: '', company_id: '', linkedin: '', whatsapp: '' });
+      setFormData({ name: '', email: '', designation: '', role: '', company_id: '', linkedin: '', whatsapp: '' });
     } catch (err) { setError(err.message); }
     finally { setSaving(false); }
   };
@@ -557,9 +572,23 @@ export default function Contacts() {
                     {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
+                <div className="cd-form-group">
+                  <label className="cd-form-label">Buying Committee Role</label>
+                  <select className="cd-form-input" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
+                    <option value="">Select Role…</option>
+                    <option value="Champion">⭐ Champion</option>
+                    <option value="Economic Buyer">💰 Economic Buyer</option>
+                    <option value="Influencer">Influencer</option>
+                    <option value="User">User</option>
+                    <option value="Technical Buyer">Technical Buyer</option>
+                    <option value="Procurement">Procurement</option>
+                    <option value="HR">HR</option>
+                    <option value="CEO">CEO</option>
+                  </select>
+                </div>
               </div>
               <div className="cd-form-footer">
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setIsAdding(false); setFormData({ name: '', email: '', designation: '', whatsapp: '', linkedin: '', company_id: '' }); }}>Cancel</button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setIsAdding(false); setFormData({ name: '', email: '', designation: '', role: '', whatsapp: '', linkedin: '', company_id: '' }); }}>Cancel</button>
                 <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>
                   {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Contact'}
                 </button>

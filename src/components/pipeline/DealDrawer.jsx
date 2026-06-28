@@ -18,6 +18,13 @@ import './DealDrawer.css';
 const TABS = ['Overview', 'Proposals', 'Activity', 'Contacts', 'Notes', 'Tasks', 'AI Insights'];
 const ACTIVITY_ICONS = { email: '📧', call: '📞', meeting: '📅', note: '📝', proposal: '📋', default: '•' };
 
+const BUYING_COMMITTEE_COLORS = {
+  'Champion': { bg: 'rgba(34,197,94,0.12)', color: '#16a34a', emoji: '⭐' },
+  'Economic Buyer': { bg: 'rgba(59,130,246,0.12)', color: '#2563eb', emoji: '💰' },
+  'CEO': { bg: 'rgba(139,92,246,0.12)', color: '#7c3aed', emoji: '👑' },
+  'default': { bg: 'rgba(100,116,139,0.12)', color: '#64748b', emoji: '👤' },
+};
+
 // ── Format INR ─────────────────────────────
 function formatINR(amount) {
   if (!amount && amount !== 0) return '—';
@@ -384,7 +391,7 @@ function ProposalsTab({ deal, showAlert, showSuccess }) {
 // ── Main DealDrawer ────────────────────────────
 export default function DealDrawer({ dealId, onClose }) {
   const { getSelectedDeal, addActivity } = usePipelineStore();
-  const { contacts, tasks, createTask, updateTask, deleteTask, updateDeal, teamMembers } = useDataStore();
+  const { contacts, tasks, meetings, createTask, updateTask, deleteTask, updateDeal, createDeal, teamMembers } = useDataStore();
   const { showAlert, showSuccess } = useDialog();
   const deal = getSelectedDeal();
   const [activeTab, setActiveTab] = useState('Overview');
@@ -397,6 +404,8 @@ export default function DealDrawer({ dealId, onClose }) {
 
   const [isEditingHeader, setIsEditingHeader] = useState(false);
   const [headerForm, setHeaderForm] = useState({ title: '', arr: '', stage: '', urgency: '', owner_id: '' });
+  const [successMetrics, setSuccessMetrics] = useState(deal?.success_metrics || '');
+  const [metricsSaving, setMetricsSaving] = useState(false);
 
   const handleEditHeaderClick = () => {
     setHeaderForm({
@@ -480,6 +489,47 @@ export default function DealDrawer({ dealId, onClose }) {
 
   const ownerInfo = typeof deal.owner === 'object' ? deal.owner : { name: deal.owner || 'Unknown', color: '#3b82f6', initials: 'UN' };
 
+  // ── Aggregate pain points from linked meetings ──────────────────────────────
+  const linkedMeetings = useMemo(() => meetings.filter(m => m.deal_id === deal.id), [meetings, deal.id]);
+  const allPainPoints = useMemo(() => {
+    const pts = [];
+    linkedMeetings.forEach(m => { (m.pain_points || []).forEach(p => { if (p && !pts.includes(p)) pts.push(p); }); });
+    return pts;
+  }, [linkedMeetings]);
+
+  // ── Champion contact ─────────────────────────────────────────────────────────
+  const champion = useMemo(() => {
+    return linkedContacts.find(c => c.role === 'Champion') || linkedContacts[0] || null;
+  }, [linkedContacts]);
+
+  const handleSaveSuccessMetrics = async () => {
+    setMetricsSaving(true);
+    try {
+      await updateDeal?.(deal.id, { success_metrics: successMetrics });
+      showSuccess('Saved', 'Success metrics updated.');
+    } catch (e) {
+      showAlert('Error', 'Failed to save success metrics.');
+    } finally {
+      setMetricsSaving(false);
+    }
+  };
+
+  const handleCreateExpansionDeal = async () => {
+    try {
+      await createDeal({
+        title: `${deal.company || deal.title} — Expansion`,
+        company_id: deal.company_id,
+        arr: 0,
+        stage: 'Discovery',
+        urgency: 'medium',
+        engagement_score: 0,
+        notes: `Expansion deal created from won deal: ${deal.title || deal.company}`,
+      });
+      showSuccess('Expansion Deal Created', 'A new Discovery deal has been created for this account.');
+    } catch (e) {
+      showAlert('Error', 'Failed to create expansion deal.');
+    }
+  };
 
   const handleGenerateInsight = async () => {
     setAiLoading(true);
@@ -635,6 +685,49 @@ export default function DealDrawer({ dealId, onClose }) {
                 </div>
               </div>
 
+              {/* Account Intelligence Block — GAP 3 */}
+              <div style={{ background: 'var(--bg-raised)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--bg-border)', marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 12 }}>Account Intelligence</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', width: 80, flexShrink: 0, paddingTop: 1 }}>Champion</span>
+                    {champion ? (
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        ⭐ {champion.name}
+                        {champion.designation && <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>· {champion.designation}</span>}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 12, color: 'var(--danger)', fontWeight: 500 }}>⚠️ No champion identified</span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', width: 80, flexShrink: 0, paddingTop: 2 }}>Pain Points</span>
+                    {allPainPoints.length > 0 ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {allPainPoints.slice(0, 5).map((p, i) => (
+                          <span key={i} style={{ fontSize: 11, background: 'rgba(239,68,68,0.1)', color: '#ef4444', padding: '2px 7px', borderRadius: 12, fontWeight: 500 }}>{p}</span>
+                        ))}
+                        {allPainPoints.length > 5 && <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>+{allPainPoints.length - 5} more</span>}
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Not captured yet — complete a Discovery meeting</span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', width: 80, flexShrink: 0, paddingTop: 1 }}>Risk</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: deal.urgency === 'urgent' ? 'var(--danger)' : deal.urgency === 'high' ? 'var(--warning)' : 'var(--text-secondary)', textTransform: 'capitalize' }}>
+                      {deal.urgency === 'urgent' ? '🔴' : deal.urgency === 'high' ? '🟡' : '🟢'} {deal.urgency || 'medium'}
+                    </span>
+                  </div>
+                  {deal.nextStep && (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)', width: 80, flexShrink: 0, paddingTop: 1 }}>Next Step</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>→ {deal.nextStep}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {deal.notes && (
                 <div className="ov-notes">
                   <p className="ov-notes-label">Deal Notes</p>
@@ -656,9 +749,22 @@ export default function DealDrawer({ dealId, onClose }) {
                 <button className="btn btn-ghost btn-sm" onClick={() => setActiveTab('Proposals')}>
                   <FileText size={13} /> Proposals
                 </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => showAlert('Schedule Meeting', 'Opening meeting scheduler...')}>
-                  <Calendar size={13} /> Schedule Meeting
-                </button>
+                {/* GAP 5 — Trial: Schedule Weekly Review */}
+                {deal.stage === 'Trial' && (
+                  <button className="btn btn-ghost btn-sm" style={{ color: 'var(--success)', borderColor: 'var(--success)', gap: 5 }}
+                    onClick={() => showAlert('Schedule Weekly Review', 'Go to Meetings → Schedule Meeting → Type: Success Review to log this week\'s review.')}
+                  >
+                    📋 Schedule Weekly Review
+                  </button>
+                )}
+                {/* GAP 7 — Closed Won: Create Expansion Deal */}
+                {deal.stage === 'Closed Won' && (
+                  <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent-blue)', borderColor: 'var(--accent-blue)', gap: 5 }}
+                    onClick={handleCreateExpansionDeal}
+                  >
+                    🚀 Create Expansion Deal
+                  </button>
+                )}
               </div>
 
               {followUp && (
@@ -717,6 +823,16 @@ export default function DealDrawer({ dealId, onClose }) {
                   <div className="contact-info" style={{ flex: 1 }}>
                     <span className="contact-name">{c.name || '—'}</span>
                     <span className="contact-role" style={{ color: 'var(--text-tertiary)' }}>{c.designation || 'Contact'}</span>
+                    {c.role && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3,
+                        padding: '1px 7px', borderRadius: 12, marginTop: 2,
+                        background: c.role === 'Champion' ? 'rgba(34,197,94,0.12)' : c.role === 'Economic Buyer' ? 'rgba(59,130,246,0.12)' : 'rgba(100,116,139,0.12)',
+                        color: c.role === 'Champion' ? '#16a34a' : c.role === 'Economic Buyer' ? '#2563eb' : '#64748b',
+                      }}>
+                        {c.role === 'Champion' ? '⭐ ' : c.role === 'Economic Buyer' ? '💰 ' : ''}{c.role}
+                      </span>
+                    )}
                     {c.email && (
                       <span style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
                         <Mail size={10} /> {c.email}
@@ -750,12 +866,40 @@ export default function DealDrawer({ dealId, onClose }) {
           {/* ── Notes ── */}
           {activeTab === 'Notes' && (
             <div className="drawer-notes">
+              {/* Success Metrics — GAP 6 */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    🎯 Success Metrics
+                    {(deal.stage === 'Trial' || deal.stage === 'Commercial') && !successMetrics && (
+                      <span style={{ fontSize: 10, background: 'rgba(239,68,68,0.1)', color: '#ef4444', padding: '1px 6px', borderRadius: 8, fontWeight: 600 }}>Required</span>
+                    )}
+                  </label>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    style={{ fontSize: 11, padding: '2px 8px' }}
+                    onClick={handleSaveSuccessMetrics}
+                    disabled={metricsSaving}
+                  >
+                    {metricsSaving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+                <textarea
+                  className="input-base"
+                  rows={3}
+                  value={successMetrics}
+                  onChange={e => setSuccessMetrics(e.target.value)}
+                  placeholder="What does success look like for this customer? (e.g. Reduce time-to-hire by 30%, fill 10 roles in Q3...)"
+                  style={{ resize: 'vertical', fontSize: 12, borderColor: (deal.stage === 'Trial' || deal.stage === 'Commercial') && !successMetrics ? 'var(--danger)' : undefined }}
+                />
+              </div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Deal Notes</label>
               <textarea
                 className="input-base"
-                rows={10}
+                rows={8}
                 defaultValue={deal.notes}
                 onChange={e => setEditedNotes(e.target.value)}
-                placeholder="Add deal notes, context, next steps..."
+                placeholder="Add deal notes, context, current workflow, competition..."
                 style={{ resize: 'vertical' }}
               />
               <button

@@ -73,7 +73,6 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
     setSaving(true);
     try {
       await onUpdate(lead.id, form);
-      setEditMode(false);
     } catch (err) {
       console.error(err);
     } finally {
