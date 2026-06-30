@@ -150,7 +150,7 @@ function KanbanColumn({ stage, deals, onDealClick, onDrop, user, team }) {
 
 export default function Pipeline() {
   const { drawerOpen, selectedDealId, selectDeal, closeDrawer, moveDeal, setSearch, search, filter, setFilter, getFilteredDeals } = usePipelineStore();
-  const { companies, createDeal } = useDataStore();
+  const { companies, deals, createDeal } = useDataStore();
   const { user, team } = useAuthStore();
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({ title: '', company_id: '', arr: '', urgency: 'medium' });
