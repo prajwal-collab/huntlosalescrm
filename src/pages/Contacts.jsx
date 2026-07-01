@@ -1,11 +1,11 @@
 // ============================================
 // HUNTLO SALES OS — CONTACTS PAGE (Rich Grid)
 // ============================================
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import {
   Search, Mail, Plus, ExternalLink, MessageSquare, X,
   SlidersHorizontal, Building2, Copy, Check, ChevronLeft, ChevronRight, Download,
-  Phone, Users, ChevronDown, AlertCircle, Loader
+  Phone, Users, ChevronDown, AlertCircle, Loader, Edit3, Save
 } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import { exportToCsv } from '../utils/exportCsv';
@@ -178,23 +178,61 @@ function ContactRow({ contact, company, onSelect, selected, isSelected, toggleSe
 
 // ── Detail Panel ──────────────────────────────────────────────
 function ContactDetail({ contact, onClose }) {
+  const { updateContact } = useDataStore();
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ ...contact });
+  const saveTimeout = useRef(null);
+
   const avatarColor = getAvatarColor(contact.name);
   const initials = contact.name
     ? contact.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
     : '?';
+
+  const setField = (key, value) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(() => {
+      updateContact(contact.id, { [key]: value });
+    }, 400);
+  };
 
   return (
     <div className="contact-detail animate-slide-right">
       <div className="cd-header">
         <div className="cd-avatar" style={{ background: avatarColor }}>{initials}</div>
         <div className="cd-header-info">
-          <h2 className="cd-name">{contact.name}</h2>
-          <p className="cd-title">{contact.designation || 'No title'}</p>
-          {contact.company && contact.company !== 'Unknown' && (
+          {isEditing ? (
+            <input 
+              value={form.name} 
+              onChange={e => setField('name', e.target.value)}
+              style={{ fontSize: 18, fontWeight: 700, padding: '2px 4px', margin: '-2px -4px', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', outline: 'none', width: '100%', borderRadius: 4 }}
+            />
+          ) : (
+            <h2 className="cd-name">{contact.name}</h2>
+          )}
+          
+          {isEditing ? (
+            <input 
+              value={form.designation} 
+              onChange={e => setField('designation', e.target.value)}
+              placeholder="Title..."
+              style={{ fontSize: 13, padding: '2px 4px', margin: '4px -4px -2px', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', outline: 'none', width: '100%', borderRadius: 4 }}
+            />
+          ) : (
+            <p className="cd-title">{contact.designation || 'No title'}</p>
+          )}
+
+          {contact.company && contact.company !== 'Unknown' && !isEditing && (
             <p className="cd-company"><Building2 size={11} /> {contact.company}</p>
           )}
         </div>
-        <button className="drawer-close" onClick={onClose}><X size={16} /></button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => setIsEditing(!isEditing)} style={{ padding: '4px', height: '28px', width: '28px' }}>
+            {isEditing ? <Save size={16} color="var(--accent-blue)" /> : <Edit3 size={16} />}
+          </button>
+          <button className="drawer-close" onClick={onClose}><X size={16} /></button>
+        </div>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingBottom: 20 }}>
@@ -227,49 +265,100 @@ function ContactDetail({ contact, onClose }) {
         <div className="cd-section-label">Contact Info</div>
         <div className="cd-field">
           <span className="cd-fl">Email</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
-            <a href={`mailto:${contact.email}`} className="cd-fv link">{contact.email || '—'}</a>
-            <CopyBtn text={contact.email} />
-          </div>
+          {isEditing ? (
+            <input 
+              value={form.email} 
+              onChange={e => setField('email', e.target.value)}
+              style={{ flex: 1, fontSize: 13, padding: '4px', background: 'transparent', border: '1px solid var(--bg-border)', outline: 'none', borderRadius: 4 }}
+            />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
+              <a href={`mailto:${contact.email}`} className="cd-fv link">{contact.email || '—'}</a>
+              {contact.email && <CopyBtn text={contact.email} />}
+            </div>
+          )}
         </div>
         <div className="cd-field">
           <span className="cd-fl">Phone</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
-            <span className="cd-fv">{contact.whatsapp || contact.phone || '—'}</span>
-            <CopyBtn text={contact.whatsapp || contact.phone} />
-          </div>
+          {isEditing ? (
+            <input 
+              value={form.whatsapp || form.phone || ''} 
+              onChange={e => {
+                setField('whatsapp', e.target.value);
+                setField('phone', e.target.value);
+              }}
+              style={{ flex: 1, fontSize: 13, padding: '4px', background: 'transparent', border: '1px solid var(--bg-border)', outline: 'none', borderRadius: 4 }}
+            />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
+              <span className="cd-fv">{contact.whatsapp || contact.phone || '—'}</span>
+              {(contact.whatsapp || contact.phone) && <CopyBtn text={contact.whatsapp || contact.phone} />}
+            </div>
+          )}
         </div>
         <div className="cd-field">
           <span className="cd-fl">LinkedIn</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
-            {contact.linkedin
-              ? <a href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`} target="_blank" rel="noopener noreferrer" className="cd-fv link">View profile</a>
-              : <span className="cd-fv empty">—</span>
-            }
-            <CopyBtn text={contact.linkedin} />
-          </div>
+          {isEditing ? (
+            <input 
+              value={form.linkedin || ''} 
+              onChange={e => setField('linkedin', e.target.value)}
+              placeholder="https://linkedin.com/in/..."
+              style={{ flex: 1, fontSize: 13, padding: '4px', background: 'transparent', border: '1px solid var(--bg-border)', outline: 'none', borderRadius: 4 }}
+            />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
+              {contact.linkedin
+                ? <a href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`} target="_blank" rel="noopener noreferrer" className="cd-fv link">View profile</a>
+                : <span className="cd-fv empty">—</span>
+              }
+              {contact.linkedin && <CopyBtn text={contact.linkedin} />}
+            </div>
+          )}
         </div>
       </div>
 
       <div className="cd-section">
         <div className="cd-section-label">Role & Engagement</div>
         <div className="cd-field"><span className="cd-fl">Role</span>
-          {contact.role ? (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-              background: contact.role === 'Champion' ? 'rgba(34,197,94,0.12)' :
-                contact.role === 'Economic Buyer' ? 'rgba(59,130,246,0.12)' :
-                contact.role === 'CEO' ? 'rgba(139,92,246,0.12)' : 'rgba(100,116,139,0.12)',
-              color: contact.role === 'Champion' ? '#16a34a' :
-                contact.role === 'Economic Buyer' ? '#2563eb' :
-                contact.role === 'CEO' ? '#7c3aed' : '#64748b',
-            }}>
-              {contact.role === 'Champion' ? '⭐ ' : contact.role === 'Economic Buyer' ? '💰 ' : ''}{contact.role}
-            </span>
-          ) : <span className="cd-fv empty">—</span>}
+          {isEditing ? (
+            <select 
+              value={form.role || ''} 
+              onChange={e => setField('role', e.target.value)}
+              style={{ flex: 1, fontSize: 13, padding: '4px', background: 'transparent', border: '1px solid var(--bg-border)', outline: 'none', borderRadius: 4 }}
+            >
+              <option value="">None</option>
+              {['Champion', 'Economic Buyer', 'CEO', 'Influencer'].map(r => <option key={r}>{r}</option>)}
+            </select>
+          ) : (
+            contact.role ? (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                background: contact.role === 'Champion' ? 'rgba(34,197,94,0.12)' :
+                  contact.role === 'Economic Buyer' ? 'rgba(59,130,246,0.12)' :
+                  contact.role === 'CEO' ? 'rgba(139,92,246,0.12)' : 'rgba(100,116,139,0.12)',
+                color: contact.role === 'Champion' ? '#16a34a' :
+                  contact.role === 'Economic Buyer' ? '#2563eb' :
+                  contact.role === 'CEO' ? '#7c3aed' : '#64748b',
+              }}>
+                {contact.role === 'Champion' ? '⭐ ' : contact.role === 'Economic Buyer' ? '💰 ' : ''}{contact.role}
+              </span>
+            ) : <span className="cd-fv empty">—</span>
+          )}
         </div>
-        <div className="cd-field"><span className="cd-fl">Timezone</span><span className="cd-fv">{contact.timezone || '—'}</span></div>
+        <div className="cd-field">
+          <span className="cd-fl">Timezone</span>
+          {isEditing ? (
+            <input 
+              value={form.timezone || ''} 
+              onChange={e => setField('timezone', e.target.value)}
+              placeholder="e.g. PST, EST"
+              style={{ flex: 1, fontSize: 13, padding: '4px', background: 'transparent', border: '1px solid var(--bg-border)', outline: 'none', borderRadius: 4 }}
+            />
+          ) : (
+            <span className="cd-fv">{contact.timezone || '—'}</span>
+          )}
+        </div>
         <div className="cd-field">
           <span className="cd-fl">Engagement</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -287,10 +376,18 @@ function ContactDetail({ contact, onClose }) {
         </div>
       </div>
 
-      {contact.notes && (
+      {(contact.notes || isEditing) && (
         <div className="cd-section">
           <div className="cd-section-label">Notes</div>
-          <p className="cd-notes">{contact.notes}</p>
+          {isEditing ? (
+            <textarea 
+              value={form.notes || ''} 
+              onChange={e => setField('notes', e.target.value)}
+              style={{ width: '100%', fontSize: 13, padding: '8px', background: 'transparent', border: '1px solid var(--bg-border)', outline: 'none', borderRadius: 4, minHeight: 80, resize: 'vertical' }}
+            />
+          ) : (
+            <p className="cd-notes">{contact.notes}</p>
+          )}
         </div>
       )}
       </div>

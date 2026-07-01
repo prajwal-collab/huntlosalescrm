@@ -54,6 +54,7 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
   const { team, user } = useAuthStore();
   const [tab, setTab] = useState('intelligence');
   const [saving, setSaving] = useState(false);
+  const [isHeaderEditing, setIsHeaderEditing] = useState(false);
   const saveTimeout = useRef(null);
   const [form, setForm] = useState({ ...lead });
 
@@ -102,39 +103,115 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
       {/* Drawer Header */}
       <div className="drawer-header">
         <div className="drawer-header-top">
-          <div>
-            <div className="drawer-company-name">{form.company_name}</div>
-            <div className="drawer-contact">
-              {form.contact_name || 'No contact'}{form.designation ? ` · ${form.designation}` : ''}
-            </div>
-            {/* Quick links */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-              {form.email && (
-                <a href={`mailto:${form.email}`} style={{ color: 'var(--text-tertiary)', display: 'flex' }}>
-                  <Mail size={14} />
-                </a>
-              )}
-              {form.website && (
-                <a href={form.website.startsWith('http') ? form.website : `https://${form.website}`}
-                  target="_blank" rel="noopener noreferrer"
-                  style={{ color: 'var(--text-tertiary)', display: 'flex' }}>
-                  <Globe size={14} />
-                </a>
-              )}
-              {form.linkedin_url && (
-                <a href={form.linkedin_url} target="_blank" rel="noopener noreferrer"
-                  style={{ color: 'var(--text-tertiary)', display: 'flex' }}>
-                  <Link2 size={14} />
-                </a>
-              )}
-              {form.phone && (
-                <a href={`tel:${form.phone}`} style={{ color: 'var(--text-tertiary)', display: 'flex' }}>
-                  <Phone size={14} />
-                </a>
-              )}
-            </div>
+          <div style={{ flex: 1, paddingRight: 16 }}>
+            {isHeaderEditing ? (
+              <>
+                <input 
+                  value={form.company_name} 
+                  onChange={e => set('company_name', e.target.value)}
+                  placeholder="Company Name"
+                  style={{ fontSize: 18, fontWeight: 700, padding: '2px 4px', margin: '-2px -4px', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', outline: 'none', width: '100%', borderRadius: 4, display: 'block', marginBottom: 4 }}
+                />
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                  <input 
+                    value={form.contact_name || ''} 
+                    onChange={e => set('contact_name', e.target.value)}
+                    placeholder="Contact Name"
+                    style={{ fontSize: 13, padding: '2px 4px', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', outline: 'none', width: '50%', borderRadius: 4 }}
+                  />
+                  <input 
+                    value={form.designation || ''} 
+                    onChange={e => set('designation', e.target.value)}
+                    placeholder="Title"
+                    style={{ fontSize: 13, padding: '2px 4px', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', outline: 'none', width: '50%', borderRadius: 4 }}
+                  />
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Mail size={13} color="var(--text-tertiary)" />
+                    <input 
+                      value={form.email || ''} 
+                      onChange={e => set('email', e.target.value)}
+                      placeholder="Email"
+                      style={{ fontSize: 12, padding: '2px 4px', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', outline: 'none', width: '100%', borderRadius: 4 }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Phone size={13} color="var(--text-tertiary)" />
+                    <input 
+                      value={form.phone || ''} 
+                      onChange={e => set('phone', e.target.value)}
+                      placeholder="Phone"
+                      style={{ fontSize: 12, padding: '2px 4px', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', outline: 'none', width: '100%', borderRadius: 4 }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Globe size={13} color="var(--text-tertiary)" />
+                    <input 
+                      value={form.website || ''} 
+                      onChange={e => set('website', e.target.value)}
+                      placeholder="Website"
+                      style={{ fontSize: 12, padding: '2px 4px', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', outline: 'none', width: '100%', borderRadius: 4 }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Link2 size={13} color="var(--text-tertiary)" />
+                    <input 
+                      value={form.linkedin_url || ''} 
+                      onChange={e => set('linkedin_url', e.target.value)}
+                      placeholder="LinkedIn URL"
+                      style={{ fontSize: 12, padding: '2px 4px', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', outline: 'none', width: '100%', borderRadius: 4 }}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="drawer-company-name">{form.company_name}</div>
+                <div className="drawer-contact">
+                  {form.contact_name || 'No contact'}{form.designation ? ` · ${form.designation}` : ''}
+                </div>
+                {/* Quick links */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                  {form.email && (
+                    <a href={`mailto:${form.email}`} style={{ color: 'var(--text-tertiary)', display: 'flex' }}>
+                      <Mail size={14} />
+                    </a>
+                  )}
+                  {form.website && (
+                    <a href={form.website.startsWith('http') ? form.website : `https://${form.website}`}
+                      target="_blank" rel="noopener noreferrer"
+                      style={{ color: 'var(--text-tertiary)', display: 'flex' }}>
+                      <Globe size={14} />
+                    </a>
+                  )}
+                  {form.linkedin_url && (
+                    <a href={form.linkedin_url} target="_blank" rel="noopener noreferrer"
+                      style={{ color: 'var(--text-tertiary)', display: 'flex' }}>
+                      <Link2 size={14} />
+                    </a>
+                  )}
+                  {form.phone && (
+                    <a href={`tel:${form.phone}`} style={{ color: 'var(--text-tertiary)', display: 'flex' }}>
+                      <Phone size={14} />
+                    </a>
+                  )}
+                </div>
+              </>
+            )}
           </div>
-          <div style={{ display: 'flex', gap: 4 }}>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
+            {editMode && (
+              <button 
+                className="btn btn-ghost btn-sm" 
+                onClick={() => setIsHeaderEditing(!isHeaderEditing)} 
+                style={{ padding: '4px', height: '28px', width: '28px' }}
+                title="Edit Lead Details"
+              >
+                {isHeaderEditing ? <Save size={16} color="var(--accent-blue)" /> : <Edit3 size={16} />}
+              </button>
+            )}
             {isOwner && (
               <button onClick={async () => {
                 const confirmed = await showConfirm(
