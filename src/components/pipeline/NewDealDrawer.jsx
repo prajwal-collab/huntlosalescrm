@@ -138,7 +138,8 @@ export default function NewDealDrawer({ onClose, prefilledLead = null }) {
           </button>
         </div>
 
-        <form onSubmit={handleAdd} className="drawer-body" style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '24px' }}>
+        <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+          <div className="drawer-body" style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '24px', flex: 1, overflowY: 'auto' }}>
           {error && (
             <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <AlertCircle size={14} /> {error}
@@ -291,11 +292,13 @@ export default function NewDealDrawer({ onClose, prefilledLead = null }) {
             </select>
           </div>
 
-          <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }} disabled={saving}>
-            {saving ? <Loader size={14} className="cc-spinner" /> : (prefilledLead ? '⚡ Convert & Save Deal' : 'Save Deal')}
-          </button>
+          </div>
+          <div style={{ padding: '16px 24px', borderTop: '1px solid var(--bg-border)', background: 'var(--bg-surface)', flexShrink: 0 }}>
+            <button type="submit" className="btn btn-primary btn-md w-full" disabled={saving}>
+              {saving ? <Loader size={14} className="cc-spinner" /> : (prefilledLead ? '⚡ Convert & Save Deal' : 'Save Deal')}
+            </button>
+          </div>
         </form>
-      </div>
     </div>
   );
 }
