@@ -293,10 +293,13 @@ function CompanyPanel({ company, contacts, onClose }) {
           </div>
 
           {/* Contacts list */}
-          {contactsForCompany.length > 0 && (
-            <div className="cp-section">
-              <div className="cp-section-label">People ({contactsForCompany.length})</div>
-              {contactsForCompany.map(c => (
+          <div className="cp-section">
+            <div className="cp-section-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>People ({contactsForCompany.length})</span>
+              <a href="/contacts" style={{ fontSize: 11, color: 'var(--accent-blue)', cursor: 'pointer', fontWeight: 600, textDecoration: 'none' }}>+ Add</a>
+            </div>
+            {contactsForCompany.length > 0 ? (
+              contactsForCompany.map(c => (
                 <div key={c.id} className="cp-contact-row">
                   <div className="cp-contact-avatar" style={{ background: getLogoColor(c.name) }}>
                     {(c.name || '?').charAt(0).toUpperCase()}
@@ -312,9 +315,13 @@ function CompanyPanel({ company, contacts, onClose }) {
                   </div>
                   {c.email && <a href={`mailto:${c.email}`} className="co-action-btn" onClick={e => e.stopPropagation()}><ExternalLink size={12} /></a>}
                 </div>
-              ))}
-            </div>
-          )}
+              ))
+            ) : (
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: '12px', textAlign: 'center', background: 'var(--bg-base)', borderRadius: 8, border: '1px dashed var(--bg-border)' }}>
+                No contacts yet. <a href="/contacts" style={{ color: 'var(--accent-blue)', textDecoration: 'none' }}>Add one</a>
+              </div>
+            )}
+          </div>
 
           {/* Links */}
           <div className="cp-section">
