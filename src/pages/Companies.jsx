@@ -580,12 +580,13 @@ export default function Companies() {
                     {['1-10','11-50','51-200','201-1000','1000+'].map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
-              </div>
-              <div className="cp-form-footer">
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setIsAdding(false); setFormData({ name: '', industry: '', size: '', website: '', linkedin: '' }); }}>Cancel</button>
-                <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>
-                  {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Company'}
-                </button>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setIsAdding(false); setFormData({ name: '', industry: '', size: '', website: '', linkedin: '' }); }}>Cancel</button>
+                  <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>
+                    {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Company'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

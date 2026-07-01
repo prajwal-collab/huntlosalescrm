@@ -685,12 +685,13 @@ export default function Contacts() {
                     <option value="CEO">CEO</option>
                   </select>
                 </div>
-              </div>
-              <div className="cd-form-footer">
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setIsAdding(false); setFormData({ name: '', email: '', designation: '', role: '', whatsapp: '', linkedin: '', company_id: '' }); }}>Cancel</button>
-                <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>
-                  {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Contact'}
-                </button>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setIsAdding(false); setFormData({ name: '', email: '', designation: '', role: '', whatsapp: '', linkedin: '', company_id: '' }); }}>Cancel</button>
+                  <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>
+                    {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Contact'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
