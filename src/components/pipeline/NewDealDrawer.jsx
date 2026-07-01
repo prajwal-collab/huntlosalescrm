@@ -299,6 +299,7 @@ export default function NewDealDrawer({ onClose, prefilledLead = null }) {
             </button>
           </div>
         </form>
+      </div>
     </div>
   );
 }
