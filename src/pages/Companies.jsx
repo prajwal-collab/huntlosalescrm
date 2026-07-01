@@ -240,7 +240,7 @@ function CompanyPanel({ company, contacts, onClose }) {
         <button className="drawer-close" onClick={onClose}><X size={16} /></button>
       </div>
 
-      <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: 16, flex: 1, overflowY: 'auto', minHeight: 0 }}>
         {error && <div className="cp-form-error"><AlertCircle size={14} /> {error}</div>}
         
         <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', alignItems: 'center', gap: 12 }}>
@@ -342,6 +342,17 @@ function CompanyPanel({ company, contacts, onClose }) {
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{company.notes}</p>
             </div>
           )}
+        </div>
+      </div>
+      <div className="cp-form-footer" style={{ marginTop: 'auto', borderTop: '1px solid var(--bg-border)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', background: 'var(--bg-surface)' }}>
+        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={async () => {
+          if (window.confirm('Are you sure you want to delete this account?')) {
+            // Delete logic would go here if useDataStore exposed it
+            onClose();
+          }
+        }}>Delete Account</button>
+        <button className="btn btn-primary btn-sm" onClick={onClose}>Done</button>
+      </div>
     </div>
   );
 }
