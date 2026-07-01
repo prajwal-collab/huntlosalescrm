@@ -222,7 +222,7 @@
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
   gap: 0;
   position: sticky;
   top: 0;

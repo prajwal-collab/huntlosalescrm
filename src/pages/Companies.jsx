@@ -262,7 +262,6 @@ function CompanyPanel({ company, contacts, onClose }) {
           <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)' }}>Notes</span>
           <textarea style={{ width: '100%', fontSize: 13, padding: '8px', background: 'transparent', border: '1px solid transparent', outline: 'none', minHeight: 80, resize: 'vertical' }} value={formData.notes} onChange={e => setField('notes', e.target.value)} placeholder="Add internal notes..." />
         </div>
-      </div>
 
           {/* Tags */}
           {(company.tags || []).length > 0 && (
@@ -342,7 +341,6 @@ function CompanyPanel({ company, contacts, onClose }) {
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{company.notes}</p>
             </div>
           )}
-        </div>
       </div>
       <div className="cp-form-footer" style={{ marginTop: 'auto', borderTop: '1px solid var(--bg-border)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', background: 'var(--bg-surface)' }}>
         <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={async () => {

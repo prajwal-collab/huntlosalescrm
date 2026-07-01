@@ -197,7 +197,8 @@ function ContactDetail({ contact, onClose }) {
         <button className="drawer-close" onClick={onClose}><X size={16} /></button>
       </div>
 
-      <div className="cd-tags">
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingBottom: 20 }}>
+        <div className="cd-tags">
         {(contact.tags || []).map(t => (
           <span key={t} className={`badge ${TAG_COLORS[t] || 'badge-gray'}`}>{t}</span>
         ))}
@@ -292,6 +293,7 @@ function ContactDetail({ contact, onClose }) {
           <p className="cd-notes">{contact.notes}</p>
         </div>
       )}
+      </div>
     </div>
   );
 }
