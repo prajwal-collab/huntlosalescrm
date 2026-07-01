@@ -100,9 +100,9 @@
 
 .contacts-table-wrap {
   flex: 1;
-  display: flex;
   flex-direction: column;
   background: var(--bg-surface);
+  overflow-x: auto;
 }
 
 /* ── Table Head ── */
@@ -123,13 +123,14 @@
   position: sticky;
   top: 0;
   z-index: 10;
+  min-width: 1150px;
 }
 
 /* ── Contact Row ── */
 .contacts-list {
-  flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 1150px;
 }
 
 .cr-row {

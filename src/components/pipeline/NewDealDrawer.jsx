@@ -98,7 +98,6 @@ export default function NewDealDrawer({ onClose, prefilledLead = null }) {
         stage: 'Discovery',
         urgency: formData.urgency,
         engagement_score: 0,
-        lead_id: formData.lead_id || null,
         notes: formData.lead_id ? `Converted from Lead #${formData.lead_id}` : '',
       });
       onClose();
