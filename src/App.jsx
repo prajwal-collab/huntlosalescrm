@@ -2,12 +2,13 @@
 // HUNTLO SALES OS — MAIN ROUTER (App.jsx)
 // ============================================
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { isConfigured } from './lib/supabase';
 import useAuthStore from './store/useAuthStore';
 import useUIStore from './store/useUIStore';
 import SetupRequired from './components/setup/SetupRequired';
 import { DialogProvider } from './context/DialogContext';
+import { supabase } from './lib/supabase';
 
 // Layout & Auth
 import Layout from './components/layout/Layout';
@@ -32,6 +33,20 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Team from './pages/Team';
 
+// Global listener to catch password recovery hashes from emails
+function AuthListener() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        navigate('/reset-password');
+      }
+    });
+    return () => subscription?.unsubscribe();
+  }, [navigate]);
+  return null;
+}
+
 export default function App() {
   const { initialize } = useAuthStore();
   const { theme } = useUIStore();
@@ -54,6 +69,7 @@ export default function App() {
   return (
     <DialogProvider>
       <BrowserRouter>
+        <AuthListener />
         <Routes>
           {/* Public Routes */}
           <Route path="/signin" element={<SignIn />} />
