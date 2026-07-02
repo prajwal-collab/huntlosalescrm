@@ -3,6 +3,7 @@
 // ============================================
 import { create } from 'zustand';
 import useDataStore from './useDataStore';
+import useAuthStore from './useAuthStore';
 
 const usePipelineStore = create((set, get) => ({
   selectedDealId: null,
@@ -105,7 +106,21 @@ const usePipelineStore = create((set, get) => ({
       }
 
       const owner = teamMap.get(d.owner_id);
-      const ownerName = owner?.name || 'Unknown';
+      const currentUser = useAuthStore.getState().user;
+      
+      let ownerName = 'Unknown';
+      let ownerColor = '#3b82f6';
+      let ownerInitials = 'UN';
+
+      if (owner) {
+        ownerName = owner.name;
+        ownerColor = owner.color || '#3b82f6';
+        ownerInitials = (owner.initials || ownerName.substring(0, 2)).toUpperCase();
+      } else if (currentUser && d.owner_id === currentUser.id) {
+        ownerName = currentUser.user_metadata?.full_name || currentUser.email || 'You';
+        ownerInitials = (currentUser.user_metadata?.full_name || currentUser.email || 'U').substring(0, 2).toUpperCase();
+      }
+
       return { 
         ...d, 
         company: company?.name || 'Unknown', 
@@ -114,8 +129,8 @@ const usePipelineStore = create((set, get) => ({
         color: '#3b82f6',
         owner: {
           name: ownerName,
-          color: owner?.color || '#3b82f6',
-          initials: (owner?.initials || ownerName.substring(0, 2)).toUpperCase()
+          color: ownerColor,
+          initials: ownerInitials
         },
         engagementScore: d.engagement_score || 0
       };

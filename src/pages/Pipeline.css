@@ -99,13 +99,13 @@
 .deal-card {
   background: #111827; /* Dark slate */
   border: 1px solid #334155;
-  border-radius: 14px;
-  padding: 16px;
+  border-radius: 12px;
+  padding: 12px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   position: relative;
   overflow: hidden;
@@ -132,50 +132,50 @@
   opacity: 1;
 }
 
-.deal-card-top { display: flex; align-items: flex-start; gap: 12px; }
+.deal-card-top { display: flex; align-items: flex-start; gap: 10px; }
 
 .deal-logo {
-  width: 40px; height: 40px;
-  border-radius: 10px;
+  width: 32px; height: 32px;
+  border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 16px; font-weight: 700;
+  font-size: 14px; font-weight: 700;
   flex-shrink: 0;
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
 }
 
-.deal-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.deal-company { font-size: 15px; font-weight: 700; color: #f8fafc; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -0.01em; }
+.deal-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.deal-company { font-size: 14px; font-weight: 700; color: #f8fafc; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -0.01em; }
 
 .deal-lead-row { display: flex; align-items: center; gap: 6px; }
 .deal-lead-name { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #94a3b8; font-weight: 500; }
 .deal-lead-name svg { opacity: 0.7; }
 
-.deal-metrics-row { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
-.deal-arr { font-size: 13px; color: #10b981; font-weight: 700; letter-spacing: -0.02em; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 6px; }
+.deal-metrics-row { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
+.deal-arr { font-size: 12px; color: #10b981; font-weight: 700; letter-spacing: -0.02em; background: rgba(16, 185, 129, 0.1); padding: 2px 6px; border-radius: 4px; }
 
 .deal-urgency-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 6px currentColor; border: 2px solid #111827; }
 
-.deal-card-mid { display: flex; flex-direction: column; gap: 6px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
+.deal-card-mid { display: flex; flex-direction: column; gap: 4px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }
 .deal-score-row { display: flex; justify-content: space-between; align-items: center; }
-.deal-score-label { font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.deal-score-label { font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 .deal-score-val { font-size: 12px; font-weight: 800; }
 
-.deal-card .progress-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+.deal-card .progress-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
 
 .deal-next-step {
-  font-size: 12px;
+  font-size: 11px;
   color: #cbd5e1;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   background: rgba(99, 102, 241, 0.1);
-  padding: 8px 10px;
+  padding: 6px 8px;
   border-radius: 6px;
   border-left: 3px solid #6366f1;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 .step-arrow { color: #6366f1; font-weight: bold; }
 
@@ -209,9 +209,9 @@
 }
 
 .avatar {
-  width: 24px; height: 24px;
+  width: 20px; height: 20px;
   border-radius: 50%;
-  font-size: 10px; font-weight: 700;
+  font-size: 9px; font-weight: 700;
   color: #fff;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;

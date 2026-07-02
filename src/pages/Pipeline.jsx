@@ -46,7 +46,7 @@ function DealCard({ deal, onClick }) {
               const owner = deal.owner;
               if (!owner) return null;
               return (
-                <div className="avatar" title={`Owner: ${owner.name}`} style={{ background: owner.color || '#3b82f6' }}>
+                <div className="avatar" title={`Added By: ${owner.name}`} style={{ background: owner.color || '#3b82f6' }}>
                   {owner.initials || getInitials(owner.name)}
                 </div>
               );
