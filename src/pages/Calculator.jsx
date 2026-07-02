@@ -115,7 +115,7 @@ export default function Calculator() {
           <h1 className="page-big-title">Enterprise Pricing Calculator</h1>
           <p className="page-big-sub">Instantly generate accurate enterprise quotations.</p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button className="btn btn-ghost" onClick={() => setShowSettings(!showSettings)}>
             <Settings size={14} /> {showSettings ? 'Hide Settings' : 'Config Settings'}
           </button>
@@ -260,29 +260,41 @@ export default function Calculator() {
           <div className="calc-pricing-cards">
             {/* Monthly */}
             <div className="calc-price-card">
-              <div className="cpc-header">Monthly Plan</div>
-              <div className="cpc-price">{formatCurrency(roundedMonthlyPrice)}<span>/mo</span></div>
-              <div className="cpc-footer">Billed Monthly</div>
+              <div className="cpc-left">
+                <div className="cpc-header">Monthly Plan</div>
+                <div className="cpc-footer">Billed Monthly</div>
+              </div>
+              <div className="cpc-right">
+                <div className="cpc-price">{formatCurrency(roundedMonthlyPrice)}<span>/mo</span></div>
+              </div>
             </div>
 
             {/* Quarterly */}
             <div className="calc-price-card recommended">
               <div className="cpc-badge">Recommended</div>
-              <div className="cpc-header">Quarterly Plan</div>
-              <div className="cpc-price">{formatCurrency(quarterlyPrice)}<span>/qtr</span></div>
-              <div className="cpc-footer">
-                <span className="discount-tag">Save {config.quarterlyDiscount}%</span> 
-                (Avg {formatCurrency(quarterlyPrice / 3)}/mo)
+              <div className="cpc-left">
+                <div className="cpc-header">Quarterly Plan</div>
+                <div className="cpc-footer">
+                  <span className="discount-tag">Save {config.quarterlyDiscount}%</span> 
+                </div>
+              </div>
+              <div className="cpc-right">
+                <div className="cpc-price">{formatCurrency(quarterlyPrice)}<span>/qtr</span></div>
+                <div className="cpc-footer" style={{ alignItems: 'flex-end' }}>(Avg {formatCurrency(quarterlyPrice / 3)}/mo)</div>
               </div>
             </div>
 
             {/* Annual */}
             <div className="calc-price-card">
-              <div className="cpc-header">Annual Plan</div>
-              <div className="cpc-price">{formatCurrency(annualPrice)}<span>/yr</span></div>
-              <div className="cpc-footer">
-                <span className="discount-tag">Save {config.annualDiscount}%</span> 
-                (Avg {formatCurrency(annualPrice / 12)}/mo)
+              <div className="cpc-left">
+                <div className="cpc-header">Annual Plan</div>
+                <div className="cpc-footer">
+                  <span className="discount-tag">Save {config.annualDiscount}%</span> 
+                </div>
+              </div>
+              <div className="cpc-right">
+                <div className="cpc-price">{formatCurrency(annualPrice)}<span>/yr</span></div>
+                <div className="cpc-footer" style={{ alignItems: 'flex-end' }}>(Avg {formatCurrency(annualPrice / 12)}/mo)</div>
               </div>
             </div>
           </div>

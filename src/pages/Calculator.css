@@ -4,8 +4,8 @@
 
 .calc-page {
   padding: 24px 32px;
-  height: 100vh;
-  overflow-y: auto;
+  min-height: 100%;
+  flex: 1;
   background: var(--bg-base);
   color: var(--text-primary);
   display: flex;
@@ -248,68 +248,84 @@
 }
 
 .calc-pricing-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 16px;
-  margin-bottom: 40px;
+  margin-bottom: 32px;
 }
 
 .calc-price-card {
   background: #ffffff;
   border: none;
-  border-radius: 20px;
-  padding: 32px 20px;
-  text-align: center;
+  border-radius: 16px;
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   position: relative;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.03);
 }
 .dark-mode .calc-price-card {
   background: rgba(255,255,255,0.03);
 }
 
 .calc-price-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 40px rgba(0,0,0,0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.06);
 }
 
 .calc-price-card.recommended {
   background: #ffffff;
-  box-shadow: 0 8px 30px rgba(59, 130, 246, 0.15), 0 0 0 2px var(--accent-blue);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.12), 0 0 0 2px var(--accent-blue);
 }
 
 .cpc-badge {
   position: absolute;
   top: -12px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 24px;
+  transform: none;
   background: linear-gradient(90deg, #3b82f6, #2563eb);
   color: #fff;
   font-size: 11px;
   font-weight: 800;
-  padding: 6px 16px;
+  padding: 4px 12px;
   border-radius: 20px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
+.cpc-left {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  gap: 4px;
+}
+
+.cpc-right {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+  gap: 4px;
+}
+
 .cpc-header {
   font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0;
 }
 
 .cpc-price {
-  font-size: 28px;
+  font-size: 20px;
   font-weight: 800;
   color: var(--text-primary);
-  margin-bottom: 12px;
+  margin-bottom: 0;
   display: flex;
   align-items: baseline;
-  justify-content: center;
-  letter-spacing: -0.03em;
+  justify-content: flex-end;
+  letter-spacing: -0.02em;
 }
 
 .cpc-price span {
@@ -324,8 +340,8 @@
   color: var(--text-tertiary);
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  align-items: center;
+  gap: 4px;
+  align-items: flex-start;
 }
 
 .discount-tag {
