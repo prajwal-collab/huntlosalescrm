@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BarChart3, Building2, Users, CheckSquare,
   Calendar, Zap, FileText, Settings, Bell, ChevronLeft,
   ChevronRight, LogOut, Sun, Moon, TrendingUp,
-  ChevronDown, Target, BookOpen
+  ChevronDown, Target, BookOpen, Calculator
 } from 'lucide-react';
 import useUIStore from '../../store/useUIStore';
 import useAuthStore from '../../store/useAuthStore';
@@ -26,6 +26,7 @@ const NAV_GROUPS = [
       { to: '/companies', icon: Building2, label: 'Accounts' },
       { to: '/contacts', icon: Users, label: 'Contacts' },
       { to: '/meetings', icon: Calendar, label: 'Meetings' },
+      { to: '/calculator', icon: Calculator, label: 'Calculator' },
     ]
   },
   {

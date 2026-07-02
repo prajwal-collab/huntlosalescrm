@@ -33,6 +33,8 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Team from './pages/Team';
 
+import Calculator from './pages/Calculator';
+
 // Global listener to catch password recovery hashes from emails
 function AuthListener() {
   const navigate = useNavigate();
@@ -90,6 +92,7 @@ export default function App() {
             <Route element={<Layout><Sequences /></Layout>} path="/sequences" />
             <Route element={<Layout><Documents /></Layout>} path="/documents" />
             <Route element={<Layout><Reports /></Layout>} path="/reports" />
+            <Route element={<Layout><Calculator /></Layout>} path="/calculator" />
             <Route element={<Layout><Settings /></Layout>} path="/settings" />
             <Route element={<Layout><Team /></Layout>} path="/team" />
           </Route>
