@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Printer, Download } from 'lucide-react';
-import logoImg from '../assets/logo.svg';
+import logoImg from '../assets/huntlo-logo-full.png';
 import './ProposalViewer.css';
 
 export default function ProposalViewer() {
@@ -58,7 +58,6 @@ export default function ProposalViewer() {
           <div className="prop-header">
             <div className="prop-logo-wrapper">
               <img src={logoImg} alt="Huntlo" />
-              <span className="prop-logo-text">Huntlo</span>
             </div>
             <div className="prop-title">{proposalName}</div>
           </div>
@@ -131,10 +130,12 @@ export default function ProposalViewer() {
                 <td><strong>Monthly Subscription</strong></td>
                 <td className="align-right highlight" style={{ fontSize: 18 }}>{formatCurrency(roundedMonthlyPrice)}</td>
               </tr>
-              <tr>
-                <td>GST</td>
-                <td className="align-right">18% Extra</td>
-              </tr>
+              {region === 'India' && (
+                <tr>
+                  <td>GST</td>
+                  <td className="align-right">18% Extra</td>
+                </tr>
+              )}
               <tr>
                 <td>Billing</td>
                 <td className="align-right">Monthly</td>
@@ -200,7 +201,7 @@ export default function ProposalViewer() {
           <div className="prop-notes">
             <h4>Commercial Notes</h4>
             <ul>
-              <li>Pricing is exclusive of 18% GST.</li>
+              {region === 'India' && <li>Pricing is exclusive of 18% GST.</li>}
               <li>Usage beyond the included allocation will be billed as per the unit pricing.</li>
               <li>Quarterly commercial plans will be finalized based on agreed monthly consumption.</li>
               <li>Strategic discounts are available for quarterly and annual commitments.</li>

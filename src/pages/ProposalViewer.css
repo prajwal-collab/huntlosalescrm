@@ -27,8 +27,7 @@
 .proposal-document {
   background: #ffffff;
   width: 100%;
-  max-width: 800px; /* Rough A4 ratio */
-  min-height: 1131px;
+  max-width: 800px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   color: #1e293b;
   font-family: 'Inter', -apple-system, sans-serif;
@@ -40,12 +39,13 @@
   padding: 60px;
   position: relative;
   page-break-after: always;
-  min-height: 1050px;
   display: flex;
   flex-direction: column;
+  border-bottom: 1px dashed #cbd5e1;
 }
 .proposal-page:last-child {
   page-break-after: auto;
+  border-bottom: none;
 }
 
 /* Header & Logos */
@@ -278,6 +278,7 @@
     padding: 20mm; /* standard A4 margins */
     box-sizing: border-box;
     page-break-after: always;
+    border-bottom: none;
   }
 
   .proposal-toolbar {
