@@ -168,9 +168,10 @@ export default function Calculator() {
       )}
 
       <div className="calc-main-grid">
-        {/* Left Panel: Customer Details */}
-        <div className="calc-panel">
-          <div className="calc-panel-header">Customer Details</div>
+        <div className="calc-left-column">
+          {/* Left Panel: Customer Details */}
+          <div className="calc-panel">
+            <div className="calc-panel-header">Customer Details</div>
           <div className="calc-form-group">
             <label>Company Name</label>
             <input type="text" placeholder="e.g. Acme Corp" value={companyName} onChange={e => setCompanyName(e.target.value)} />
@@ -225,9 +226,10 @@ export default function Calculator() {
             <label>WhatsApp Outreach</label>
             <input type="number" value={whatsappOutreach} onChange={e => setWhatsappOutreach(Number(e.target.value))} />
           </div>
-          <div className="calc-req-row">
-            <label>AI Voice Calling (Mins)</label>
-            <input type="number" value={aiCallsMins} onChange={e => setAiCallsMins(Number(e.target.value))} />
+            <div className="calc-req-row">
+              <label>AI Voice Calling (Mins)</label>
+              <input type="number" value={aiCallsMins} onChange={e => setAiCallsMins(Number(e.target.value))} />
+            </div>
           </div>
         </div>
 
