@@ -279,21 +279,7 @@ const useAuthStore = create(
 
           set({ team });
         } catch (err) {
-          console.warn('[AuthStore] Failed to fetch team from Supabase, falling back:', err.message);
-          if (u) {
-            set({ team: [{
-                id: u.id,
-                email: u.email,
-                name: u.user_metadata?.full_name || u.email || 'You',
-                role: u.email === 'prajwal@earlyjobs.in' ? 'Admin' : 'Member',
-                status: 'active',
-                type: 'member',
-                initials: (u.email || '?').substring(0, 2).toUpperCase(),
-                color: '#3b82f6'
-            }] });
-          } else {
-            set({ team: [] });
-          }
+          console.warn('[AuthStore] Failed to fetch team from Supabase:', err.message);
         }
       },
 
@@ -309,19 +295,8 @@ const useAuthStore = create(
           await get().fetchTeam();
           return data;
         } catch (err) {
-          console.warn('[AuthStore] inviteMember database insert failed, falling back to local state:', err.message);
-          const newInvite = {
-            id: `inv-${Date.now()}`,
-            name: invite.email.split('@')[0],
-            email: invite.email,
-            role: invite.role,
-            status: 'invited',
-            initials: invite.email.substring(0, 2).toUpperCase(),
-            color: '#f59e0b',
-            token: token
-          };
-          set(state => ({ team: [...state.team, newInvite] }));
-          return newInvite;
+          console.error('[AuthStore] inviteMember database insert failed:', err.message);
+          throw err;
         }
       },
 
@@ -341,8 +316,7 @@ const useAuthStore = create(
 
           await get().fetchTeam();
         } catch (err) {
-          console.warn('[AuthStore] removeMember database call failed, falling back to local state:', err.message);
-          set(state => ({ team: state.team.filter(m => m.id !== memberId) }));
+          console.error('[AuthStore] removeMember database call failed:', err.message);
           throw err;
         }
       },
@@ -363,10 +337,7 @@ const useAuthStore = create(
 
           await get().fetchTeam();
         } catch (err) {
-          console.warn('[AuthStore] updateMemberRole database call failed, falling back to local state:', err.message);
-          set(state => ({
-            team: state.team.map(m => m.id === memberId ? { ...m, role } : m)
-          }));
+          console.error('[AuthStore] updateMemberRole database call failed:', err.message);
           throw err;
         }
       },
