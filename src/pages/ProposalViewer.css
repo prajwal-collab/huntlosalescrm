@@ -1,0 +1,292 @@
+/* =========================================
+   HUNTLO — ENTERPRISE COMMERCIAL PROPOSAL
+   ========================================= */
+
+/* Base wrapper for screen viewing */
+.proposal-wrapper {
+  background: var(--bg-base);
+  min-height: 100vh;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+}
+
+/* Print Toolbar (Hidden on print) */
+.proposal-toolbar {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+/* The actual document container (A4 layout representation on screen) */
+.proposal-document {
+  background: #ffffff;
+  width: 100%;
+  max-width: 800px; /* Rough A4 ratio */
+  min-height: 1131px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  color: #1e293b;
+  font-family: 'Inter', -apple-system, sans-serif;
+  line-height: 1.6;
+}
+
+/* Page structure */
+.proposal-page {
+  padding: 60px;
+  position: relative;
+  page-break-after: always;
+  min-height: 1050px;
+  display: flex;
+  flex-direction: column;
+}
+.proposal-page:last-child {
+  page-break-after: auto;
+}
+
+/* Header & Logos */
+.prop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+  border-bottom: 2px solid #f1f5f9;
+  padding-bottom: 24px;
+}
+
+.prop-logo-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.prop-logo-wrapper img {
+  height: 36px;
+  width: auto;
+}
+
+.prop-logo-text {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1b66f2; /* Huntlo Blue */
+  letter-spacing: -0.03em;
+}
+
+.prop-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-align: right;
+}
+
+/* Typography */
+.prop-h1 {
+  font-size: 32px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 16px 0;
+  line-height: 1.2;
+}
+
+.prop-h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1b66f2; /* Huntlo Blue */
+  margin: 32px 0 16px 0;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.prop-p {
+  font-size: 15px;
+  color: #475569;
+  margin: 0 0 16px 0;
+}
+
+/* Prepared Section */
+.prop-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  background: #f8fafc;
+  padding: 24px;
+  border-radius: 8px;
+  margin: 32px 0;
+  border-left: 4px solid #1b66f2;
+}
+
+.prop-meta-col h4 {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  letter-spacing: 0.05em;
+}
+
+.prop-meta-col p {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 4px 0;
+}
+
+.prop-meta-col span {
+  font-size: 14px;
+  color: #64748b;
+}
+
+/* Tables */
+.prop-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 32px;
+}
+
+.prop-table th {
+  text-align: left;
+  padding: 12px 16px;
+  background: #f1f5f9;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  border-bottom: 2px solid #e2e8f0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.prop-table td {
+  padding: 14px 16px;
+  font-size: 14px;
+  color: #1e293b;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.prop-table tr:last-child td {
+  border-bottom: none;
+}
+
+.prop-table td.align-right,
+.prop-table th.align-right {
+  text-align: right;
+}
+
+.prop-table td strong {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.prop-table td.highlight {
+  color: #1b66f2;
+  font-weight: 700;
+}
+
+/* Note Section */
+.prop-notes {
+  background: #f8fafc;
+  padding: 24px;
+  border-radius: 8px;
+  margin-top: 24px;
+}
+.prop-notes h4 {
+  font-size: 14px;
+  color: #0f172a;
+  margin: 0 0 12px 0;
+}
+.prop-notes ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #475569;
+  font-size: 13px;
+}
+.prop-notes li {
+  margin-bottom: 8px;
+}
+
+/* Footer Section */
+.prop-footer {
+  margin-top: auto;
+  padding-top: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+.prop-footer-left h4 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  color: #0f172a;
+}
+.prop-footer-left p {
+  margin: 0 0 2px 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.prop-footer-right {
+  text-align: right;
+}
+.prop-footer-right p {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+.prop-footer-right strong {
+  color: #1b66f2;
+  font-size: 14px;
+}
+
+/* Print CSS */
+@media print {
+  @page {
+    size: A4;
+    margin: 0; /* Let the component handle margins */
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  /* Reset backgrounds to ensure print accuracy */
+  body {
+    background: #fff;
+  }
+  
+  .proposal-document, .proposal-document * {
+    visibility: visible;
+  }
+  
+  .proposal-document {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: none;
+    box-shadow: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .proposal-page {
+    /* Exact A4 height to trigger browser page breaks correctly if needed, but page-break-after handles it */
+    min-height: 297mm; 
+    padding: 20mm; /* standard A4 margins */
+    box-sizing: border-box;
+    page-break-after: always;
+  }
+
+  .proposal-toolbar {
+    display: none !important;
+  }
+
+  /* Force background colors to print */
+  .prop-table th, .prop-meta-grid, .prop-notes {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

@@ -26,7 +26,7 @@ const usePipelineStore = create((set, get) => ({
     const company = companies.find(c => c.id === rawDeal.company_id);
     const dealContacts = contacts.filter(c => c.company_id === rawDeal.company_id).map(c => c.name);
     const owner = teamMembers?.find(tm => tm.id === rawDeal.owner_id);
-    const ownerName = owner?.name || 'Unknown';
+    const ownerName = owner?.full_name || owner?.email || 'Unknown';
     
     return {
       ...rawDeal,
@@ -113,7 +113,7 @@ const usePipelineStore = create((set, get) => ({
       let ownerInitials = 'UN';
 
       if (owner) {
-        ownerName = owner.name;
+        ownerName = owner.full_name || owner.email || 'Unknown';
         ownerColor = owner.color || '#3b82f6';
         ownerInitials = (owner.initials || ownerName.substring(0, 2)).toUpperCase();
       } else if (currentUser && d.owner_id === currentUser.id) {

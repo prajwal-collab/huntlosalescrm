@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Settings, Calculator as CalcIcon, Plus, Info, Check, Copy, Download, Share2 } from 'lucide-react';
 import useCalculatorStore from '../store/useCalculatorStore';
 import './Calculator.css';
 
 export default function Calculator() {
   const { config, updateConfig, updateRegionalConfig } = useCalculatorStore();
+  const navigate = useNavigate();
   
   // Local state for UI
   const [showSettings, setShowSettings] = useState(false);
@@ -73,6 +75,29 @@ export default function Calculator() {
 
   const estimatedArr = roundedMonthlyPrice * 12;
 
+  const handleGenerateProposal = () => {
+    navigate('/proposal/preview', {
+      state: {
+        companyName,
+        region,
+        industry,
+        proposalName,
+        salesOwner,
+        searches,
+        unlocks,
+        emailReveals,
+        mobileReveals,
+        emailOutreach,
+        whatsappOutreach,
+        aiCallsMins,
+        roundedMonthlyPrice,
+        quarterlyPrice,
+        annualPrice,
+        regionalConfig
+      }
+    });
+  };
+
   // Format currency
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('en-IN', {
@@ -94,7 +119,7 @@ export default function Calculator() {
           <button className="btn btn-ghost" onClick={() => setShowSettings(!showSettings)}>
             <Settings size={14} /> {showSettings ? 'Hide Settings' : 'Config Settings'}
           </button>
-          <button className="btn btn-primary">
+          <button className="btn btn-primary" onClick={handleGenerateProposal}>
             <Download size={14} /> Generate PDF
           </button>
         </div>
@@ -262,7 +287,7 @@ export default function Calculator() {
 
           <div className="calc-actions">
             <button className="btn btn-outline" style={{ flex: 1 }}><Copy size={14} /> Copy Pricing</button>
-            <button className="btn btn-primary" style={{ flex: 1 }}><Share2 size={14} /> Send to Proposal</button>
+            <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleGenerateProposal}><Share2 size={14} /> Send to Proposal</button>
           </div>
         </div>
       </div>

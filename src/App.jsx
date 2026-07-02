@@ -34,6 +34,7 @@ import Settings from './pages/Settings';
 import Team from './pages/Team';
 
 import Calculator from './pages/Calculator';
+import ProposalViewer from './pages/ProposalViewer';
 
 // Global listener to catch password recovery hashes from emails
 function AuthListener() {
@@ -95,6 +96,7 @@ export default function App() {
             <Route element={<Layout><Calculator /></Layout>} path="/calculator" />
             <Route element={<Layout><Settings /></Layout>} path="/settings" />
             <Route element={<Layout><Team /></Layout>} path="/team" />
+            <Route element={<ProposalViewer />} path="/proposal/preview" />
           </Route>
 
           {/* Fallback */}
