@@ -39,8 +39,8 @@
 .kanban-board::-webkit-scrollbar { height: 6px; }
 
 .kanban-col {
-  width: 260px;
-  min-width: 260px;
+  width: 240px;
+  min-width: 240px;
   background: var(--bg-base);
   border: 1px solid var(--bg-border);
   border-radius: var(--radius-lg);
@@ -99,13 +99,13 @@
 .deal-card {
   background: #111827; /* Dark slate */
   border: 1px solid #334155;
-  border-radius: 12px;
-  padding: 12px;
+  border-radius: 10px;
+  padding: 10px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   position: relative;
   overflow: hidden;
@@ -123,8 +123,8 @@
 
 .deal-card:hover {
   border-color: #475569;
-  transform: translateY(-3px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 12px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
   background: #1e293b;
 }
 
@@ -132,45 +132,45 @@
   opacity: 1;
 }
 
-.deal-card-top { display: flex; align-items: flex-start; gap: 10px; }
+.deal-card-top { display: flex; align-items: flex-start; gap: 8px; }
 
 .deal-logo {
-  width: 32px; height: 32px;
-  border-radius: 8px;
+  width: 24px; height: 24px;
+  border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 14px; font-weight: 700;
+  font-size: 12px; font-weight: 700;
   flex-shrink: 0;
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .deal-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.deal-company { font-size: 14px; font-weight: 700; color: #f8fafc; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -0.01em; }
+.deal-company { font-size: 13px; font-weight: 700; color: #f8fafc; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -0.01em; }
 
-.deal-lead-row { display: flex; align-items: center; gap: 6px; }
-.deal-lead-name { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #94a3b8; font-weight: 500; }
-.deal-lead-name svg { opacity: 0.7; }
+.deal-lead-row { display: flex; align-items: center; gap: 4px; }
+.deal-lead-name { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: #94a3b8; font-weight: 500; }
+.deal-lead-name svg { opacity: 0.7; width: 10px; height: 10px; }
 
-.deal-metrics-row { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
-.deal-arr { font-size: 12px; color: #10b981; font-weight: 700; letter-spacing: -0.02em; background: rgba(16, 185, 129, 0.1); padding: 2px 6px; border-radius: 4px; }
+.deal-metrics-row { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+.deal-arr { font-size: 11px; color: #10b981; font-weight: 700; letter-spacing: -0.02em; background: rgba(16, 185, 129, 0.1); padding: 2px 6px; border-radius: 4px; }
 
 .deal-urgency-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 6px currentColor; border: 2px solid #111827; }
 
-.deal-card-mid { display: flex; flex-direction: column; gap: 4px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }
+.deal-card-mid { display: flex; flex-direction: column; gap: 2px; background: rgba(0,0,0,0.2); padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }
 .deal-score-row { display: flex; justify-content: space-between; align-items: center; }
 .deal-score-label { font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-.deal-score-val { font-size: 12px; font-weight: 800; }
+.deal-score-val { font-size: 11px; font-weight: 800; }
 
 .deal-card .progress-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
 
 .deal-next-step {
-  font-size: 11px;
+  font-size: 10px;
   color: #cbd5e1;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   background: rgba(99, 102, 241, 0.1);
-  padding: 6px 8px;
+  padding: 4px 6px;
   border-radius: 6px;
   border-left: 3px solid #6366f1;
   display: flex;
@@ -209,12 +209,12 @@
 }
 
 .avatar {
-  width: 20px; height: 20px;
+  width: 18px; height: 18px;
   border-radius: 50%;
-  font-size: 9px; font-weight: 700;
+  font-size: 8px; font-weight: 700;
   color: #fff;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
-  border: 2px solid #111827;
+  border: 1.5px solid #111827;
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
