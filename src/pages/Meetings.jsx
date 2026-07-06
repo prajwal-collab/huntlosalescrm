@@ -53,6 +53,7 @@ function MeetingDetailPanel({ meeting, onClose, updateMeeting, deals }) {
     ai_summary: meeting.ai_summary || '',
     pain_points: meeting.pain_points || [],
     objections: meeting.objections || [],
+    attended: meeting.attended ?? (meeting.status === 'completed' ? true : false),
   });
   const [newPainPoint, setNewPainPoint] = useState('');
   const [newObjection, setNewObjection] = useState('');
@@ -72,6 +73,7 @@ function MeetingDetailPanel({ meeting, onClose, updateMeeting, deals }) {
         ai_summary: summaryForm.ai_summary,
         pain_points: summaryForm.pain_points,
         objections: summaryForm.objections,
+        attended: summaryForm.attended,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -188,6 +190,33 @@ Best,
           <Mail size={13} /> Send Recap
         </button>
       </div>
+
+      {/* Demo Attended Tracker */}
+      {(meeting.type === 'Demo' || meeting.type === 'demo') && (
+        <div className="md-section">
+          <h3 className="md-section-title">📊 Demo Attendance</h3>
+          <label style={{
+            display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px',
+            borderRadius: 10, cursor: 'pointer', fontSize: 14, fontWeight: 500,
+            background: summaryForm.attended ? 'rgba(22,163,74,0.1)' : 'rgba(100,116,139,0.08)',
+            border: `1.5px solid ${summaryForm.attended ? 'rgba(22,163,74,0.3)' : 'var(--bg-border)'}`,
+            transition: 'all 0.2s',
+          }}>
+            <input
+              type="checkbox"
+              checked={!!summaryForm.attended}
+              onChange={e => setSummaryForm(f => ({ ...f, attended: e.target.checked }))}
+              style={{ width: 16, height: 16, accentColor: '#16a34a', cursor: 'pointer' }}
+            />
+            <span style={{ color: summaryForm.attended ? '#16a34a' : 'var(--text-secondary)' }}>
+              {summaryForm.attended ? '✅ Prospect Showed Up' : '⏳ Mark as Showed Up'}
+            </span>
+            {summaryForm.attended && (
+              <span className="badge badge-green" style={{ marginLeft: 'auto', fontSize: 11 }}>Attended</span>
+            )}
+          </label>
+        </div>
+      )}
 
       {/* Notes */}
       <div className="md-section">

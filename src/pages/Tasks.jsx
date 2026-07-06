@@ -55,6 +55,7 @@ export default function Tasks() {
   // Counts for each tab
   const pendingCount = tasks.filter(t => t.status !== 'completed').length;
   const callCount = tasks.filter(t => t.type === 'call' && t.status !== 'completed').length;
+  const coldCallsCompleted = tasks.filter(t => (t.type === 'call' || t.type === 'cold_call') && t.status === 'completed').length;
   const emailCount = tasks.filter(t => t.type === 'email' && t.status !== 'completed').length;
   const linkedinCount = tasks.filter(t => t.type === 'linkedin' && t.status !== 'completed').length;
   const overdueCount = tasks.filter(t => t.status !== 'completed' && safeIsPast(t.due)).length;
@@ -140,6 +141,24 @@ export default function Tasks() {
           <h1 className="page-big-title" style={{ fontSize: 22 }}>Tasks</h1>
         </div>
         <div className="page-header-actions">
+          <button
+            className="btn btn-ghost btn-sm"
+            style={{ gap: 6, fontSize: 12, background: 'rgba(239,68,68,0.08)', color: '#dc2626', border: '1px solid rgba(239,68,68,0.2)' }}
+            onClick={async () => {
+              setSaving(true);
+              try {
+                await createTask({
+                  title: `Cold Call — ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`,
+                  type: 'call',
+                  priority: 'medium',
+                  due: new Date().toISOString(),
+                  status: 'completed',
+                });
+              } finally { setSaving(false); }
+            }}
+          >
+            📞 Log Cold Call
+          </button>
           <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}><Plus size={13} /> Create task</button>
         </div>
       </div>
@@ -163,6 +182,9 @@ export default function Tasks() {
         </div>
         <div className={`apollo-tab ${filter === 'completed' ? 'active' : ''}`} onClick={() => setFilter('completed')}>
           Completed
+        </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', padding: '0 8px' }}>
+          📞 <strong style={{ color: '#dc2626' }}>{coldCallsCompleted}</strong> cold calls logged
         </div>
       </div>
 
@@ -288,6 +310,7 @@ export default function Tasks() {
                 <option value="follow-up">Follow-up</option>
                 <option value="email">Email</option>
                 <option value="call">Call</option>
+                <option value="cold_call">Cold Call</option>
                 <option value="linkedin">LinkedIn</option>
                 <option value="prep">Prep</option>
               </select>

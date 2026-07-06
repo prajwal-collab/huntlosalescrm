@@ -58,16 +58,29 @@ export default function Reports() {
       const addedAccounts = companies.filter(c => c.owner_id === member.id).length;
       const addedContacts = contacts.filter(c => c.owner_id === member.id).length;
       const setMeetings = meetings.filter(m => m.owner_id === member.id).length;
-      
+
+      // 6 SDR Activity Metrics
+      const memberLeads = leads.filter(l => l.owner_id === member.id);
+      const memberTasks = tasks.filter(t => t.owner_id === member.id || t.assigned_to === member.id);
+      const memberMeetings = meetings.filter(m => m.owner_id === member.id);
+
+      const trialSignups = memberLeads.filter(l => l.trial_confirmed || l.stage === 'Trial Started').length;
+      const enrichmentDone = memberLeads.filter(l => l.enrichment_done).length;
+      const outreachSent = memberLeads.filter(l => l.outreach_sent || (l.email_status && l.email_status !== 'Not Sent') || l.stage === 'Outreach Started').length;
+      const demosScheduled = memberMeetings.filter(m => m.type === 'Demo' || m.type === 'demo').length;
+      const demosAttended = memberMeetings.filter(m => (m.type === 'Demo' || m.type === 'demo') && (m.attended || m.status === 'completed')).length;
+      const coldCallsMade = memberTasks.filter(t => (t.type === 'call' || t.type === 'cold_call') && t.status === 'completed').length;
+
       let wonRevenue = 0;
       deals.forEach(d => {
         if (d.owner_id === member.id && d.stage === 'Closed Won') {
           wonRevenue += Number(d.arr) || 0;
         }
       });
-      return { ...member, addedAccounts, addedContacts, setMeetings, wonRevenue };
+      return { ...member, addedAccounts, addedContacts, setMeetings, wonRevenue,
+        trialSignups, enrichmentDone, outreachSent, demosScheduled, demosAttended, coldCallsMade };
     }).sort((a, b) => b.wonRevenue - a.wonRevenue);
-  }, [team, companies, contacts, meetings, deals]);
+  }, [team, companies, contacts, meetings, deals, leads, tasks]);
 
   const metrics = useMemo(() => {
     let totalRevenue = 0;
@@ -311,55 +324,114 @@ export default function Reports() {
           </div>
         </>
       ) : (
-        <div className="rep-chart-card" style={{ marginTop: 24, padding: 0 }}>
-          <div className="rep-chart-header" style={{ padding: '24px 24px 0 24px' }}>
-            <h3>SDR Performance Leaderboard</h3>
-            <span className="badge badge-blue">Sorted by Won Revenue</span>
+        <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+          {/* ─ Team-wide 6 Metrics Summary ───────── */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12 }}>
+            {[
+              { label: 'Trial Signups', icon: '🧪', value: leaderboard.reduce((s,m)=>s+m.trialSignups,0), color: '#16a34a' },
+              { label: 'Enrichments Done', icon: '🔍', value: leaderboard.reduce((s,m)=>s+m.enrichmentDone,0), color: '#3b82f6' },
+              { label: 'Outreach Sent', icon: '📨', value: leaderboard.reduce((s,m)=>s+m.outreachSent,0), color: '#8b5cf6' },
+              { label: 'Demos Scheduled', icon: '📅', value: leaderboard.reduce((s,m)=>s+m.demosScheduled,0), color: '#f59e0b' },
+              { label: 'Demos Showed Up', icon: '✅', value: leaderboard.reduce((s,m)=>s+m.demosAttended,0), color: '#10b981' },
+              { label: 'Cold Calls Made', icon: '📞', value: leaderboard.reduce((s,m)=>s+m.coldCallsMade,0), color: '#ef4444' },
+            ].map(metric => (
+              <div key={metric.label} className="rep-stat-card" style={{ textAlign: 'center', padding: '16px 12px' }}>
+                <div style={{ fontSize: 24, marginBottom: 4 }}>{metric.icon}</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: metric.color, lineHeight: 1 }}>{metric.value}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4, fontWeight: 500 }}>{metric.label}</div>
+              </div>
+            ))}
           </div>
-          <div style={{ padding: '24px' }}>
-            <table className="huntlo-table">
-              <thead>
-                <tr>
-                  <th>SDR Name</th>
-                  <th>Accounts Added</th>
-                  <th>Contacts Added</th>
-                  <th>Meetings Set</th>
-                  <th>Won Revenue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leaderboard.length > 0 ? leaderboard.map(member => (
-                  <tr key={member.id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div className="avatar avatar-sm" style={{ backgroundColor: member.color || '#3b82f6' }}>
-                          {member.initials || member.name?.slice(0,2).toUpperCase() || 'SR'}
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{member.name || member.email}</span>
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            {member.role && <span className="badge badge-gray" style={{ fontSize: '9px', padding: '2px 4px' }}>{member.role}</span>}
-                            {member.team && <span className="badge badge-purple" style={{ fontSize: '9px', padding: '2px 4px' }}>{member.team}</span>}
+
+          {/* ─ Per-SDR Activity Table ─────────── */}
+          <div className="rep-chart-card" style={{ padding: 0 }}>
+            <div className="rep-chart-header" style={{ padding: '20px 24px 0 24px' }}>
+              <h3>SDR Activity Breakdown</h3>
+              <span className="badge badge-blue">6 Key Metrics per Rep</span>
+            </div>
+            <div style={{ padding: '16px 24px 24px', overflowX: 'auto' }}>
+              <table className="huntlo-table">
+                <thead>
+                  <tr>
+                    <th style={{ minWidth: 160 }}>SDR Name</th>
+                    <th title="Confirmed trial signups">🧪 Trials</th>
+                    <th title="Leads with enrichment completed">🔍 Enriched</th>
+                    <th title="Leads where outreach has been sent">📨 Outreach</th>
+                    <th title="Demo meetings scheduled">📅 Demos Sched.</th>
+                    <th title="Demos where prospect attended">✅ Showed Up</th>
+                    <th title="Completed call/cold_call tasks">📞 Cold Calls</th>
+                    <th title="Won revenue">Won Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaderboard.length > 0 ? leaderboard.map(member => (
+                    <tr key={member.id}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div className="avatar avatar-sm" style={{ backgroundColor: member.color || '#3b82f6', flexShrink: 0 }}>
+                            {member.initials || member.name?.slice(0,2).toUpperCase() || 'SR'}
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <span style={{ fontWeight: 500, color: 'var(--text-primary)', fontSize: 13 }}>{member.name || member.email}</span>
+                            <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+                              {member.role && <span className="badge badge-gray" style={{ fontSize: '9px', padding: '2px 4px' }}>{member.role}</span>}
+                              {member.team && <span className="badge badge-purple" style={{ fontSize: '9px', padding: '2px 4px' }}>{member.team}</span>}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td>{member.addedAccounts}</td>
-                    <td>{member.addedContacts}</td>
-                    <td>{member.setMeetings}</td>
-                    <td style={{ color: 'var(--success)', fontWeight: 600 }}>
-                      {fmtINR(member.wonRevenue)}
-                    </td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-tertiary)' }}>
-                      No team members found. Invite users in Settings to see their activity.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 700, color: member.trialSignups > 0 ? '#16a34a' : 'var(--text-tertiary)' }}>
+                          {member.trialSignups}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 700, color: member.enrichmentDone > 0 ? '#3b82f6' : 'var(--text-tertiary)' }}>
+                          {member.enrichmentDone}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 700, color: member.outreachSent > 0 ? '#8b5cf6' : 'var(--text-tertiary)' }}>
+                          {member.outreachSent}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 700, color: member.demosScheduled > 0 ? '#f59e0b' : 'var(--text-tertiary)' }}>
+                          {member.demosScheduled}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontWeight: 700, color: member.demosAttended > 0 ? '#10b981' : 'var(--text-tertiary)' }}>
+                            {member.demosAttended}
+                          </span>
+                          {member.demosScheduled > 0 && (
+                            <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
+                              ({Math.round((member.demosAttended / member.demosScheduled) * 100)}%)
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 700, color: member.coldCallsMade > 0 ? '#ef4444' : 'var(--text-tertiary)' }}>
+                          {member.coldCallsMade}
+                        </span>
+                      </td>
+                      <td style={{ color: 'var(--success)', fontWeight: 600 }}>
+                        {fmtINR(member.wonRevenue)}
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan="8" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-tertiary)' }}>
+                        No team members found. Invite users in Settings to track their activity.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

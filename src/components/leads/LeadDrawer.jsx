@@ -470,7 +470,7 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
                     onChange={e => set('estimated_mrr', parseInt(e.target.value) || 0)} />
                 ) : (
                   <span style={{ fontWeight: 700, color: '#16a34a', fontSize: 14 }}>
-                    {form.estimated_mrr ? `$${form.estimated_mrr.toLocaleString()}/mo` : 'Not estimated'}
+                    {form.estimated_mrr ? `₹${form.estimated_mrr.toLocaleString()}/mo` : 'Not estimated'}
                   </span>
                 )}
               </Field>
@@ -518,6 +518,48 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
                 ) : <span className={`d-field-value${!form.hiring_volume ? ' empty' : ''}`}>{form.hiring_volume || 'Unknown'}</span>}
               </Field>
               <Field label="Team Size" value={form.team_size} />
+            </div>
+
+            {/* ── SDR ACTIVITY TRACKING ─────────────────── */}
+            <div className="d-section">
+              <div className="d-section-label">📊 SDR Activity Tracking</div>
+              <Field label="Lead Enrichment">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: editMode ? 'pointer' : 'default', fontSize: 13 }}>
+                  <input type="checkbox"
+                    disabled={!editMode}
+                    checked={!!form.enrichment_done}
+                    onChange={e => set('enrichment_done', e.target.checked)} />
+                  <span className={`badge ${form.enrichment_done ? 'badge-green' : 'badge-gray'}`}>
+                    {form.enrichment_done ? '✅ Enrichment Done' : 'Not Enriched'}
+                  </span>
+                  {form.enriched_at && <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{new Date(form.enriched_at).toLocaleDateString()}</span>}
+                </label>
+              </Field>
+              <Field label="Outreach Sent">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: editMode ? 'pointer' : 'default', fontSize: 13 }}>
+                  <input type="checkbox"
+                    disabled={!editMode}
+                    checked={!!form.outreach_sent}
+                    onChange={e => set('outreach_sent', e.target.checked)} />
+                  <span className={`badge ${form.outreach_sent ? 'badge-blue' : 'badge-gray'}`}>
+                    {form.outreach_sent ? '📨 Outreach Sent' : 'Not Sent'}
+                  </span>
+                </label>
+              </Field>
+              <Field label="Trial Signup">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: editMode ? 'pointer' : 'default', fontSize: 13 }}>
+                  <input type="checkbox"
+                    disabled={!editMode}
+                    checked={!!form.trial_confirmed}
+                    onChange={e => {
+                      set('trial_confirmed', e.target.checked);
+                      if (e.target.checked && form.stage !== 'Trial Started') set('stage', 'Trial Started');
+                    }} />
+                  <span className={`badge ${form.trial_confirmed ? 'badge-green' : 'badge-gray'}`}>
+                    {form.trial_confirmed ? '🧪 Trial Confirmed' : 'No Trial'}
+                  </span>
+                </label>
+              </Field>
             </div>
 
             <div className="d-section">
