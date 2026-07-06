@@ -335,7 +335,13 @@ export default function Reports() {
                         <div className="avatar avatar-sm" style={{ backgroundColor: member.color || '#3b82f6' }}>
                           {member.initials || member.name?.slice(0,2).toUpperCase() || 'SR'}
                         </div>
-                        <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{member.name || member.email}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{member.name || member.email}</span>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            {member.role && <span className="badge badge-gray" style={{ fontSize: '9px', padding: '2px 4px' }}>{member.role}</span>}
+                            {member.team && <span className="badge badge-purple" style={{ fontSize: '9px', padding: '2px 4px' }}>{member.team}</span>}
+                          </div>
+                        </div>
                       </div>
                     </td>
                     <td>{member.addedAccounts}</td>

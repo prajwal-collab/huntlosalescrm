@@ -117,7 +117,7 @@ function CompanyRow({ company, contacts, onSelect, selected, isSelected, toggleS
       <div className="co-col">
         {arr > 0 ? (
           <span style={{ fontSize: 13, fontWeight: 700, color: '#16a34a' }}>
-            ${(arr / 1000).toFixed(0)}k
+            ₹{(arr / 1000).toFixed(0)}k
           </span>
         ) : <span className="co-empty">—</span>}
       </div>
@@ -246,7 +246,7 @@ function CompanyPanel({ company, contacts, onClose }) {
         <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)' }}>MRR Estimate</span>
           <div style={{ display: 'flex', alignItems: 'center', background: 'transparent', border: '1px solid transparent' }}>
-            <span style={{ color: 'var(--success)', fontWeight: 600 }}>$</span>
+            <span style={{ color: 'var(--success)', fontWeight: 600 }}>₹</span>
             <input type="number" style={{ width: '100%', fontSize: 13, padding: '4px 8px', outline: 'none', border: 'none', background: 'transparent', color: 'var(--success)', fontWeight: 600 }} value={formData.arr_estimate} onChange={e => setField('arr_estimate', Number(e.target.value))} />
           </div>
         </div>
@@ -275,7 +275,7 @@ function CompanyPanel({ company, contacts, onClose }) {
             <div className="cp-stat">
               <span className="cp-stat-label">MRR Estimate</span>
               <span className="cp-stat-val" style={{ color: '#16a34a' }}>
-                ${((company.arr_estimate || 0) / 1000).toFixed(0)}k
+                ₹{((company.arr_estimate || 0) / 1000).toFixed(0)}k
               </span>
             </div>
             <div className="cp-stat">

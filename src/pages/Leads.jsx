@@ -212,7 +212,7 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user, 
       <div className="lc">
         {lead.estimated_mrr ? (
           <span style={{ fontSize: 13, fontWeight: 600, color: '#16a34a' }}>
-            ${lead.estimated_mrr.toLocaleString()}/mo
+            ₹{lead.estimated_mrr.toLocaleString()}/mo
           </span>
         ) : (
           <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>—</span>
@@ -297,7 +297,7 @@ function DraggableLeadCard({ lead, onClick, team, user }) {
       )}
       <div className="lbc-footer">
         {lead.estimated_mrr > 0 ? (
-          <span className="lbc-mrr">${(lead.estimated_mrr / 1000).toFixed(0)}k</span>
+          <span className="lbc-mrr">₹{(lead.estimated_mrr / 1000).toFixed(0)}k</span>
         ) : <span />}
         <span className="lbc-time">{new Date(lead.created_at).toLocaleDateString()}</span>
       </div>

@@ -91,8 +91,9 @@ function MemberCard({ member, leads, deals, tasks, meetings, now, onView }) {
           <div className="tc-member-info">
             <div className="tc-member-name">{member.name || member.email?.split('@')[0]}</div>
             <div className="tc-member-email">{member.email}</div>
-            <div className="tc-member-role">
+            <div className="tc-member-role" style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
               <span className={`badge badge-${member.role === 'Admin' ? 'blue' : 'gray'}`}>{member.role || 'Member'}</span>
+              {member.team && <span className="badge badge-purple">{member.team}</span>}
               <span className="tc-activity-label" style={{ color: activityColors[activityStatus] }}>
                 ● {activityLabels[activityStatus]}
               </span>
@@ -432,7 +433,11 @@ export default function Team() {
                   <Avatar name={m.name || m.email} color={m.color || '#3b82f6'} size={30} />
                   <div className="tc-lb-info">
                     <div className="tc-lb-name">{m.name || m.email?.split('@')[0]}</div>
-                    <div className="tc-lb-sub">{m.wonCount} deals · {m.leadCount} leads</div>
+                    <div className="tc-lb-sub">
+                      {m.role && <span className="badge badge-gray" style={{ fontSize: '9px', padding: '2px 4px', marginRight: '4px' }}>{m.role}</span>}
+                      {m.team && <span className="badge badge-purple" style={{ fontSize: '9px', padding: '2px 4px', marginRight: '4px' }}>{m.team}</span>}
+                      {m.wonCount} deals · {m.leadCount} leads
+                    </div>
                   </div>
                   <div className="tc-lb-mrr" style={{ color: m.wonMRR > 0 ? '#16a34a' : 'var(--text-tertiary)' }}>
                     {fmtINR(m.wonMRR)}
