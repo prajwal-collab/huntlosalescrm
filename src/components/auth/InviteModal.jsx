@@ -155,7 +155,7 @@ export default function InviteModal({ isOpen, onClose }) {
                   <div style={{ background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', borderRadius: 8, padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     <AlertCircle size={16} color="#2563eb" style={{ flexShrink: 0, marginTop: 2 }} />
                     <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                      Email couldn't be sent automatically. Connect Google Workspace in Settings → Integrations to send emails, or share these invite links directly.
+                      Email couldn't be sent automatically. Please check your email configuration (Google Workspace or Resend API key), or share these invite links directly.
                     </span>
                   </div>
                   <h4 style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>Share these invite links:</h4>

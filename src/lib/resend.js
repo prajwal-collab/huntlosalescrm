@@ -7,7 +7,7 @@ const RESEND_API_KEY = import.meta.env.VITE_RESEND_API_KEY;
 const APP_URL = import.meta.env.VITE_APP_URL || 'http://localhost:5173';
 const isConfigured = RESEND_API_KEY && RESEND_API_KEY !== 'your_resend_api_key';
 
-// Send team invitation email via Gmail API
+// Send team invitation email via Gmail or Resend
 export async function sendTeamInvitation({ toEmail, toName, inviterName, role, inviteToken }) {
   const session = useAuthStore.getState().session;
   let token = session?.provider_token;
@@ -29,16 +29,9 @@ export async function sendTeamInvitation({ toEmail, toName, inviterName, role, i
     }
   }
 
-  // If still no token, return graceful failure (InviteModal will show manual link)
-  if (!token) {
-    return { 
-      success: false, 
-      error: 'Google Workspace not connected. Share the invite link directly instead.' 
-    };
-  }
-
   const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
   const inviteUrl = `${appUrl}/accept-invite?token=${inviteToken}`;
+  const subject = `${inviterName} invited you to Huntlo Sales OS`;
 
   const htmlBody = `
 <!DOCTYPE html>
@@ -90,40 +83,74 @@ export async function sendTeamInvitation({ toEmail, toName, inviterName, role, i
 </html>
   `;
 
-  try {
-    const subject = `${inviterName} invited you to Huntlo Sales OS`;
-    const mime = [
-      `To: ${toEmail}`,
-      `Subject: ${subject}`,
-      'MIME-Version: 1.0',
-      'Content-Type: text/html; charset=utf-8',
-      '',
-      htmlBody
-    ].join('\r\n');
-    
-    const raw = btoa(unescape(encodeURIComponent(mime)))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
+  if (token) {
+    try {
+      const mime = [
+        `To: ${toEmail}`,
+        `Subject: ${subject}`,
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=utf-8',
+        '',
+        htmlBody
+      ].join('\r\n');
       
-    const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      const raw = btoa(unescape(encodeURIComponent(mime)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+        
+      const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ raw })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        return { success: true, id: data.id, gmail: true };
+      } else {
+        console.warn('Gmail API send failed for invite, trying Resend...', await res.text());
+      }
+    } catch (err) {
+      console.warn('Gmail API send failed for invite, trying Resend...', err);
+    }
+  }
+
+  if (!isConfigured) {
+    console.warn(`[Resend] Demo Mode: Would send invite email to ${toEmail}.`);
+    await new Promise(r => setTimeout(r, 600));
+    return { success: true, demo: true };
+  }
+
+  try {
+    const endpoint = '/api/resend/emails';
+    
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ raw })
+      body: JSON.stringify({
+        from: `Huntlo Sales OS <onboarding@resend.dev>`,
+        to: [toEmail],
+        subject,
+        html: htmlBody
+      }),
     });
 
     if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Gmail API error: ${errText}`);
+      const err = await res.json();
+      throw new Error(err.message || 'Failed to send invite email via Resend');
     }
 
     const data = await res.json();
     return { success: true, id: data.id };
   } catch (err) {
-    console.error('[Gmail Invite Send Error]:', err);
+    console.error('[Resend Invite Send Error]:', err);
     return { success: false, error: err.message };
   }
 }
