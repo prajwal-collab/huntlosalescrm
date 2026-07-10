@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, CheckCircle, Clock, Plus, Users, FileText, Settings, Target } from 'lucide-react';
+import { ChevronLeft, CheckCircle, Clock, Plus, Users, FileText, Settings, Target, DownloadCloud } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import { format, parseISO } from 'date-fns';
+import LumaSheetsSyncModal from '../components/webinars/LumaSheetsSyncModal';
 import './Webinars.css';
 
 export default function WebinarDetail() {
@@ -20,6 +21,7 @@ export default function WebinarDetail() {
 
   const webinar = webinars.find(w => w.id === id);
   const [activeTab, setActiveTab] = useState('registrants');
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
 
   // Related data
   const webinarTasks = useMemo(() => tasks.filter(t => t.webinar_id === id), [tasks, id]);
@@ -95,6 +97,11 @@ export default function WebinarDetail() {
         
         {activeTab === 'registrants' && (
           <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+              <button className="btn btn-primary btn-sm" onClick={() => setIsSyncModalOpen(true)}>
+                <DownloadCloud size={14} /> Sync from Luma / Sheets
+              </button>
+            </div>
             <table className="apollo-table">
               <thead>
                 <tr>
@@ -181,6 +188,11 @@ export default function WebinarDetail() {
         )}
 
       </div>
+      <LumaSheetsSyncModal 
+        isOpen={isSyncModalOpen} 
+        onClose={() => setIsSyncModalOpen(false)} 
+        webinarId={id} 
+      />
     </div>
   );
 }

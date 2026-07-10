@@ -1376,6 +1376,138 @@ const useDataStore = create((set, get) => ({
     return data;
   },
 
+  syncWebinarRegistrants: async (webinarId, parsedData) => {
+    const { user } = useAuthStore.getState();
+    const orgId = await get()._getOrgId();
+    
+    let newContactsCount = 0;
+    let newDealsCount = 0;
+    let newTasksCount = 0;
+    let syncedCount = 0;
+
+    for (const row of parsedData) {
+      // Find standard Luma columns (Name, Email, Job Title, Company)
+      const name = row['Name'] || row['Full Name'] || row['name'] || '';
+      const email = row['Email'] || row['email'] || '';
+      const title = row['Job Title'] || row['title'] || row['Designation'] || '';
+      const companyName = row['Company'] || row['company'] || row['Company Name'] || '';
+      
+      if (!email) continue; // Skip rows without email
+
+      // 1. Resolve Company
+      let companyId = null;
+      if (companyName) {
+        const existingCompany = get().companies.find(c => c.name?.toLowerCase() === companyName.toLowerCase());
+        if (existingCompany) {
+          companyId = existingCompany.id;
+        } else {
+          // Auto-create company
+          try {
+            const { data: newCompany } = await supabase.from('companies').insert({
+              name: companyName,
+              ...(orgId ? { organization_id: orgId } : {})
+            }).select().single();
+            if (newCompany) {
+              companyId = newCompany.id;
+              set(state => ({ companies: [newCompany, ...state.companies] }));
+            }
+          } catch(e) {}
+        }
+      }
+
+      // 2. Resolve Contact
+      let contactId = null;
+      const existingContact = get().contacts.find(c => c.email?.toLowerCase() === email.toLowerCase());
+      if (existingContact) {
+        contactId = existingContact.id;
+      } else {
+        try {
+          const { data: newContact } = await supabase.from('contacts').insert({
+            name,
+            email,
+            designation: title,
+            company_id: companyId,
+            ...(orgId ? { organization_id: orgId } : {})
+          }).select().single();
+          if (newContact) {
+            contactId = newContact.id;
+            set(state => ({ contacts: [newContact, ...state.contacts] }));
+            newContactsCount++;
+          }
+        } catch(e) {}
+      }
+
+      if (!contactId) continue;
+
+      // 3. Intelligent Lead Scoring based on title/company
+      let leadScore = 30; // base score
+      const lowerTitle = title.toLowerCase();
+      if (lowerTitle.includes('founder') || lowerTitle.includes('ceo') || lowerTitle.includes('vp')) leadScore += 40;
+      if (lowerTitle.includes('hr') || lowerTitle.includes('recruiter') || lowerTitle.includes('talent')) leadScore += 30;
+      if (companyName) leadScore += 10;
+
+      // Check if already registered
+      const alreadyRegistered = get().webinar_registrants.find(r => r.webinar_id === webinarId && r.contact_id === contactId);
+      
+      if (!alreadyRegistered) {
+        // Create registrant
+        try {
+          const { data: newReg } = await supabase.from('webinar_registrants').insert({
+            webinar_id: webinarId,
+            contact_id: contactId,
+            lead_score: leadScore,
+            registration_date: new Date().toISOString(),
+            ...(orgId ? { organization_id: orgId } : {})
+          }).select().single();
+          if (newReg) {
+            set(state => ({ webinar_registrants: [newReg, ...state.webinar_registrants] }));
+            syncedCount++;
+
+            // 4. World Class Automations for VIPs (Score >= 70)
+            if (leadScore >= 70) {
+              // Auto Deal
+              try {
+                const { data: newDeal } = await supabase.from('deals').insert({
+                  title: `${companyName || name} - Webinar VIP Lead`,
+                  contact_id: contactId,
+                  company_id: companyId,
+                  stage: 'Discovery',
+                  arr: 0,
+                  owner_id: user?.id,
+                  notes: `Auto-created from Luma sync. VIP Registrant (Score: ${leadScore}).`,
+                  ...(orgId ? { organization_id: orgId } : {})
+                }).select().single();
+                if (newDeal) {
+                  set(state => ({ deals: [newDeal, ...state.deals] }));
+                  newDealsCount++;
+                }
+              } catch(e) {}
+
+              // Auto Task
+              try {
+                const { data: newTask } = await supabase.from('tasks').insert({
+                  title: `Review VIP Webinar Registrant: ${name}`,
+                  webinar_id: webinarId,
+                  contact_id: contactId,
+                  status: 'pending',
+                  due: new Date().toISOString(),
+                  assigned_to: user?.id,
+                  ...(orgId ? { organization_id: orgId } : {})
+                }).select().single();
+                if (newTask) {
+                  set(state => ({ tasks: [newTask, ...state.tasks] }));
+                  newTasksCount++;
+                }
+              } catch(e) {}
+            }
+          }
+        } catch(e) {}
+      }
+    }
+    
+    return { synced: syncedCount, newContacts: newContactsCount, newDeals: newDealsCount, newTasks: newTasksCount };
+  },
+
   createWebinarSOP: async (sop) => {
     const { user } = useAuthStore.getState();
     const orgId = await get()._getOrgId();

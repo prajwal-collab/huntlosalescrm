@@ -8,7 +8,7 @@ import {
   Target, BarChart3, Building2, Users, CheckSquare,
   Calendar, Zap, FileText, TrendingUp, Sparkles,
   ArrowRight, Link2, Play, Star, Info, AlertCircle,
-  Globe, Mail, Phone, MessageCircle, Settings, Layers
+  Globe, Mail, Phone, MessageCircle, Settings, Layers, Video
 } from 'lucide-react';
 import '../UserGuide.css';
 
@@ -917,6 +917,64 @@ If you're viewing "Hot Leads" with a stage filter applied, only those leads are 
 **CSV format:** Standard comma-separated, UTF-8 encoded — opens in Excel, Google Sheets, etc.
 
 **Fields exported:** All visible columns plus IDs and timestamps.
+`,
+      },
+    ],
+  },
+  {
+    id: 'webinars',
+    icon: Video,
+    color: '#ec4899',
+    title: '🎥 Webinars',
+    description: 'Manage webinar events and registrants',
+    articles: [
+      {
+        title: 'Webinars & Luma / Google Sheets Integration',
+        content: `
+If you primarily use **Luma** for webinar registrations and **Google Sheets** for managing the initial lists, Huntlo acts as your central Hub for tracking the downstream sales funnel.
+
+**Workflow:**
+1. **Host on Luma:** Use Luma for your event landing page and registrations.
+2. **Export / Sync:** Export your Luma registrants to a CSV or Google Sheet.
+3. **Import to Huntlo:** Go to the **Leads** or **Contacts** page in Huntlo and click **Import CSV**. Huntlo will automatically create Contact and Company records for your registrants.
+4. **Manage the Webinar:** Go to the **Webinars** page to track the event lifecycle (Planned → In Promotion → Live → Follow-up → Closed).
+`,
+      },
+      {
+        title: 'Webinar Dashboard & KPIs',
+        content: `
+The **Webinars** page offers two views:
+
+**1. 90-Day Roadmap (Kanban):**
+A board showing all your webinars across their lifecycle:
+- **Planned:** Event is scheduled but not yet public
+- **In Promotion:** Actively marketing and driving registrations
+- **Live:** The event is happening today/soon
+- **Follow-up:** Event is over, SDRs are doing outreach
+- **Closed:** All follow-up actions complete
+
+**2. KPI Dashboard:**
+Tracks your webinar funnel health:
+- **Total Registrations:** Across all events
+- **Attendance Rate:** Percentage of registrants who actually showed up
+- **Demo Request Rate:** Percentage of attendees who requested a demo
+- **Pipeline Generated:** Total ARR from deals sourced via webinars
+`,
+      },
+      {
+        title: 'Managing Registrants & Tasks',
+        content: `
+Click on any Webinar card to open the **Webinar Detail** view.
+
+**Registrants Tab:**
+- Shows all contacts registered for this specific webinar
+- Displays their **Lead Score** (e.g., auto-calculated based on their profile/activity)
+- **Attendance Tracking:** Mark if they attended
+- **Demo Requests:** If a registrant requests a demo, click the **Mark as Requested** button. Huntlo will automatically create a new Deal in your pipeline for this contact!
+
+**Tasks Tab:**
+- Track webinar-specific tasks (e.g., "Send reminder email", "Upload recording")
+- Overdue tasks will highlight the webinar card in red on the main dashboard to ensure nothing is missed.
 `,
       },
     ],
