@@ -2,7 +2,7 @@
 // HUNTLO SALES OS — HOME OS PAGE
 // ============================================
 import { useState, useMemo } from 'react';
-import { Sparkles, AlertCircle, Calendar, FileText, Clock, TrendingUp, ArrowRight, Zap, Activity, Users, BarChart3 } from 'lucide-react';
+import { Sparkles, AlertCircle, Calendar, FileText, Clock, TrendingUp, ArrowRight, Zap, Activity, Users, BarChart3, CheckCircle2, Presentation, Send, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import usePipelineStore from '../store/usePipelineStore';
@@ -108,6 +108,41 @@ export default function HomeOS() {
 
   const newDealsThisWeek = deals.filter(d => (now - new Date(d.created_at).getTime()) < 7 * 86400000).length;
   const closedThisMonth = deals.filter(d => d.stage === 'Closed Won' && (now - new Date(d.updated_at || d.created_at).getTime()) < 30 * 86400000).length;
+
+  // ── Team Activity Metrics ──
+  const tasksCompletedToday = tasks.filter(t => {
+    if (t.status !== 'completed') return false;
+    const d = new Date(t.updated_at || now);
+    return d.toDateString() === new Date(now).toDateString();
+  });
+
+  const meetingsHeldThisWeek = meetings.filter(m => {
+    const d = new Date(m.date).getTime();
+    return d <= now && d >= now - 7 * 86400000;
+  });
+
+  const newLeadsThisWeek = leads.filter(l => (now - new Date(l.created_at).getTime()) < 7 * 86400000);
+  
+  const proposalsSentThisWeek = proposals ? proposals.filter(p => p.status !== 'draft' && (now - new Date(p.created_at).getTime()) < 7 * 86400000) : [];
+
+  const topPerformerData = useMemo(() => {
+    if (!team || team.length === 0) return { name: 'N/A', count: 0 };
+    const wonThisMonthDeals = deals.filter(d => d.stage === 'Closed Won' && (now - new Date(d.updated_at || d.created_at).getTime()) < 30 * 86400000);
+    const ownerCounts = {};
+    wonThisMonthDeals.forEach(d => {
+      if (d.owner_id) ownerCounts[d.owner_id] = (ownerCounts[d.owner_id] || 0) + 1;
+    });
+    let topId = null;
+    let maxCount = 0;
+    Object.entries(ownerCounts).forEach(([id, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        topId = id;
+      }
+    });
+    const topMember = team.find(m => m.id === topId);
+    return { name: topMember?.name || 'N/A', count: maxCount };
+  }, [deals, team, now]);
 
 
   const activityFeed = useMemo(() => {
@@ -262,6 +297,19 @@ export default function HomeOS() {
           <PriorityCard icon={Zap} label="Hot Leads" count={hotLeads.length} urgency="positive" color="var(--success)" onClick={() => navigate('/leads')} />
           <PriorityCard icon={BarChart3} label="Trials Needing Review" count={trialsNeedingReview.length} urgency={trialsNeedingReview.length > 0 ? 'urgent' : 'low'} color={trialsNeedingReview.length > 0 ? 'var(--danger)' : 'var(--text-secondary)'} onClick={() => navigate('/pipeline')} />
           <PriorityCard icon={Users} label="Total Contacts" count={contacts?.length || 0} urgency="low" color="var(--text-secondary)" onClick={() => navigate('/contacts')} />
+        </div>
+      </section>
+
+      {/* Team Activity & Performance */}
+      <section className="section">
+        <h2 className="section-title">Team Activity & Performance</h2>
+        <div className="priorities-grid">
+          <PriorityCard icon={CheckCircle2} label="Tasks Done Today" count={tasksCompletedToday.length} urgency="positive" color="var(--success)" onClick={() => navigate('/tasks')} />
+          <PriorityCard icon={Presentation} label="Meetings This Week" count={meetingsHeldThisWeek.length} urgency="high" color="var(--accent-blue)" onClick={() => navigate('/meetings')} />
+          <PriorityCard icon={Users} label="New Leads (7d)" count={newLeadsThisWeek.length} urgency="medium" color="var(--accent-purple)" onClick={() => navigate('/leads')} />
+          <PriorityCard icon={Send} label="Proposals Sent (7d)" count={proposalsSentThisWeek.length} urgency="low" color="var(--text-secondary)" onClick={() => navigate('/pipeline')} />
+          <PriorityCard icon={TrendingUp} label="Deals Won (30d)" count={closedThisMonth} urgency="warning" color="var(--orange)" onClick={() => navigate('/pipeline')} />
+          <PriorityCard icon={Trophy} label={`Top Performer: ${topPerformerData.name}`} count={topPerformerData.count} urgency="urgent" color="var(--danger)" onClick={() => navigate('/team')} />
         </div>
       </section>
 
