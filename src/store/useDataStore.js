@@ -1080,7 +1080,15 @@ const useDataStore = create((set, get) => ({
     const { data, error } = await supabase
       .from('webhook_events')
       .select('*')
-      .eq('organization_id', profile.organization_id)
+      .eq('organization_id', profile.organization_id);
+
+    if (error) {
+      console.error('Error fetching webhook events:', error);
+      return [];
+    }
+    return data || [];
+  },
+
   // eslint-disable-next-line no-unused-vars
   enrollLeadsInSequence: async ({ sequenceId, leadIds, config }) => {
     const state = get();
