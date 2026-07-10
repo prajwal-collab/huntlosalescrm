@@ -437,6 +437,7 @@ const useDataStore = create((set, get) => ({
 
   bulkCreateLeads: async (leadsList) => {
     const { user } = useAuthStore.getState();
+    await get().ensureProfile();
     const orgId = await get()._getOrgId();
     const records = leadsList.map(l => ({ 
       ...l, 
@@ -491,6 +492,7 @@ const useDataStore = create((set, get) => ({
 
   bulkCreateCompanies: async (companiesList) => {
     const { user } = useAuthStore.getState();
+    await get().ensureProfile();
     const orgId = await get()._getOrgId();
     const listWithoutOwner = companiesList.map(c => {
       // Remove any fields that don't belong in the table
@@ -554,6 +556,7 @@ const useDataStore = create((set, get) => ({
 
   bulkCreateContacts: async (contactsList) => {
     const { user } = useAuthStore.getState();
+    await get().ensureProfile();
     const orgId = await get()._getOrgId();
     const state = get();
     let allCompanies = [...state.companies];
@@ -1378,6 +1381,7 @@ const useDataStore = create((set, get) => ({
 
   syncWebinarRegistrants: async (webinarId, parsedData) => {
     const { user } = useAuthStore.getState();
+    await get().ensureProfile();
     const orgId = await get()._getOrgId();
     
     let newContactsCount = 0;

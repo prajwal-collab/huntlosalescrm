@@ -389,7 +389,7 @@ export default function UTMGenerator() {
                   ) : filteredLinks.length === 0 ? (
                     <tr><td colSpan="6" style={{textAlign: 'center', padding: '40px', color: '#888'}}>No links found.</td></tr>
                   ) : filteredLinks.map(link => {
-                    const shortUrl = `https://get.huntlo.ai/l/${link.short_code}`;
+                    const shortUrl = `${window.location.origin}/l/${link.short_code}`;
                     const rate = link.clicks > 0 ? ((link.conversions / link.clicks) * 100).toFixed(1) : 0;
                     
                     let progClass = 'lt-progress-low';

@@ -16,7 +16,9 @@ export default function WebinarDetail() {
     contacts, 
     updateWebinar, 
     updateTask, 
-    updateWebinarRegistrant 
+    updateWebinarRegistrant,
+    webinar_content_assets,
+    webinar_follow_ups
   } = useDataStore();
 
   const webinar = webinars.find(w => w.id === id);
@@ -176,14 +178,74 @@ export default function WebinarDetail() {
         )}
 
         {activeTab === 'assets' && (
-          <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-tertiary)', background: 'var(--bg-surface)', border: '1px dashed var(--bg-border)', borderRadius: 8 }}>
-            Content Assets view is currently a placeholder.
+          <div className="assets-list" style={{ maxWidth: 800 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+              <button className="btn btn-primary btn-sm">
+                <Plus size={14} /> Add Asset
+              </button>
+            </div>
+            {webinar_content_assets.filter(a => a.webinar_id === id).length === 0 ? (
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-tertiary)', background: 'var(--bg-surface)', border: '1px dashed var(--bg-border)', borderRadius: 8 }}>
+                <FileText size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+                <h3>No Content Assets</h3>
+                <p style={{ marginTop: 8 }}>Add slide decks, worksheets, or lead magnets associated with this webinar.</p>
+              </div>
+            ) : (
+              <table className="apollo-table">
+                <thead>
+                  <tr>
+                    <th>Asset Name</th>
+                    <th>Type</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {webinar_content_assets.filter(a => a.webinar_id === id).map(asset => (
+                    <tr key={asset.id}>
+                      <td style={{ fontWeight: 500 }}>{asset.title || asset.name}</td>
+                      <td><span className="badge badge-gray">{asset.type || 'Document'}</span></td>
+                      <td>
+                        <button className="btn btn-ghost btn-sm">View</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
 
         {activeTab === 'funnel' && (
-          <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-tertiary)', background: 'var(--bg-surface)', border: '1px dashed var(--bg-border)', borderRadius: 8 }}>
-            Funnel & Follow-up sequences view is currently a placeholder.
+          <div className="funnel-list" style={{ maxWidth: 800 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+              <button className="btn btn-primary btn-sm">
+                <Plus size={14} /> Add Follow-up Step
+              </button>
+            </div>
+            {webinar_follow_ups.filter(f => f.webinar_id === id).length === 0 ? (
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-tertiary)', background: 'var(--bg-surface)', border: '1px dashed var(--bg-border)', borderRadius: 8 }}>
+                <Target size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+                <h3>No Follow-up Sequence</h3>
+                <p style={{ marginTop: 8 }}>Create an automated email or task sequence for attendees and no-shows.</p>
+              </div>
+            ) : (
+              <div className="follow-up-sequence" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {webinar_follow_ups.filter(f => f.webinar_id === id).map((step, idx) => (
+                  <div key={step.id} style={{ padding: 16, border: '1px solid var(--bg-border)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      {idx + 1}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600 }}>{step.title || step.subject || 'Follow-up Step'}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                        {step.type === 'email' ? '📧 Email Automaton' : '✅ Manual Task'} • Day {step.day_offset}
+                      </div>
+                    </div>
+                    <button className="btn btn-ghost btn-sm">Edit</button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
