@@ -82,9 +82,9 @@ export default function LumaSheetsSyncModal({ isOpen, onClose, webinarId }) {
   };
 
   return (
-    <div className="csv-modal-overlay">
-      <div className="csv-modal-content" style={{ maxWidth: 500 }}>
-        <div className="csv-modal-header">
+    <div className="global-slider-overlay" onClick={onClose}>
+      <div className="global-slider-content" onClick={e => e.stopPropagation()}>
+        <div className="global-slider-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Video size={18} color="var(--accent-blue)" />
             <h2>Luma / Google Sheets Sync</h2>
@@ -92,7 +92,7 @@ export default function LumaSheetsSyncModal({ isOpen, onClose, webinarId }) {
           <button className="btn-close" onClick={onClose}><X size={20} /></button>
         </div>
 
-        <div className="csv-modal-body">
+        <div className="global-slider-body">
           {error && (
             <div className="csv-alert error" style={{ alignItems: 'flex-start' }}>
               <AlertCircle size={18} style={{ marginTop: '2px', flexShrink: 0 }} />

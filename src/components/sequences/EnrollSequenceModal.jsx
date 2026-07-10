@@ -94,8 +94,8 @@ export default function EnrollSequenceModal({ leads, onClose }) {
 
   if (done) {
     return (
-      <div className="enroll-overlay" onClick={onClose}>
-        <div className="enroll-modal" onClick={e => e.stopPropagation()}>
+      <div className="global-slider-overlay" onClick={onClose}>
+        <div className="global-slider-content" onClick={e => e.stopPropagation()}>
           <div className="enroll-success">
             <div className="enroll-success-icon">✅</div>
             <div className="enroll-success-title">
@@ -115,11 +115,11 @@ export default function EnrollSequenceModal({ leads, onClose }) {
   }
 
   return (
-    <div className="enroll-overlay" onClick={onClose}>
-      <div className="enroll-modal" onClick={e => e.stopPropagation()}>
+    <div className="global-slider-overlay" onClick={onClose}>
+      <div className="global-slider-content" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="enroll-header">
+        <div className="global-slider-header">
           <div>
             <div className="enroll-title">
               {step === 0 ? 'Enroll in Sequence'
@@ -147,7 +147,7 @@ export default function EnrollSequenceModal({ leads, onClose }) {
 
         {/* ─── STEP 0: Confirm leads ─── */}
         {step === 0 && (
-          <div className="enroll-body">
+          <div className="global-slider-body">
             <div>
               <div className="seq-picker-label">Leads to be enrolled</div>
               <div className="enroll-leads-preview">
@@ -186,7 +186,7 @@ export default function EnrollSequenceModal({ leads, onClose }) {
 
         {/* ─── STEP 1: Pick sequence ─── */}
         {step === 1 && (
-          <div className="enroll-body">
+          <div className="global-slider-body">
             {seqList.length === 0 ? (
               <div className="empty-state" style={{ marginTop: 20 }}>
                 <Zap size={28} />
@@ -250,7 +250,7 @@ export default function EnrollSequenceModal({ leads, onClose }) {
 
         {/* ─── STEP 2: Configure ─── */}
         {step === 2 && (
-          <div className="enroll-body">
+          <div className="global-slider-body">
             {/* Summary card */}
             <div className="enroll-review-card">
               <div className="enroll-review-row">
@@ -333,7 +333,7 @@ export default function EnrollSequenceModal({ leads, onClose }) {
         )}
 
         {/* Footer */}
-        <div className="enroll-footer">
+        <div className="global-slider-footer">
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => step === 0 ? onClose() : setStep(s => s - 1)}

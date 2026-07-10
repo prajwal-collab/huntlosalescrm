@@ -145,12 +145,13 @@ export default function Webinars() {
       </div>
 
       {isAdding && (
-        <div className="modal-backdrop">
-          <div className="modal-content animate-slide-up" style={{ width: 400 }}>
-            <div className="modal-header">
+        <div className="global-slider-overlay" onClick={() => setIsAdding(false)}>
+          <div className="global-slider-content" onClick={e => e.stopPropagation()}>
+            <div className="global-slider-header">
               <h2>Create New Webinar</h2>
             </div>
-            <form onSubmit={handleAdd} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div className="global-slider-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div className="form-group">
                 <label className="label">Webinar Title *</label>
                 <input required className="input-base" placeholder="e.g. Q3 Hiring Trends" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
@@ -173,7 +174,8 @@ export default function Webinars() {
                 <label className="label">Date & Time *</label>
                 <input required type="datetime-local" className="input-base" value={formData.date_time} onChange={e => setFormData({...formData, date_time: e.target.value})} />
               </div>
-              <div className="modal-actions">
+              </div>
+              <div className="global-slider-footer">
                 <button type="button" className="btn btn-ghost" onClick={() => setIsAdding(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary">Create Webinar</button>
               </div>

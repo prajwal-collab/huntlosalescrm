@@ -323,9 +323,9 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
   };
 
   return (
-    <div className="csv-modal-overlay">
-      <div className="csv-modal-content">
-        <div className="csv-modal-header">
+    <div className="global-slider-overlay" onClick={onClose}>
+      <div className="global-slider-content wide" onClick={e => e.stopPropagation()}>
+        <div className="global-slider-header">
           <h2>Import Records</h2>
           <button className="btn-close" onClick={onClose}><X size={20} /></button>
         </div>
@@ -338,7 +338,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
           </div>
         )}
 
-        <div className="csv-modal-body">
+        <div className="global-slider-body">
           {error && (
             <div className="csv-alert error" style={{ alignItems: 'flex-start' }}>
               <AlertCircle size={18} style={{ marginTop: '2px', flexShrink: 0 }} />
