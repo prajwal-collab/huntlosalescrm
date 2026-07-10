@@ -1,0 +1,291 @@
+/* UTM Generator Styles */
+.utm-generator-page {
+  padding: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.utm-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.utm-page-title h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.utm-page-title p {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* Dashboard Section */
+.utm-dashboard {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.utm-metric-card {
+  background: var(--surface-color, #ffffff);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.light-mode .utm-metric-card {
+  background: #ffffff;
+}
+
+.utm-metric-title {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.utm-metric-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.utm-metric-sub {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.metric-positive { color: #10b981; }
+.metric-neutral { color: var(--text-secondary); }
+
+/* Form Section */
+.utm-generator-panel {
+  background: var(--surface-color, #ffffff);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.light-mode .utm-generator-panel {
+  background: #ffffff;
+}
+
+.utm-panel-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.utm-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.utm-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.utm-form-group label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.utm-form-group input,
+.utm-form-group select {
+  height: 38px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.utm-form-group input:focus,
+.utm-form-group select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.utm-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+  gap: 12px;
+}
+
+.utm-btn-primary {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+.utm-btn-primary:hover {
+  background: #2563eb;
+}
+
+.utm-btn-secondary {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.utm-btn-secondary:hover {
+  background: var(--bg-secondary);
+}
+
+/* Data Grid Section (Airtable/Notion style) */
+.utm-history-panel {
+  background: var(--surface-color, #ffffff);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.light-mode .utm-history-panel {
+  background: #ffffff;
+}
+
+.utm-history-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.utm-history-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.utm-table-wrapper {
+  overflow-x: auto;
+}
+
+.utm-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  min-width: 1200px;
+}
+
+.utm-table th,
+.utm-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+  font-size: 13px;
+}
+
+.utm-table th:last-child,
+.utm-table td:last-child {
+  border-right: none;
+}
+
+.utm-table th {
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-secondary);
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  white-space: nowrap;
+}
+.light-mode .utm-table th {
+  background: #f8fafc;
+}
+
+.utm-table tr:hover td {
+  background: var(--bg-secondary, rgba(0,0,0,0.02));
+}
+
+.utm-table td.utm-cell-url {
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: monospace;
+  color: var(--text-secondary);
+}
+
+.utm-copy-btn {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.utm-copy-btn:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.badge-source {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.bg-linkedin { background: #e0f2fe; color: #0284c7; }
+.bg-twitter { background: #e0e7ff; color: #4338ca; }
+.bg-email { background: #fef3c7; color: #d97706; }
+.bg-blog { background: #dcfce7; color: #15803d; }
+.bg-google { background: #fee2e2; color: #b91c1c; }
+.bg-default { background: var(--bg-secondary); color: var(--text-primary); }
+
+.conv-high {
+  color: #10b981;
+  font-weight: 600;
+}
+.conv-med {
+  color: #f59e0b;
+  font-weight: 600;
+}
+.conv-low {
+  color: #ef4444;
+  font-weight: 600;
+}

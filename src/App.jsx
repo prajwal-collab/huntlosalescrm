@@ -37,6 +37,7 @@ import Calculator from './pages/Calculator';
 import ProposalViewer from './pages/ProposalViewer';
 import Webinars from './pages/Webinars';
 import WebinarDetail from './pages/WebinarDetail';
+import UTMGenerator from './pages/UTMGenerator';
 
 // Global listener to catch password recovery hashes from emails
 function AuthListener() {
@@ -100,6 +101,7 @@ export default function App() {
             <Route element={<Layout><Team /></Layout>} path="/team" />
             <Route element={<Layout><Webinars /></Layout>} path="/webinars" />
             <Route element={<Layout><WebinarDetail /></Layout>} path="/webinars/:id" />
+            <Route element={<Layout><UTMGenerator /></Layout>} path="/utm" />
             <Route element={<ProposalViewer />} path="/proposal/preview" />
           </Route>
 
