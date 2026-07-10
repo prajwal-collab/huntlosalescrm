@@ -12,12 +12,12 @@
 
 :root {
   /* === REFINED COLOR PALETTE === */
-  --bg-base:        #f4f6f9;
-  --bg-surface:     #ffffff;
+  --bg-base:        #faf9f6;
+  --bg-surface:     #fdfcf9;
   --bg-elevated:    #ffffff;
-  --bg-hover:       #f0f2f6;
-  --bg-border:      #e2e6ef;
-  --bg-border-soft: #eef1f6;
+  --bg-hover:       #f3f2ef;
+  --bg-border:      #e6e5e1;
+  --bg-border-soft: #f0efe9;
 
   --accent-blue:      #4f6ef7;
   --accent-blue-dim:  #3b5ce4;
