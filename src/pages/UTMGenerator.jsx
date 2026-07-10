@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Copy, ExternalLink, Search, Plus, Link as LinkIcon, Activity, Trash2 } from 'lucide-react';
+import { Copy, ExternalLink, Search, Plus, Link as LinkIcon, Activity, Trash2, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import useAuthStore from '../store/useAuthStore';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis } from 'recharts';
@@ -33,20 +33,22 @@ export default function UTMGenerator() {
     campaign: ''
   });
 
+  const fetchLinks = async () => {
+    if (!user) return;
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('utm_links')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) setLinks(data);
+    setLoading(false);
+  };
+
   // Fetch initial data
   useEffect(() => {
     if (!user) return;
-    const fetchLinks = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('utm_links')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (!error && data) setLinks(data);
-      setLoading(false);
-    };
-
+    
     fetchLinks();
 
     const channel = supabase.channel('schema-db-changes')
@@ -247,6 +249,9 @@ export default function UTMGenerator() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <button className="lt-btn-secondary" onClick={fetchLinks} title="Refresh Data" style={{ padding: '0 12px', height: '32px', borderRadius: '6px', border: '1px solid #eaeaea', background: 'var(--surface-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <RefreshCw size={14} className={loading ? 'spinning' : ''} />
+          </button>
           <button className="lt-btn-new" onClick={() => baseUrlInputRef.current?.focus()}>
             <Plus size={14} /> New Link
           </button>
