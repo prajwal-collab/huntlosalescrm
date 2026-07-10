@@ -17,6 +17,12 @@ const useDataStore = create((set, get) => ({
   leads: [],
   teamMembers: [],
   proposals: [],
+  webinars: [],
+  webinar_funnel_stages: [],
+  webinar_registrants: [],
+  webinar_content_assets: [],
+  webinar_follow_ups: [],
+  webinar_sops: [],
   loading: false,
   error: null,
   _realtimeChannel: null,
@@ -112,9 +118,15 @@ const useDataStore = create((set, get) => ({
         supabase.from('leads').select('*').order('created_at', { ascending: false }),
         supabase.from('profiles').select('*'),
         supabase.from('proposals').select('*').order('created_at', { ascending: false }),
+        supabase.from('webinars').select('*').order('date_time', { ascending: true }),
+        supabase.from('webinar_funnel_stages').select('*').order('due_date', { ascending: true }),
+        supabase.from('webinar_registrants').select('*').order('created_at', { ascending: false }),
+        supabase.from('webinar_content_assets').select('*').order('created_at', { ascending: false }),
+        supabase.from('webinar_follow_ups').select('*').order('day_offset', { ascending: true }),
+        supabase.from('webinar_sops').select('*').order('created_at', { ascending: false }),
       ]);
 
-      const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes, leadsRes, teamRes, proposalsRes] = results;
+      const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes, leadsRes, teamRes, proposalsRes, webinarsRes, funnelStagesRes, registrantsRes, assetsRes, followUpsRes, sopsRes] = results;
 
       // Helper to safely extract data from allSettled results
       const extract = (res) => (res.status === 'fulfilled' && !res.value.error) ? res.value.data : [];
@@ -130,6 +142,12 @@ const useDataStore = create((set, get) => ({
         leads: extract(leadsRes),
         teamMembers: extract(teamRes),
         proposals: extract(proposalsRes),
+        webinars: extract(webinarsRes),
+        webinar_funnel_stages: extract(funnelStagesRes),
+        webinar_registrants: extract(registrantsRes),
+        webinar_content_assets: extract(assetsRes),
+        webinar_follow_ups: extract(followUpsRes),
+        webinar_sops: extract(sopsRes),
         loading: false,
         error: null
       });
@@ -1063,11 +1081,310 @@ const useDataStore = create((set, get) => ({
       .from('webhook_events')
       .select('*')
       .eq('organization_id', profile.organization_id)
+  // eslint-disable-next-line no-unused-vars
+  enrollLeadsInSequence: async ({ sequenceId, leadIds, config }) => {
+    const state = get();
+    const sequence = state.sequences.find(s => s.id === sequenceId);
+    if (!sequence) throw new Error('Sequence not found');
+
+    const firstStep = sequence.nodes?.[0];
+
+    // Find the actual leads being enrolled
+    const enrolledLeads = state.leads.filter(l => leadIds.includes(l.id));
+
+    // Simulate sequence execution (Day 1 / Touchpoint 1) if it's an email step
+    if (firstStep && firstStep.type === 'email') {
+      try {
+        const { parseTemplate } = await import('../utils/personalization.js');
+        const { sendSequenceEmail } = await import('../lib/resend.js');
+        const { user } = useAuthStore.getState();
+        
+        // Fetch personal email settings for SDR
+        let emailSettings = null;
+        if (user) {
+          const { data } = await supabase
+            .from('user_email_settings')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+          emailSettings = data;
+        }
+
+        const senderName = emailSettings?.sender_name || user?.user_metadata?.full_name || 'Huntlo Sales';
+        const replyToEmail = emailSettings?.smtp_user || undefined;
+
+        // Dispatch emails in parallel without blocking the UI completely
+        Promise.all(enrolledLeads.map(async (lead) => {
+          const leadEmail = lead.email || lead.contact_linkedin; // simple fallback
+          if (!leadEmail || !leadEmail.includes('@')) return;
+
+          const parsedSubject = parseTemplate(firstStep.subject, lead, user);
+          const parsedContent = parseTemplate(firstStep.content, lead, user);
+
+          await sendSequenceEmail({
+            toEmail: leadEmail,
+            subject: parsedSubject,
+            body: parsedContent,
+            fromName: senderName,
+            replyTo: replyToEmail,
+          });
+        })).catch(err => console.error('[Sequence Execution Error]:', err));
+      } catch (err) {
+        console.error('Failed to execute initial sequence step:', err);
+      }
+    }
+
+    set(state => {
+      const sequences = state.sequences.map(s => {
+        if (s.id === sequenceId) {
+          return { ...s, enrolled: (s.enrolled || 0) + leadIds.length };
+        }
+        return s;
+      });
+      return { sequences };
+    });
+    return new Promise(resolve => setTimeout(resolve, 800));
+  },
+
+  // ── Email Settings ────────────────────────
+  fetchEmailSettings: async () => {
+    const { user } = useAuthStore.getState();
+    if (!user) return null;
+    const { data, error } = await supabase
+      .from('user_email_settings')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 is no rows returned
+    return data || null;
+  },
+
+  saveEmailSettings: async (settings) => {
+    const { user } = useAuthStore.getState();
+    if (!user) throw new Error('Not authenticated');
+    
+    const payload = { ...settings, user_id: user.id };
+    const { data, error } = await supabase
+      .from('user_email_settings')
+      .upsert(payload, { onConflict: 'user_id' })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  // ── Webhooks ──────────────────────────────
+  fetchWebhookConfig: async () => {
+    const { user } = useAuthStore.getState();
+    if (!user) return null;
+    const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
+    if (!profile?.organization_id) return null;
+    
+    let { data, error } = await supabase
+      .from('webhook_configs')
+      .select('*')
+      .eq('organization_id', profile.organization_id)
+      .single();
+      
+    if (error && error.code === 'PGRST116') {
+      const { data: newConfig } = await supabase
+        .from('webhook_configs')
+        .insert({ organization_id: profile.organization_id })
+        .select()
+        .single();
+      data = newConfig;
+    }
+    return data || null;
+  },
+
+  saveWebhookConfig: async (configId, updates) => {
+    const { data, error } = await supabase
+      .from('webhook_configs')
+      .update(updates)
+      .eq('id', configId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  regenerateWebhookToken: async (configId) => {
+    const newToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    const { data, error } = await supabase
+      .from('webhook_configs')
+      .update({ secret_token: newToken })
+      .eq('id', configId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  fetchWebhookEvents: async () => {
+    const { user } = useAuthStore.getState();
+    if (!user) return [];
+    const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
+    if (!profile?.organization_id) return [];
+
+    const { data, error } = await supabase
+      .from('webhook_events')
+      .select('*')
+      .eq('organization_id', profile.organization_id)
       .order('created_at', { ascending: false })
       .limit(50);
     if (error) throw error;
     return data || [];
   },
+  // ── Webinars ──────────────────────────────
+  createWebinar: async (webinar) => {
+    const { user } = useAuthStore.getState();
+    const orgId = await get()._getOrgId();
+    const payload = { ...webinar, owner_id: user?.id, ...(orgId ? { organization_id: orgId } : {}) };
+    
+    const { data, error } = await supabase.from('webinars').insert(payload).select().single();
+    if (error) throw error;
+    
+    set(state => ({ webinars: [data, ...state.webinars] }));
+
+    // Auto-create tasks based on default SOP
+    const sops = get().webinar_sops;
+    const defaultSop = sops.length > 0 ? sops[0] : null;
+    
+    if (defaultSop && defaultSop.tasks) {
+      const webinarDate = new Date(data.date_time);
+      const tasksToCreate = defaultSop.tasks.map(t => {
+        const dueDate = new Date(webinarDate);
+        dueDate.setDate(dueDate.getDate() + (t.offset_days || 0));
+        return {
+          title: t.title,
+          type: t.type || 'follow-up',
+          priority: 'medium',
+          due: dueDate.toISOString(),
+          status: 'pending',
+          owner_id: user?.id,
+          webinar_id: data.id,
+          checklist_source: defaultSop.id,
+          ...(orgId ? { organization_id: orgId } : {})
+        };
+      });
+
+      const { data: createdTasks, error: taskErr } = await supabase.from('tasks').insert(tasksToCreate).select();
+      if (!taskErr && createdTasks) {
+        set(state => ({ tasks: [...createdTasks, ...state.tasks] }));
+      }
+    }
+
+    return data;
+  },
+
+  updateWebinar: async (id, updates) => {
+    const { data, error } = await supabase.from('webinars').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    set(state => ({ webinars: state.webinars.map(w => w.id === id ? data : w) }));
+    return data;
+  },
+
+  deleteWebinar: async (id) => {
+    const { error } = await supabase.from('webinars').delete().eq('id', id);
+    if (error) throw error;
+    set(state => ({ webinars: state.webinars.filter(w => w.id !== id) }));
+  },
+
+  createWebinarRegistrant: async (registrant) => {
+    const { user } = useAuthStore.getState();
+    const orgId = await get()._getOrgId();
+    
+    // Auto-calculate lead score based on qualification answers
+    let score = 0;
+    const ans = registrant.qualification_answers || {};
+    if (ans.urgent_roles === 'yes') score += 20;
+    if (ans.hiring_volume && parseInt(ans.hiring_volume) > 10) score += 30;
+    if (ans.agency_or_in_house === 'agency') score += 15;
+    if (ans.team_size && parseInt(ans.team_size) > 5) score += 15;
+    
+    const payload = { 
+      ...registrant, 
+      lead_score: score,
+      ...(orgId ? { organization_id: orgId } : {})
+    };
+
+    const { data, error } = await supabase.from('webinar_registrants').insert(payload).select().single();
+    if (error) throw error;
+    
+    set(state => ({ webinar_registrants: [data, ...state.webinar_registrants] }));
+    return data;
+  },
+
+  updateWebinarRegistrant: async (id, updates) => {
+    const state = get();
+    const existing = state.webinar_registrants.find(r => r.id === id);
+    
+    const { data, error } = await supabase.from('webinar_registrants').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    
+    set(state => ({ webinar_registrants: state.webinar_registrants.map(r => r.id === id ? data : r) }));
+
+    // Automations:
+    // If demo_requested flipped to true, create a Deal.
+    if (updates.demo_requested === true && existing?.demo_requested !== true) {
+      // Find contact to get company id and name
+      const contact = state.contacts.find(c => c.id === data.contact_id);
+      if (contact) {
+        const { user } = useAuthStore.getState();
+        const orgId = await get()._getOrgId();
+        
+        const dealTitle = `${contact.name || contact.email} - Webinar Demo Request`;
+        const newDeal = {
+          title: dealTitle,
+          company_id: contact.company_id,
+          stage: 'Discovery',
+          arr: 0,
+          owner_id: user?.id,
+          notes: `Created from Webinar registration.\nAnswers: ${JSON.stringify(data.qualification_answers, null, 2)}`,
+          ...(orgId ? { organization_id: orgId } : {})
+        };
+        
+        const { data: createdDeal, error: dealErr } = await supabase.from('deals').insert(newDeal).select().single();
+        if (!dealErr && createdDeal) {
+          set(state => ({ deals: [createdDeal, ...state.deals] }));
+          
+          // Optionally, add a notification
+          useUIStore.getState().addNotification({
+            id: `deal-auto-${createdDeal.id}`,
+            type: 'deal',
+            title: '💼 Auto-created Deal',
+            message: `A deal was created for ${contact.name} from webinar request.`,
+            route: '/pipeline',
+            unread: true,
+            time: new Date().toISOString(),
+          });
+        }
+      }
+    }
+    
+    return data;
+  },
+
+  createWebinarSOP: async (sop) => {
+    const { user } = useAuthStore.getState();
+    const orgId = await get()._getOrgId();
+    const payload = { ...sop, ...(orgId ? { organization_id: orgId } : {}) };
+    const { data, error } = await supabase.from('webinar_sops').insert(payload).select().single();
+    if (error) throw error;
+    set(state => ({ webinar_sops: [data, ...state.webinar_sops] }));
+    return data;
+  },
+  
+  updateWebinarSOP: async (id, updates) => {
+    const { data, error } = await supabase.from('webinar_sops').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    set(state => ({ webinar_sops: state.webinar_sops.map(s => s.id === id ? data : s) }));
+    return data;
+  },
+
 }));
 
 export default useDataStore;

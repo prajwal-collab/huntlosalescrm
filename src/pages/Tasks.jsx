@@ -234,6 +234,7 @@ export default function Tasks() {
             const owner = teamMembers?.find(tm => tm.id === task.owner_id);
             const ownerName = owner?.name || 'ME';
             const ownerInitials = ownerName !== 'ME' ? ownerName.substring(0, 2).toUpperCase() : 'ME';
+            const relatedWebinar = task.webinar_id ? useDataStore.getState().webinars.find(w => w.id === task.webinar_id) : null;
 
             return (
               <div
@@ -254,6 +255,7 @@ export default function Tasks() {
                     <span className="badge badge-gray">{task.type}</span>
                     {isOverdue && <span className="badge" style={{ background: 'rgba(239,68,68,0.1)', color: '#dc2626', fontSize: 10 }}>⚠ Overdue</span>}
                     {task.company && <span className="task-company">{task.company}</span>}
+                    {relatedWebinar && <span className="badge" style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', marginLeft: 4 }}>Webinar: {relatedWebinar.title}</span>}
                   </div>
                 </div>
 

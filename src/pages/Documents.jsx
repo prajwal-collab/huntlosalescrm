@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { FileText, Plus, Search, Eye, Download, MoreVertical, Sparkles, X, Link as LinkIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import useDataStore from '../store/useDataStore';
+import useAuthStore from '../store/useAuthStore';
 import { useDialog } from '../context/DialogContext';
 import './Documents.css';
 
 export default function Documents() {
   const { documents, companies, createDocument, teamMembers } = useDataStore();
+  const { user } = useAuthStore();
   const { showAlert } = useDialog();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
@@ -49,7 +51,7 @@ export default function Documents() {
       <div className="page-header-row">
         <div>
           <h1 className="page-big-title">Documents</h1>
-          <p className="page-big-sub">{documents.length} files tracked</p>
+          <p className="page-big-sub">{documents.length} files tracked • Visible to workspace</p>
         </div>
         <div className="page-header-actions">
           <div className="search-box" style={{ width: 260 }}>
@@ -84,7 +86,7 @@ export default function Documents() {
                   </div>
                   <div className="doc-company" style={{ flex: 1 }}>{company?.name || 'All'}</div>
                   <div className="doc-owner" style={{ flex: 1, fontSize: '13px', color: 'var(--text-secondary)' }}>
-                    {teamMembers?.find(tm => tm.id === doc.owner_id)?.name || 'ME'}
+                    {doc.owner_id === user?.id ? 'ME' : (teamMembers?.find(tm => tm.id === doc.owner_id)?.name || 'Team Member')}
                   </div>
                   <div className="doc-views" style={{ width: 80 }}>{doc.views}</div>
                   <div className="doc-date" style={{ width: 120 }}>{formatDistanceToNow(new Date(doc.created_at), { addSuffix: true })}</div>
@@ -98,7 +100,7 @@ export default function Documents() {
               <div className="empty-state" style={{ marginTop: 40 }}>
                 <FileText size={32} />
                 <h3>No documents yet</h3>
-                <p>Add your first proposal or contract.</p>
+                <p>Add your first proposal or contract. Documents are visible to your team.</p>
               </div>
             )}
           </div>

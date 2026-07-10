@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BarChart3, Building2, Users, CheckSquare,
   Calendar, Zap, FileText, Settings, Bell, ChevronLeft,
   ChevronRight, LogOut, Sun, Moon, TrendingUp,
-  ChevronDown, Target, BookOpen, Calculator
+  ChevronDown, Target, BookOpen, Calculator, Video
 } from 'lucide-react';
 import useUIStore from '../../store/useUIStore';
 import useAuthStore from '../../store/useAuthStore';
@@ -18,6 +18,7 @@ const NAV_GROUPS = [
       { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
       { to: '/leads', icon: Target, label: 'Leads' },
       { to: '/pipeline', icon: BarChart3, label: 'Pipeline' },
+      { to: '/webinars', icon: Video, label: 'Webinars' },
     ]
   },
   {
