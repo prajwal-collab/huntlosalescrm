@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Copy, ExternalLink, Search, Plus, Link as LinkIcon, BarChart2, Activity } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Copy, ExternalLink, Search, Plus, Link as LinkIcon, Activity, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import useAuthStore from '../store/useAuthStore';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis } from 'recharts';
@@ -7,7 +7,6 @@ import './UTMGenerator.css';
 
 const CHANNELS = ['LinkedIn', 'Twitter', 'Google', 'Email', 'WhatsApp', 'Organic', 'Paid'];
 const PURPOSES = ['Webinar', 'Blog Post', 'Lead Magnet', 'Newsletter', 'Sales Promo'];
-
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b'];
 
 export default function UTMGenerator() {
@@ -15,9 +14,14 @@ export default function UTMGenerator() {
   const [links, setLinks] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // Navigation & UI State
+  const [activeTab, setActiveTab] = useState('Dashboard');
+  const baseUrlInputRef = useRef(null);
+
   // Filters state
   const [searchQuery, setSearchQuery] = useState('');
   const [activeChannelFilter, setActiveChannelFilter] = useState('All');
+  const [dateRange, setDateRange] = useState('Last 30 Days');
 
   // Generator form
   const [formData, setFormData] = useState({
@@ -58,14 +62,61 @@ export default function UTMGenerator() {
     return () => supabase.removeChannel(channel);
   }, [user]);
 
-  // Derived Analytics
+  // Handle Delete Link
+  const handleDeleteLink = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this link? This will break the tracking URL.")) return;
+    
+    // Optimistic UI update
+    const previousLinks = [...links];
+    setLinks(links.filter(l => l.id !== id));
+    
+    const { error } = await supabase.from('utm_links').delete().eq('id', id);
+    if (error) {
+      console.error("Error deleting link:", error);
+      setLinks(previousLinks); // Revert on error
+      alert("Failed to delete the link.");
+    }
+  };
+
+  // Derived Analytics & Filters
+  const filteredLinks = useMemo(() => {
+    const now = new Date();
+    
+    return links.filter(l => {
+      // Search
+      const matchesSearch = (l.asset_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (l.utm_campaign || '').toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Channel
+      const matchesChannel = activeChannelFilter === 'All' || (l.utm_source || '').toLowerCase() === activeChannelFilter.toLowerCase();
+      
+      // Date Range
+      let matchesDate = true;
+      if (l.created_at) {
+        const linkDate = new Date(l.created_at);
+        if (dateRange === 'Last 30 Days') {
+          const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          matchesDate = linkDate >= thirtyDaysAgo;
+        } else if (dateRange === 'This Quarter') {
+          const currentQuarter = Math.floor(now.getMonth() / 3);
+          const linkQuarter = Math.floor(linkDate.getMonth() / 3);
+          matchesDate = (linkDate.getFullYear() === now.getFullYear() && linkQuarter === currentQuarter);
+        } else if (dateRange === 'Year to Date') {
+          matchesDate = linkDate.getFullYear() === now.getFullYear();
+        }
+      }
+
+      return matchesSearch && matchesChannel && matchesDate;
+    });
+  }, [links, searchQuery, activeChannelFilter, dateRange]);
+
   const metrics = useMemo(() => {
     let totalClicks = 0;
     let totalConversions = 0;
     const sourceMap = {};
     const campaignMap = {};
 
-    links.forEach(l => {
+    filteredLinks.forEach(l => {
       totalClicks += l.clicks || 0;
       totalConversions += l.conversions || 0;
       
@@ -78,7 +129,6 @@ export default function UTMGenerator() {
 
     const convRate = totalClicks > 0 ? ((totalConversions / totalClicks) * 100).toFixed(1) : 0;
     
-    // Format for charts
     const donutData = Object.entries(sourceMap)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
@@ -90,16 +140,7 @@ export default function UTMGenerator() {
       .slice(0, 4);
 
     return { totalClicks, totalConversions, convRate, donutData, barData };
-  }, [links]);
-
-  const filteredLinks = useMemo(() => {
-    return links.filter(l => {
-      const matchesSearch = (l.asset_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            (l.utm_campaign || '').toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesChannel = activeChannelFilter === 'All' || (l.utm_source || '') === activeChannelFilter;
-      return matchesSearch && matchesChannel;
-    });
-  }, [links, searchQuery, activeChannelFilter]);
+  }, [filteredLinks]);
 
   const generateFullUrl = (item) => {
     try {
@@ -111,7 +152,9 @@ export default function UTMGenerator() {
     } catch { return ''; }
   };
 
-  const handleCopy = (text) => navigator.clipboard.writeText(text);
+  const handleCopy = (text) => {
+    navigator.clipboard.writeText(text);
+  };
 
   const handleGenerate = async (e) => {
     e.preventDefault();
@@ -134,6 +177,7 @@ export default function UTMGenerator() {
 
     if (!error) {
       setFormData(prev => ({ ...prev, baseUrl: '', assetName: '', campaign: '' }));
+      setActiveChannelFilter('All');
     }
   };
 
@@ -147,6 +191,16 @@ export default function UTMGenerator() {
     return '';
   };
 
+  // Helper for relative time in activity feed
+  const getRelativeTime = (dateString) => {
+    const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+    const daysDifference = Math.round((new Date(dateString).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysDifference === 0) return 'Today';
+    if (daysDifference === -1) return 'Yesterday';
+    return rtf.format(daysDifference, 'day');
+  };
+
   return (
     <div className="linktrack-container">
       {/* HEADER */}
@@ -157,9 +211,15 @@ export default function UTMGenerator() {
             LinkTrack
           </div>
           <div className="lt-tabs">
-            <div className="lt-tab active">Dashboard</div>
-            <div className="lt-tab">Analytics</div>
-            <div className="lt-tab">Settings</div>
+            {['Dashboard', 'Analytics', 'Settings'].map(tab => (
+              <div 
+                key={tab} 
+                className={`lt-tab ${activeTab === tab ? 'active' : ''}`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab}
+              </div>
+            ))}
           </div>
         </div>
         <div className="lt-header-right">
@@ -172,7 +232,7 @@ export default function UTMGenerator() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <button className="lt-btn-new">
+          <button className="lt-btn-new" onClick={() => baseUrlInputRef.current?.focus()}>
             <Plus size={14} /> New Link
           </button>
         </div>
@@ -192,7 +252,7 @@ export default function UTMGenerator() {
               <span className="lt-filter-badge">{links.length}</span>
             </div>
             {CHANNELS.map(ch => {
-              const count = links.filter(l => l.utm_source === ch).length;
+              const count = links.filter(l => (l.utm_source || '').toLowerCase() === ch.toLowerCase()).length;
               return (
                 <div 
                   key={ch} 
@@ -208,15 +268,28 @@ export default function UTMGenerator() {
 
           <div className="lt-sidebar-section" style={{ marginTop: 'auto' }}>
             <div className="lt-section-title">Date Range</div>
-            <div className="lt-filter-item active">Last 30 Days</div>
-            <div className="lt-filter-item">This Quarter</div>
-            <div className="lt-filter-item">Year to Date</div>
+            {['Last 30 Days', 'This Quarter', 'Year to Date'].map(range => (
+              <div 
+                key={range}
+                className={`lt-filter-item ${dateRange === range ? 'active' : ''}`}
+                onClick={() => setDateRange(range)}
+              >
+                {range}
+              </div>
+            ))}
           </div>
         </aside>
 
         {/* CENTER CONTENT (55%) */}
         <section className="lt-center-content">
           
+          {/* Active Tab Logic (Keep simple for now, just show dashboard if Analytics/Settings selected) */}
+          {activeTab !== 'Dashboard' && (
+            <div style={{padding: 20, textAlign: 'center', color: '#666'}}>
+              {activeTab} features coming soon. Showing Dashboard view.
+            </div>
+          )}
+
           {/* Quick Generator */}
           <div className="lt-quick-gen">
             <div className="lt-card-header">
@@ -224,12 +297,26 @@ export default function UTMGenerator() {
             </div>
             <form onSubmit={handleGenerate} className="lt-gen-form-row">
               <div className="lt-input-group">
-                <label>Base URL</label>
-                <input required type="url" placeholder="https://..." className="lt-input" value={formData.baseUrl} onChange={e => setFormData({...formData, baseUrl: e.target.value})} />
+                <label>Base URL *</label>
+                <input 
+                  required 
+                  type="url" 
+                  placeholder="https://..." 
+                  className="lt-input" 
+                  value={formData.baseUrl} 
+                  onChange={e => setFormData({...formData, baseUrl: e.target.value})} 
+                  ref={baseUrlInputRef}
+                />
               </div>
               <div className="lt-input-group">
-                <label>Asset Name</label>
-                <input required placeholder="E.g. Q4 Launch" className="lt-input" value={formData.assetName} onChange={e => setFormData({...formData, assetName: e.target.value})} />
+                <label>Asset Name *</label>
+                <input 
+                  required 
+                  placeholder="E.g. Q4 Launch" 
+                  className="lt-input" 
+                  value={formData.assetName} 
+                  onChange={e => setFormData({...formData, assetName: e.target.value})} 
+                />
               </div>
               <div className="lt-input-group">
                 <label>Purpose</label>
@@ -267,13 +354,14 @@ export default function UTMGenerator() {
                     <th>Short Link</th>
                     <th>Clicks</th>
                     <th>Conv. Rate</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan="5" style={{textAlign: 'center', padding: '40px'}}>Loading...</td></tr>
+                    <tr><td colSpan="6" style={{textAlign: 'center', padding: '40px'}}>Loading...</td></tr>
                   ) : filteredLinks.length === 0 ? (
-                    <tr><td colSpan="5" style={{textAlign: 'center', padding: '40px', color: '#888'}}>No links found.</td></tr>
+                    <tr><td colSpan="6" style={{textAlign: 'center', padding: '40px', color: '#888'}}>No links found.</td></tr>
                   ) : filteredLinks.map(link => {
                     const shortUrl = `${window.location.origin}/l/${link.short_code}`;
                     const rate = link.clicks > 0 ? ((link.conversions / link.clicks) * 100).toFixed(1) : 0;
@@ -298,8 +386,8 @@ export default function UTMGenerator() {
                         <td>
                           <div className="lt-link-wrapper">
                             <span className="lt-link-text lt-short-link">{shortUrl}</span>
-                            <button className="lt-action-btn" onClick={() => handleCopy(shortUrl)}><Copy size={12}/></button>
-                            <a href={shortUrl} target="_blank" rel="noopener noreferrer" className="lt-action-btn"><ExternalLink size={12}/></a>
+                            <button className="lt-action-btn" onClick={() => handleCopy(shortUrl)} title="Copy Short Link"><Copy size={12}/></button>
+                            <a href={shortUrl} target="_blank" rel="noopener noreferrer" className="lt-action-btn" title="Test Open"><ExternalLink size={12}/></a>
                           </div>
                         </td>
                         <td style={{fontWeight: 600}}>{link.clicks.toLocaleString()}</td>
@@ -310,6 +398,11 @@ export default function UTMGenerator() {
                               <div className={`lt-progress-fill ${progClass}`} style={{ width: `${Math.min(rate, 100)}%` }}></div>
                             </div>
                           </div>
+                        </td>
+                        <td>
+                          <button className="lt-action-btn" style={{color: '#ef4444', opacity: 0.7}} onClick={() => handleDeleteLink(link.id)} title="Delete Link">
+                            <Trash2 size={14} />
+                          </button>
                         </td>
                       </tr>
                     );
@@ -329,7 +422,7 @@ export default function UTMGenerator() {
             <div className="lt-snapshot-grid">
               <div className="lt-snapshot-card">
                 <span className="lt-snap-label">Total Links</span>
-                <span className="lt-snap-value">{links.length}</span>
+                <span className="lt-snap-value">{filteredLinks.length}</span>
               </div>
               <div className="lt-snapshot-card">
                 <span className="lt-snap-label">Total Clicks</span>
@@ -384,12 +477,12 @@ export default function UTMGenerator() {
           <div className="lt-sidebar-section" style={{ borderTop: '1px solid #eaeaea', paddingTop: '20px' }}>
             <div className="lt-section-title">Recent Activity</div>
             <div className="lt-activity-list">
-              {links.slice(0, 4).map((l, i) => (
+              {filteredLinks.slice(0, 4).map((l, i) => (
                 <div className="lt-activity-item" key={l.id || i}>
                   <div className="lt-act-icon"><Activity size={14}/></div>
                   <div className="lt-act-content">
                     <span className="lt-act-title">Link created: <b>{l.asset_name}</b></span>
-                    <span className="lt-act-time">Just now via {l.utm_source}</span>
+                    <span className="lt-act-time">{getRelativeTime(l.created_at)} via {l.utm_source}</span>
                   </div>
                 </div>
               ))}
