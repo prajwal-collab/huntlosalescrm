@@ -20,17 +20,20 @@ CREATE TABLE IF NOT EXISTS public.utm_links (
 ALTER TABLE public.utm_links ENABLE ROW LEVEL SECURITY;
 
 -- Allow users to see their own links
+DROP POLICY IF EXISTS "Users can view their own utm links" ON public.utm_links;
 CREATE POLICY "Users can view their own utm links"
     ON public.utm_links FOR SELECT
     USING (auth.uid() = user_id);
 
 -- Allow users to insert their own links
+DROP POLICY IF EXISTS "Users can insert their own utm links" ON public.utm_links;
 CREATE POLICY "Users can insert their own utm links"
     ON public.utm_links FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
 -- Allow the system/public to view by short_code for redirection
 -- We allow anonymous access here because anyone clicking the link needs to be redirected
+DROP POLICY IF EXISTS "Anyone can view links by short_code" ON public.utm_links;
 CREATE POLICY "Anyone can view links by short_code"
     ON public.utm_links FOR SELECT
     USING (true);
@@ -54,4 +57,15 @@ END;
 $$;
 
 -- Enable Realtime for utm_links so dashboard can update live
-ALTER PUBLICATION supabase_realtime ADD TABLE public.utm_links;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_publication_tables
+        WHERE pubname = 'supabase_realtime'
+        AND tablename = 'utm_links'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.utm_links;
+    END IF;
+END
+$$;
