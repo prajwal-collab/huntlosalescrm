@@ -36,7 +36,7 @@ const NAV_GROUPS = [
       { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
       { to: '/sequences', icon: Zap, label: 'Sequences' },
       { to: '/documents', icon: FileText, label: 'Documents' },
-      { to: '/utm', icon: Link, label: 'UTM Builder' },
+      { to: '/utm', icon: Link, label: 'LinkTrack' },
       { to: '/reports', icon: TrendingUp, label: 'Reports' },
       { to: '/team', icon: Users, label: 'Team View', badge: '●' },
     ]
