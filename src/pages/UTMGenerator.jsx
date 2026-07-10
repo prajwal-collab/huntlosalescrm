@@ -1,120 +1,16 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Copy, Plus, ExternalLink, Download } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import useAuthStore from '../store/useAuthStore';
 import './UTMGenerator.css';
-
-// Initial Mock Data
-const INITIAL_LINKS = [
-  {
-    id: '1',
-    assetName: 'Q3 Product Webinar',
-    purpose: 'Registration Drive',
-    baseUrl: 'https://huntlo.com/webinars/q3-product',
-    source: 'linkedin',
-    medium: 'social',
-    campaign: 'q3_launch',
-    content: 'video_ad_1',
-    dateCreated: '2026-07-01',
-    clicks: 1450,
-    conversions: 112,
-  },
-  {
-    id: '2',
-    assetName: 'Cold Email Playbook',
-    purpose: 'Lead Gen Ebook',
-    baseUrl: 'https://huntlo.com/resources/cold-email-playbook',
-    source: 'google',
-    medium: 'cpc',
-    campaign: 'ebook_search',
-    content: 'ad_copy_a',
-    dateCreated: '2026-07-02',
-    clicks: 3200,
-    conversions: 450,
-  },
-  {
-    id: '3',
-    assetName: 'Summer Promo',
-    purpose: 'Sales Discount',
-    baseUrl: 'https://huntlo.com/pricing',
-    source: 'email',
-    medium: 'newsletter',
-    campaign: 'summer_promo_26',
-    content: 'hero_button',
-    dateCreated: '2026-07-03',
-    clicks: 890,
-    conversions: 24,
-  },
-  {
-    id: '4',
-    assetName: 'Feature Announcement',
-    purpose: 'Blog Traffic',
-    baseUrl: 'https://huntlo.com/blog/new-pipeline-view',
-    source: 'twitter',
-    medium: 'social',
-    campaign: 'product_updates',
-    content: 'image_post',
-    dateCreated: '2026-07-04',
-    clicks: 650,
-    conversions: 15,
-  },
-  {
-    id: '5',
-    assetName: 'Partner Webinar',
-    purpose: 'Co-marketing',
-    baseUrl: 'https://huntlo.com/webinars/partner-sales',
-    source: 'partner_newsletter',
-    medium: 'email',
-    campaign: 'partner_q3',
-    content: 'text_link',
-    dateCreated: '2026-07-05',
-    clicks: 420,
-    conversions: 85,
-  },
-  {
-    id: '6',
-    assetName: 'SEO Landing Page',
-    purpose: 'Organic Leads',
-    baseUrl: 'https://huntlo.com/crm-for-startups',
-    source: 'google',
-    medium: 'organic',
-    campaign: 'seo_startups',
-    content: '',
-    dateCreated: '2026-07-06',
-    clicks: 2100,
-    conversions: 120,
-  },
-  {
-    id: '7',
-    assetName: 'Retargeting Display',
-    purpose: 'Bring Back Dropoffs',
-    baseUrl: 'https://huntlo.com/',
-    source: 'google',
-    medium: 'display',
-    campaign: 'retargeting_30d',
-    content: 'banner_300x250',
-    dateCreated: '2026-07-07',
-    clicks: 1100,
-    conversions: 8,
-  },
-  {
-    id: '8',
-    assetName: 'Founder Story Post',
-    purpose: 'Brand Awareness',
-    baseUrl: 'https://huntlo.com/about',
-    source: 'linkedin',
-    medium: 'social',
-    campaign: 'founder_brand',
-    content: 'text_story',
-    dateCreated: '2026-07-08',
-    clicks: 5300,
-    conversions: 45,
-  }
-];
 
 const SOURCES = ['linkedin', 'twitter', 'facebook', 'google', 'email', 'newsletter', 'partner', 'direct'];
 const MEDIUMS = ['social', 'cpc', 'email', 'organic', 'display', 'referral', 'affiliate'];
 
 export default function UTMGenerator() {
-  const [links, setLinks] = useState(INITIAL_LINKS);
+  const { user } = useAuthStore();
+  const [links, setLinks] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     assetName: '',
     purpose: '',
@@ -125,6 +21,52 @@ export default function UTMGenerator() {
     content: ''
   });
 
+  // Fetch initial data
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchLinks = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('utm_links')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (!error && data) {
+        setLinks(data);
+      }
+      setLoading(false);
+    };
+
+    fetchLinks();
+
+    // Subscribe to realtime updates
+    const channel = supabase.channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'utm_links',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setLinks(prev => [payload.new, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            setLinks(prev => prev.map(l => l.id === payload.new.id ? payload.new : l));
+          } else if (payload.eventType === 'DELETE') {
+            setLinks(prev => prev.filter(l => l.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   // Calculate Dashboard Metrics
   const metrics = useMemo(() => {
     let totalClicks = 0;
@@ -134,7 +76,7 @@ export default function UTMGenerator() {
     links.forEach(l => {
       totalClicks += l.clicks || 0;
       totalConversions += l.conversions || 0;
-      sourceMap[l.source] = (sourceMap[l.source] || 0) + (l.conversions || 0);
+      sourceMap[l.utm_source] = (sourceMap[l.utm_source] || 0) + (l.conversions || 0);
     });
 
     const convRate = totalClicks > 0 ? ((totalConversions / totalClicks) * 100).toFixed(1) : 0;
@@ -173,31 +115,52 @@ export default function UTMGenerator() {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleGenerate = (e) => {
-    e.preventDefault();
-    if (!formData.baseUrl) return alert('Base URL is required.');
+  const generateShortCode = () => {
+    return Math.random().toString(36).substring(2, 8);
+  };
 
-    const newLink = {
-      id: Date.now().toString(),
-      ...formData,
-      dateCreated: new Date().toISOString().split('T')[0],
+  const handleGenerate = async (e) => {
+    e.preventDefault();
+    if (!formData.baseUrl || !user) return alert('Base URL is required.');
+
+    const fullUrl = generateFullUrl(formData);
+    const shortCode = generateShortCode();
+
+    const newLinkData = {
+      user_id: user.id,
+      asset_name: formData.assetName,
+      purpose: formData.purpose,
+      base_url: formData.baseUrl,
+      utm_source: formData.source,
+      utm_medium: formData.medium,
+      utm_campaign: formData.campaign,
+      utm_content: formData.content,
+      full_utm_url: fullUrl,
+      short_code: shortCode,
       clicks: 0,
       conversions: 0
     };
 
-    setLinks([newLink, ...links]);
-    setFormData({
-      assetName: '',
-      purpose: '',
-      baseUrl: '',
-      source: 'linkedin',
-      medium: 'social',
-      campaign: '',
-      content: ''
-    });
+    const { error } = await supabase.from('utm_links').insert(newLinkData);
+
+    if (error) {
+      console.error('Failed to create link:', error);
+      alert('Failed to generate link. Check console for details.');
+    } else {
+      setFormData({
+        assetName: '',
+        purpose: '',
+        baseUrl: '',
+        source: 'linkedin',
+        medium: 'social',
+        campaign: '',
+        content: ''
+      });
+    }
   };
 
   const getSourceBadgeClass = (source) => {
+    if (!source) return 'bg-default';
     const s = source.toLowerCase();
     if (s.includes('linkedin')) return 'bg-linkedin';
     if (s.includes('twitter')) return 'bg-twitter';
@@ -230,12 +193,12 @@ export default function UTMGenerator() {
         <div className="utm-metric-card">
           <span className="utm-metric-title">Total Clicks</span>
           <span className="utm-metric-value">{metrics.totalClicks.toLocaleString()}</span>
-          <span className="utm-metric-sub metric-positive">↑ 12% vs last month</span>
+          <span className="utm-metric-sub metric-positive">Real-time data</span>
         </div>
         <div className="utm-metric-card">
           <span className="utm-metric-title">Total Conversions</span>
           <span className="utm-metric-value">{metrics.totalConversions.toLocaleString()}</span>
-          <span className="utm-metric-sub metric-positive">↑ 8% vs last month</span>
+          <span className="utm-metric-sub metric-positive">Real-time data</span>
         </div>
         <div className="utm-metric-card">
           <span className="utm-metric-title">Avg Conv. Rate</span>
@@ -292,7 +255,7 @@ export default function UTMGenerator() {
             </div>
           </div>
           <div className="utm-form-actions">
-            <button type="submit" className="utm-btn-primary">Generate Link</button>
+            <button type="submit" className="utm-btn-primary">Generate & Save Link</button>
           </div>
         </form>
       </div>
@@ -309,42 +272,53 @@ export default function UTMGenerator() {
                 <th>Date</th>
                 <th>Asset / Purpose</th>
                 <th>Source / Medium</th>
-                <th>Campaign</th>
                 <th>Full UTM Link</th>
+                <th>Short Tracking Link</th>
                 <th>Clicks</th>
                 <th>Conversions</th>
                 <th>Conv. Rate</th>
               </tr>
             </thead>
             <tbody>
-              {links.map(link => {
-                const fullUrl = generateFullUrl(link);
+              {loading ? (
+                <tr><td colSpan="8" style={{textAlign: 'center', padding: '20px'}}>Loading...</td></tr>
+              ) : links.length === 0 ? (
+                <tr><td colSpan="8" style={{textAlign: 'center', padding: '20px', color: 'var(--text-secondary)'}}>No links generated yet.</td></tr>
+              ) : links.map(link => {
                 const convRate = link.clicks > 0 ? ((link.conversions / link.clicks) * 100).toFixed(1) : 0;
+                const shortUrl = `${window.location.origin}/l/${link.short_code}`;
                 
                 return (
                   <tr key={link.id}>
-                    <td>{link.dateCreated}</td>
+                    <td>{new Date(link.created_at).toISOString().split('T')[0]}</td>
                     <td>
-                      <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{link.assetName}</div>
+                      <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{link.asset_name}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{link.purpose}</div>
                     </td>
                     <td>
-                      <span className={`badge-source ${getSourceBadgeClass(link.source)}`}>{link.source}</span>
-                      <div style={{ fontSize: 11, marginTop: 4, color: 'var(--text-secondary)' }}>{link.medium}</div>
+                      <span className={`badge-source ${getSourceBadgeClass(link.utm_source)}`}>{link.utm_source}</span>
+                      <div style={{ fontSize: 11, marginTop: 4, color: 'var(--text-secondary)' }}>{link.utm_medium}</div>
                     </td>
-                    <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{link.campaign || '-'}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div className="utm-cell-url" title={fullUrl}>{fullUrl}</div>
-                        <button className="utm-copy-btn" onClick={() => handleCopy(fullUrl)} title="Copy Link">
+                        <div className="utm-cell-url" title={link.full_utm_url}>{link.full_utm_url}</div>
+                        <button className="utm-copy-btn" onClick={() => handleCopy(link.full_utm_url)} title="Copy Long Link">
                           <Copy size={14} />
                         </button>
-                        <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="utm-copy-btn" style={{ color: 'var(--text-secondary)' }} title="Open Link">
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div className="utm-cell-url" style={{ color: '#10b981', fontWeight: 600 }}>{shortUrl}</div>
+                        <button className="utm-copy-btn" onClick={() => handleCopy(shortUrl)} title="Copy Tracking Link">
+                          <Copy size={14} />
+                        </button>
+                        <a href={shortUrl} target="_blank" rel="noopener noreferrer" className="utm-copy-btn" style={{ color: 'var(--text-secondary)' }} title="Test Redirect">
                           <ExternalLink size={14} />
                         </a>
                       </div>
                     </td>
-                    <td>{link.clicks.toLocaleString()}</td>
+                    <td style={{ fontWeight: 600 }}>{link.clicks.toLocaleString()}</td>
                     <td>{link.conversions.toLocaleString()}</td>
                     <td className={getConvRateClass(convRate)}>
                       {convRate}%

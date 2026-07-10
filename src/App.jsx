@@ -38,6 +38,7 @@ import ProposalViewer from './pages/ProposalViewer';
 import Webinars from './pages/Webinars';
 import WebinarDetail from './pages/WebinarDetail';
 import UTMGenerator from './pages/UTMGenerator';
+import LinkRedirect from './pages/LinkRedirect';
 
 // Global listener to catch password recovery hashes from emails
 function AuthListener() {
@@ -83,6 +84,7 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/accept-invite" element={<AcceptInvite />} />
+          <Route path="/l/:code" element={<LinkRedirect />} />
 
           {/* Protected Routes */}
           <Route element={<AuthGuard />}>
