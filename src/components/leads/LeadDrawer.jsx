@@ -172,32 +172,53 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
                 <div className="drawer-contact">
                   {form.contact_name || 'No contact'}{form.designation ? ` · ${form.designation}` : ''}
                 </div>
-                {/* Quick links */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                  {form.email && (
-                    <a href={`mailto:${form.email}`} style={{ color: 'var(--text-tertiary)', display: 'flex' }}>
-                      <Mail size={14} />
-                    </a>
-                  )}
-                  {form.website && (
-                    <a href={form.website.startsWith('http') ? form.website : `https://${form.website}`}
-                      target="_blank" rel="noopener noreferrer"
-                      style={{ color: 'var(--text-tertiary)', display: 'flex' }}>
-                      <Globe size={14} />
-                    </a>
-                  )}
-                  {form.linkedin_url && (
-                    <a href={form.linkedin_url} target="_blank" rel="noopener noreferrer"
-                      style={{ color: 'var(--text-tertiary)', display: 'flex' }}>
-                      <Link2 size={14} />
-                    </a>
-                  )}
-                  {form.phone && (
-                    <a href={`tel:${form.phone}`} style={{ color: 'var(--text-tertiary)', display: 'flex' }}>
-                      <Phone size={14} />
-                    </a>
-                  )}
-                </div>
+                {/* Contact details - Apollo Style */}
+                {(form.email || form.phone || form.linkedin_url || form.website) && (
+                  <div className="contact-details-block" style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: 8, 
+                    marginTop: 16, 
+                    padding: '12px 14px', 
+                    background: 'var(--bg-base)', 
+                    border: '1px solid var(--bg-border)', 
+                    borderRadius: '10px',
+                    boxShadow: 'var(--shadow-xs)',
+                    maxHeight: '140px',
+                    overflowY: 'auto'
+                  }}>
+                    {form.email && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+                        <div style={{ width: 26, height: 26, borderRadius: 6, background: '#fff', border: '1px solid var(--bg-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                          <Mail size={14} color="var(--accent-blue)" />
+                        </div>
+                        <a href={`mailto:${form.email}`} style={{ color: 'var(--text-primary)', textDecoration: 'none', fontWeight: 600, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{form.email}</a>
+                      </div>
+                    )}
+                    {form.phone && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+                        <div style={{ width: 26, height: 26, borderRadius: 6, background: '#fff', border: '1px solid var(--bg-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                          <Phone size={14} color="#059669" />
+                        </div>
+                        <a href={`tel:${form.phone}`} style={{ color: 'var(--text-primary)', textDecoration: 'none', fontWeight: 500 }}>{form.phone}</a>
+                      </div>
+                    )}
+                    {(form.linkedin_url || form.website) && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: (form.email || form.phone) ? 6 : 0, paddingTop: (form.email || form.phone) ? 8 : 0, borderTop: (form.email || form.phone) ? '1px dashed var(--bg-border)' : 'none' }}>
+                        {form.linkedin_url && (
+                          <a href={form.linkedin_url} target="_blank" rel="noopener noreferrer" className="badge badge-blue" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Link2 size={12} /> LinkedIn
+                          </a>
+                        )}
+                        {form.website && (
+                          <a href={form.website.startsWith('http') ? form.website : `https://${form.website}`} target="_blank" rel="noopener noreferrer" className="badge badge-gray" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Globe size={12} /> Website
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </div>
