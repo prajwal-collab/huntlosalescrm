@@ -111,6 +111,12 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user, 
         <div className="lead-company-info">
           <span className="lead-company-name">{lead.company_name || '—'}</span>
           <span className="lead-contact-name">{lead.contact_name || lead.designation || 'No contact'}</span>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+            {lead.email && <Mail size={12} color="var(--text-tertiary)" title={lead.email} />}
+            {lead.phone && <Phone size={12} color="var(--text-tertiary)" title={lead.phone} />}
+            {lead.linkedin_url && <Link2 size={12} color="var(--text-tertiary)" title="LinkedIn" />}
+            {lead.website && <Globe size={12} color="var(--text-tertiary)" title={lead.website} />}
+          </div>
         </div>
       </div>
 

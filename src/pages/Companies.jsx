@@ -5,7 +5,8 @@ import { useState, useRef } from 'react';
 import {
   Search, ExternalLink, Building2, Users,
   Plus, X, AlertCircle, Loader, Globe,
-  SlidersHorizontal, ChevronDown, BarChart2, Copy, Check, Download
+  SlidersHorizontal, ChevronDown, BarChart2, Copy, Check, Download,
+  Mail, Phone, Link2
 } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import { exportToCsv } from '../utils/exportCsv';
@@ -307,11 +308,11 @@ function CompanyPanel({ company, contacts, onClose }) {
                   <div className="cp-contact-info">
                     <span className="cp-contact-name">{c.name}</span>
                     <span className="cp-contact-title">{c.designation || 'No title'}</span>
-                    {c.email && (
-                      <span className="cp-contact-email">
-                        {c.email} <CopyBtn text={c.email} />
-                      </span>
-                    )}
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                      {c.email && <Mail size={12} color="var(--text-tertiary)" title={c.email} />}
+                      {(c.whatsapp || c.phone) && <Phone size={12} color="var(--text-tertiary)" title={c.whatsapp || c.phone} />}
+                      {c.linkedin && <Link2 size={12} color="var(--text-tertiary)" title="LinkedIn" />}
+                    </div>
                   </div>
                   {c.email && <a href={`mailto:${c.email}`} className="co-action-btn" onClick={e => e.stopPropagation()}><ExternalLink size={12} /></a>}
                 </div>

@@ -78,6 +78,11 @@ function ContactRow({ contact, company, onSelect, selected, isSelected, toggleSe
         <div className="cr-name-stack">
           <span className="cr-name-text">{contact.name || '—'}</span>
           <span className="cr-desig-text">{contact.designation || 'No title'}</span>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+            {contact.email && <Mail size={12} color="var(--text-tertiary)" title={contact.email} />}
+            {(contact.whatsapp || contact.phone) && <Phone size={12} color="var(--text-tertiary)" title={contact.whatsapp || contact.phone} />}
+            {contact.linkedin && <ExternalLink size={12} color="var(--text-tertiary)" title="LinkedIn" />}
+          </div>
         </div>
       </div>
 
