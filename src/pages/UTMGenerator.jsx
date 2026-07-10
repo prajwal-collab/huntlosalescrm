@@ -27,6 +27,7 @@ export default function UTMGenerator() {
   const [formData, setFormData] = useState({
     baseUrl: '',
     assetName: '',
+    customShortCode: '',
     purpose: 'Webinar',
     source: 'LinkedIn',
     campaign: ''
@@ -161,7 +162,15 @@ export default function UTMGenerator() {
     if (!formData.baseUrl || !user) return alert('Base URL is required.');
 
     const fullUrl = generateFullUrl(formData);
-    const shortCode = Math.random().toString(36).substring(2, 8);
+    
+    // Use custom short code or generate a random one
+    let shortCode = formData.customShortCode.trim();
+    if (!shortCode) {
+      shortCode = Math.random().toString(36).substring(2, 8);
+    } else {
+      // sanitize custom short code
+      shortCode = shortCode.replace(/[^a-zA-Z0-9-_]/g, '').toLowerCase();
+    }
 
     const { error } = await supabase.from('utm_links').insert({
       user_id: user.id,
@@ -175,8 +184,14 @@ export default function UTMGenerator() {
       short_code: shortCode
     });
 
-    if (!error) {
-      setFormData(prev => ({ ...prev, baseUrl: '', assetName: '', campaign: '' }));
+    if (error) {
+      if (error.code === '23505') { // Postgres unique violation code
+        alert(`The custom short link "/l/${shortCode}" is already taken. Please try another one.`);
+      } else {
+        alert('Failed to generate link. Check console for details.');
+      }
+    } else {
+      setFormData(prev => ({ ...prev, baseUrl: '', assetName: '', campaign: '', customShortCode: '' }));
       setActiveChannelFilter('All');
     }
   };
@@ -297,7 +312,18 @@ export default function UTMGenerator() {
             </div>
             <form onSubmit={handleGenerate} className="lt-gen-form-row">
               <div className="lt-input-group">
-                <label>Base URL *</label>
+                <label>Internal Link Title *</label>
+                <input 
+                  required 
+                  placeholder="e.g. Q4 Promo Campaign" 
+                  className="lt-input" 
+                  value={formData.assetName} 
+                  onChange={e => setFormData({...formData, assetName: e.target.value})} 
+                  ref={baseUrlInputRef}
+                />
+              </div>
+              <div className="lt-input-group">
+                <label>Base URL (Destination) *</label>
                 <input 
                   required 
                   type="url" 
@@ -305,24 +331,19 @@ export default function UTMGenerator() {
                   className="lt-input" 
                   value={formData.baseUrl} 
                   onChange={e => setFormData({...formData, baseUrl: e.target.value})} 
-                  ref={baseUrlInputRef}
                 />
               </div>
               <div className="lt-input-group">
-                <label>Asset Name *</label>
-                <input 
-                  required 
-                  placeholder="E.g. Q4 Launch" 
-                  className="lt-input" 
-                  value={formData.assetName} 
-                  onChange={e => setFormData({...formData, assetName: e.target.value})} 
-                />
-              </div>
-              <div className="lt-input-group">
-                <label>Purpose</label>
-                <select className="lt-select" value={formData.purpose} onChange={e => setFormData({...formData, purpose: e.target.value})}>
-                  {PURPOSES.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
+                <label>Custom Short Link (Optional)</label>
+                <div className="lt-input-prefix-wrapper">
+                  <span className="lt-input-prefix">/l/</span>
+                  <input 
+                    placeholder="e.g. q4-promo" 
+                    className="lt-input lt-input-with-prefix" 
+                    value={formData.customShortCode} 
+                    onChange={e => setFormData({...formData, customShortCode: e.target.value})} 
+                  />
+                </div>
               </div>
               <button type="submit" className="lt-btn-generate">Generate</button>
             </form>
@@ -349,7 +370,7 @@ export default function UTMGenerator() {
               <table className="lt-table">
                 <thead>
                   <tr>
-                    <th>Asset</th>
+                    <th>Link Title (Internal)</th>
                     <th>Channel</th>
                     <th>Short Link</th>
                     <th>Clicks</th>
