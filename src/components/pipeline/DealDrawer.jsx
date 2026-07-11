@@ -391,7 +391,7 @@ function ProposalsTab({ deal, showAlert, showSuccess }) {
 // ── Main DealDrawer ────────────────────────────
 export default function DealDrawer({ dealId, onClose }) {
   const { getSelectedDeal, addActivity } = usePipelineStore();
-  const { contacts, tasks, meetings, createTask, updateTask, deleteTask, updateDeal, createDeal, teamMembers } = useDataStore();
+  const { contacts, tasks, meetings, createTask, updateTask, deleteTask, updateDeal, createDeal, deleteDeal, teamMembers } = useDataStore();
   const { showAlert, showSuccess } = useDialog();
   const deal = getSelectedDeal();
   const [activeTab, setActiveTab] = useState('Overview');
@@ -435,6 +435,18 @@ export default function DealDrawer({ dealId, onClose }) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDeleteDeal = () => {
+    showAlert('Delete Deal', 'Are you sure you want to delete this deal? This action cannot be undone.', async () => {
+      try {
+        await deleteDeal(deal.id);
+        onClose();
+        showSuccess('Deal Deleted', 'The deal has been deleted.');
+      } catch (e) {
+        showAlert('Error', 'Failed to delete deal.');
+      }
+    });
   };
 
   // Task form state
@@ -635,6 +647,7 @@ export default function DealDrawer({ dealId, onClose }) {
               </div>
             </>
           )}
+          <button className="drawer-close" onClick={handleDeleteDeal} style={{ right: 52, color: 'var(--danger)' }} title="Delete Deal"><Trash2 size={16} /></button>
           <button className="drawer-close" onClick={onClose}><X size={16} /></button>
         </div>
 

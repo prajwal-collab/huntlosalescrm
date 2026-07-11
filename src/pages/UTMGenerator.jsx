@@ -303,13 +303,7 @@ export default function UTMGenerator() {
         {/* CENTER CONTENT (55%) */}
         <section className="lt-center-content">
           
-          {/* Active Tab Logic (Keep simple for now, just show dashboard if Analytics/Settings selected) */}
-          {activeTab !== 'Dashboard' && (
-            <div style={{padding: 20, textAlign: 'center', color: '#666'}}>
-              {activeTab} features coming soon. Showing Dashboard view.
-            </div>
-          )}
-
+          {/* Active Tab Logic */}
           {/* Quick Generator */}
           <div className="lt-quick-gen">
             <div className="lt-card-header">

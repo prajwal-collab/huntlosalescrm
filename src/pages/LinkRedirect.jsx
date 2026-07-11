@@ -1,11 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 export default function LinkRedirect() {
   const { code } = useParams();
+  const hasRedirected = useRef(false);
 
   useEffect(() => {
+    if (hasRedirected.current) return;
+    hasRedirected.current = true;
     const handleRedirect = async () => {
       try {
         // Increment the click counter and get the destination URL

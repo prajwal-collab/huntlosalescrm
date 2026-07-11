@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, Loader, CheckCircle, AlertCircle } from 'lucide-react';
 import useAuthStore from '../../store/useAuthStore';
-import logoImg from '../../assets/logo.png';
+const logoImg = "https://res.cloudinary.com/dxlsyh1qj/image/upload/v1783768087/Group_39_olh8ld.png";
 import bgImg from '../../assets/auth_bg.png';
 import './Auth.css';
 

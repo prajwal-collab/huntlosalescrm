@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import useUIStore from '../../store/useUIStore';
 import useAuthStore from '../../store/useAuthStore';
-import logoImg from '../../assets/logo.svg';
+const logoImg = "https://res.cloudinary.com/dxlsyh1qj/image/upload/v1783768087/Group_39_olh8ld.png";
 import './Sidebar.css';
 
 const NAV_GROUPS = [
