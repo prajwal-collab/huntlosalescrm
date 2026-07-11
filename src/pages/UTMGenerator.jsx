@@ -303,62 +303,86 @@ export default function UTMGenerator() {
         {/* CENTER CONTENT (55%) */}
         <section className="lt-center-content">
           
-          {/* Active Tab Logic */}
-          {/* Quick Generator */}
-          <div className="lt-quick-gen">
-            <div className="lt-card-header">
-              <h2>Quick Link Generator</h2>
-            </div>
-            <form onSubmit={handleGenerate} className="lt-gen-form-row">
-              <div className="lt-input-group">
-                <label>Internal Link Title *</label>
-                <input 
-                  required 
-                  placeholder="e.g. Q4 Promo Campaign" 
-                  className="lt-input" 
-                  value={formData.assetName} 
-                  onChange={e => setFormData({...formData, assetName: e.target.value})} 
-                  ref={baseUrlInputRef}
-                />
+          {activeTab === 'Dashboard' ? (
+            <div className="lt-quick-gen">
+              <div className="lt-card-header">
+                <h2>Quick Link Generator</h2>
               </div>
-              <div className="lt-input-group">
-                <label>Base URL (Destination) *</label>
-                <input 
-                  required 
-                  type="url" 
-                  placeholder="https://..." 
-                  className="lt-input" 
-                  value={formData.baseUrl} 
-                  onChange={e => setFormData({...formData, baseUrl: e.target.value})} 
-                />
-              </div>
-              <div className="lt-input-group">
-                <label>Custom Short Link (Optional)</label>
-                <div className="lt-input-prefix-wrapper">
-                  <span className="lt-input-prefix">/l/</span>
+              <form onSubmit={handleGenerate} className="lt-gen-form-row">
+                <div className="lt-input-group">
+                  <label>Internal Link Title *</label>
                   <input 
-                    placeholder="e.g. q4-promo" 
-                    className="lt-input lt-input-with-prefix" 
-                    value={formData.customShortCode} 
-                    onChange={e => setFormData({...formData, customShortCode: e.target.value})} 
+                    required 
+                    placeholder="e.g. Q4 Promo Campaign" 
+                    className="lt-input" 
+                    value={formData.assetName} 
+                    onChange={e => setFormData({...formData, assetName: e.target.value})} 
+                    ref={baseUrlInputRef}
                   />
                 </div>
-              </div>
-              <button type="submit" className="lt-btn-generate">Generate</button>
-            </form>
-            
-            <div className="lt-channels-chips">
-              {CHANNELS.map(ch => (
-                <div 
-                  key={ch} 
-                  className={`lt-chip ${formData.source === ch ? 'active' : ''}`}
-                  onClick={() => setFormData({...formData, source: ch})}
-                >
-                  {ch}
+                <div className="lt-input-group">
+                  <label>Base URL (Destination) *</label>
+                  <input 
+                    required 
+                    type="url" 
+                    placeholder="https://..." 
+                    className="lt-input" 
+                    value={formData.baseUrl} 
+                    onChange={e => setFormData({...formData, baseUrl: e.target.value})} 
+                  />
                 </div>
-              ))}
+                <div className="lt-input-group">
+                  <label>Custom Short Link (Optional)</label>
+                  <div className="lt-input-prefix-wrapper">
+                    <span className="lt-input-prefix">/l/</span>
+                    <input 
+                      placeholder="e.g. q4-promo" 
+                      className="lt-input lt-input-with-prefix" 
+                      value={formData.customShortCode} 
+                      onChange={e => setFormData({...formData, customShortCode: e.target.value})} 
+                    />
+                  </div>
+                </div>
+                <button type="submit" className="lt-btn-generate">Generate</button>
+              </form>
+              
+              <div className="lt-channels-chips">
+                {CHANNELS.map(ch => (
+                  <div 
+                    key={ch} 
+                    className={`lt-chip ${formData.source === ch ? 'active' : ''}`}
+                    onClick={() => setFormData({...formData, source: ch})}
+                  >
+                    {ch}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : activeTab === 'Analytics' ? (
+            <div className="lt-analytics-main" style={{ marginBottom: 24, padding: 24, background: '#fff', borderRadius: 12, border: '1px solid #eaeaea' }}>
+               <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Analytics Overview</h2>
+               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                 <div style={{ padding: 16, border: '1px solid #f0f0f0', borderRadius: 8, background: '#fafafa' }}>
+                   <div style={{ fontSize: 12, color: '#666', marginBottom: 8, fontWeight: 500 }}>Total Links Generated</div>
+                   <div style={{ fontSize: 28, fontWeight: 700, color: '#111' }}>{filteredLinks.length}</div>
+                 </div>
+                 <div style={{ padding: 16, border: '1px solid #f0f0f0', borderRadius: 8, background: '#fafafa' }}>
+                   <div style={{ fontSize: 12, color: '#666', marginBottom: 8, fontWeight: 500 }}>Total Clicks Recorded</div>
+                   <div style={{ fontSize: 28, fontWeight: 700, color: '#3b82f6' }}>{metrics.totalClicks.toLocaleString()}</div>
+                 </div>
+                 <div style={{ padding: 16, border: '1px solid #f0f0f0', borderRadius: 8, background: '#fafafa' }}>
+                   <div style={{ fontSize: 12, color: '#666', marginBottom: 8, fontWeight: 500 }}>Top Performing Channel</div>
+                   <div style={{ fontSize: 20, fontWeight: 600, color: '#111', marginTop: 4 }}>
+                     {metrics.donutData.length > 0 ? metrics.donutData[0].name : 'N/A'}
+                   </div>
+                 </div>
+               </div>
+            </div>
+          ) : (
+            <div style={{ padding: 40, textAlign: 'center', color: '#666', background: '#fff', borderRadius: 12, border: '1px solid #eaeaea', marginBottom: 24 }}>
+              Settings configuration coming soon.
+            </div>
+          )}
 
           {/* Live Links Table */}
           <div className="lt-table-card">

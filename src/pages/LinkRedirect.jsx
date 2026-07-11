@@ -13,7 +13,7 @@ export default function LinkRedirect() {
       try {
         const sessionKey = `utm_clicked_${code}`;
         const alreadyClicked = sessionStorage.getItem(sessionKey);
-        const isBot = /bot|googlebot|crawler|spider|robot|crawling|slurp|facebookexternalhit|whatsapp|skype/i.test(navigator.userAgent);
+        const isBot = /bot|googlebot|crawler|spider|robot|crawling/i.test(navigator.userAgent);
         
         let targetUrl = null;
         
