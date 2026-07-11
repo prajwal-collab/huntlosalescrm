@@ -124,7 +124,7 @@ export default function UTMGenerator() {
       totalConversions += l.conversions || 0;
       
       const src = l.utm_source || 'Unknown';
-      sourceMap[src] = (sourceMap[src] || 0) + (l.conversions || 0);
+      sourceMap[src] = (sourceMap[src] || 0) + (l.clicks || 0);
 
       const cmp = l.utm_campaign || 'Default';
       campaignMap[cmp] = (campaignMap[cmp] || 0) + (l.clicks || 0);
@@ -459,7 +459,7 @@ export default function UTMGenerator() {
           </div>
 
           <div className="lt-sidebar-section">
-            <div className="lt-section-title">Top Channels (Conversions)</div>
+            <div className="lt-section-title">Top Channels (Clicks)</div>
             <div className="lt-chart-container">
               {metrics.donutData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">

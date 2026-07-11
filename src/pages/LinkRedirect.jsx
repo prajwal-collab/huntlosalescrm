@@ -11,31 +11,42 @@ export default function LinkRedirect() {
     hasRedirected.current = true;
     const handleRedirect = async () => {
       try {
-        // Increment the click counter and get the destination URL
-        const { data, error } = await supabase.rpc('increment_utm_click', {
-          p_short_code: code,
-        });
-
-        if (error) {
-          console.error('Error tracking click:', error);
-          // Fallback: try to just get the url if the RPC fails
-          const { data: linkData } = await supabase
-            .from('utm_links')
-            .select('full_utm_url')
-            .eq('short_code', code)
-            .single();
-            
-          if (linkData?.full_utm_url) {
-            window.location.replace(linkData.full_utm_url);
-            return;
+        const sessionKey = `utm_clicked_${code}`;
+        const alreadyClicked = sessionStorage.getItem(sessionKey);
+        const isBot = /bot|googlebot|crawler|spider|robot|crawling|slurp|facebookexternalhit|whatsapp|skype/i.test(navigator.userAgent);
+        
+        let targetUrl = null;
+        
+        if (!alreadyClicked && !isBot) {
+          // Increment the click counter and get the destination URL
+          const { data, error } = await supabase.rpc('increment_utm_click', {
+            p_short_code: code,
+          });
+          
+          if (!error && data) {
+            sessionStorage.setItem(sessionKey, 'true');
+            targetUrl = data;
           }
-        } else if (data) {
-          window.location.replace(data);
-          return;
+        }
+        
+        // If it was a bot, already clicked, or RPC failed, fetch URL without incrementing
+        if (!targetUrl) {
+           const { data: linkData } = await supabase
+             .from('utm_links')
+             .select('full_utm_url')
+             .eq('short_code', code)
+             .single();
+             
+           if (linkData?.full_utm_url) {
+             targetUrl = linkData.full_utm_url;
+           }
         }
 
-        // If not found or error, redirect to home
-        window.location.replace('/');
+        if (targetUrl) {
+          window.location.replace(targetUrl);
+        } else {
+          window.location.replace('/');
+        }
       } catch (err) {
         console.error('Redirect failed:', err);
         window.location.replace('/');
