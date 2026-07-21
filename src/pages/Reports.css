@@ -31,3 +31,27 @@
 }
 .rep-chart-header h3 { font-size: var(--text-md); font-weight: 600; color: var(--text-primary); }
 .rep-chart-area { flex: 1; padding: var(--space-4); }
+
+/* Pipeline Notes */
+.pipeline-notes-card { grid-column: span 2; }
+.pipeline-notes-textarea {
+  width: 100%;
+  min-height: 100px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-primary);
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+  transition: var(--transition-fast);
+}
+.pipeline-notes-textarea:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.12);
+}
+.pipeline-notes-textarea::placeholder { color: var(--text-tertiary); }
+

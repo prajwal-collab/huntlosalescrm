@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, Settings, X, Activity } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Settings, X, Activity, Download, BookOpen, Save } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import useAuthStore from '../store/useAuthStore';
 import { format, subMonths, isSameMonth, subWeeks, isSameWeek } from 'date-fns';
@@ -36,11 +36,90 @@ export default function Reports() {
   const [showCustomizer, setShowCustomizer] = useState(false);
   const { deals, meetings, tasks, companies, contacts, leads } = useDataStore();
   const { team, fetchTeam } = useAuthStore();
+  const [exportingType, setExportingType] = useState(null);
 
   const [widgets, setWidgets] = useState(() => {
     const saved = localStorage.getItem('huntlo_reports_config');
-    return saved ? JSON.parse(saved) : { stats: true, revenue: true, activity: true, funnel: true, sources: true, tasks: true };
+    return saved ? JSON.parse(saved) : { stats: true, revenue: true, activity: true, funnel: true, sources: true, tasks: true, pipelineNotes: true };
   });
+
+  // Pipeline Notes state (persistent)
+  const [pipelineNotes, setPipelineNotes] = useState(() => localStorage.getItem('huntlo_pipeline_notes') || '');
+  const [notesSaved, setNotesSaved] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      localStorage.setItem('huntlo_pipeline_notes', pipelineNotes);
+      setNotesSaved(true);
+      setTimeout(() => setNotesSaved(false), 1500);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [pipelineNotes]);
+
+  // ── Export Functions ─────────────────────────────────────────
+  const exportPipelineCSV = () => {
+    const PIPELINE_STAGES = ['Discovery', 'Qualification', 'Trial', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'];
+    const stageCounts = {};
+    const stageMRR = {};
+    PIPELINE_STAGES.forEach(s => { stageCounts[s] = 0; stageMRR[s] = 0; });
+    deals.forEach(d => {
+      if (stageCounts[d.stage] !== undefined) {
+        stageCounts[d.stage]++;
+        stageMRR[d.stage] += Number(d.arr) || 0;
+      }
+    });
+
+    let csv = 'HUNTLO PIPELINE REPORT\n';
+    csv += `Generated,${format(new Date(), 'dd MMM yyyy HH:mm')}\n\n`;
+    csv += `Total Pipeline Value,${metrics.pipeline}\n`;
+    csv += `Total Revenue Won,${metrics.revenue}\n`;
+    csv += `Win Rate,${metrics.winRate}\n`;
+    csv += `Tasks Done (30d),${metrics.tasksCompleted30d}\n\n`;
+
+    csv += 'STAGE SUMMARY\n';
+    csv += 'Stage,Deal Count,Total MRR\n';
+    PIPELINE_STAGES.forEach(s => {
+      csv += `${s},${stageCounts[s]},${stageMRR[s]}\n`;
+    });
+
+    csv += '\nDEAL DETAILS\n';
+    csv += 'Deal Title,Company,Stage,MRR,Urgency,Engagement Score,Owner,Last Activity,Created At\n';
+    deals.forEach(d => {
+      const company = companies.find(c => c.id === d.company_id);
+      const owner = team.find(t => t.id === d.owner_id);
+      csv += `"${d.title || ''}","${company?.name || ''}","${d.stage || ''}",${d.arr || 0},"${d.urgency || 'medium'}",${d.engagement_score || 0},"${owner?.name || owner?.email || ''}","${d.last_activity || ''}","${d.created_at || ''}"\n`;
+    });
+
+    if (pipelineNotes.trim()) {
+      csv += '\nPIPELINE NOTES\n';
+      csv += `"${pipelineNotes.replace(/"/g, '""')}"\n`;
+    }
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `huntlo_pipeline_report_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportTeamActivityCSV = () => {
+    let csv = 'HUNTLO TEAM ACTIVITY REPORT\n';
+    csv += `Generated,${format(new Date(), 'dd MMM yyyy HH:mm')}\n\n`;
+    csv += 'SDR Name,Role,Team,Trial Signups,Enrichments Done,Outreach Sent,Demos Scheduled,Demos Showed Up,Show Rate %,Cold Calls Made,Won Revenue\n';
+    leaderboard.forEach(m => {
+      const showRate = m.demosScheduled > 0 ? Math.round((m.demosAttended / m.demosScheduled) * 100) : 0;
+      csv += `"${m.name || m.email}","${m.role || ''}","${m.team || ''}",${m.trialSignups},${m.enrichmentDone},${m.outreachSent},${m.demosScheduled},${m.demosAttended},${showRate}%,${m.coldCallsMade},${m.wonRevenue}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `huntlo_team_activity_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const toggleWidget = (key) => {
     const next = { ...widgets, [key]: !widgets[key] };
@@ -200,6 +279,9 @@ export default function Reports() {
                   </button>
                 ))}
               </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setExportingType('pipeline'); exportPipelineCSV(); setTimeout(() => setExportingType(null), 1200); }}>
+                <Download size={13} /> {exportingType === 'pipeline' ? '✓ Exported' : 'Export Pipeline'}
+              </button>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowCustomizer(true)}>
                 <Settings size={14} /> Customize
               </button>
@@ -322,9 +404,45 @@ export default function Reports() {
               </div>
             )}
           </div>
+
+          {/* Pipeline Notes Widget */}
+          {widgets.pipelineNotes && (
+            <div className="rep-chart-card pipeline-notes-card">
+              <div className="rep-chart-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <BookOpen size={16} color="var(--accent-blue)" />
+                  <h3>Pipeline Notes</h3>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {notesSaved && <span style={{ fontSize: 11, color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 4 }}><Save size={11} /> Saved</span>}
+                  <span className="badge badge-gray">Manager Notes</span>
+                </div>
+              </div>
+              <div style={{ padding: '16px 20px' }}>
+                <textarea
+                  className="pipeline-notes-textarea"
+                  value={pipelineNotes}
+                  onChange={(e) => setPipelineNotes(e.target.value)}
+                  placeholder="Write pipeline observations, weekly summaries, strategy notes, blockers...\n\nThese notes are auto-saved locally and included in pipeline exports."
+                  rows={5}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{pipelineNotes.length} characters · Auto-saved to browser</span>
+                  {pipelineNotes.trim() && <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Included in CSV exports</span>}
+                </div>
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+          {/* Export Team Activity Button */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => { setExportingType('team'); exportTeamActivityCSV(); setTimeout(() => setExportingType(null), 1200); }}>
+              <Download size={13} /> {exportingType === 'team' ? '✓ Exported' : 'Export Team Activity'}
+            </button>
+          </div>
 
           {/* ─ Team-wide 6 Metrics Summary ───────── */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12 }}>
@@ -473,6 +591,11 @@ export default function Reports() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: 'var(--bg-elevated)', borderRadius: 8 }}>
               <span style={{ fontWeight: 500 }}>Task Completion</span>
               <input type="checkbox" checked={widgets.tasks} onChange={() => toggleWidget('tasks')} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: 'var(--bg-elevated)', borderRadius: 8 }}>
+              <span style={{ fontWeight: 500 }}>Pipeline Notes</span>
+              <input type="checkbox" checked={widgets.pipelineNotes} onChange={() => toggleWidget('pipelineNotes')} />
             </div>
 
           </div>

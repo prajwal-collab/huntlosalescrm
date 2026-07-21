@@ -416,6 +416,23 @@ const useDataStore = create((set, get) => ({
     return data;
   },
 
+  // Append timestamped notes to a lead without overwriting existing notes
+  appendLeadNotes: async (id, newNote, stageUpdate) => {
+    const lead = get().leads.find(l => l.id === id);
+    if (!lead) return null;
+    const timestamp = new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const existingNotes = lead.notes || '';
+    const appendedNotes = existingNotes
+      ? `${existingNotes}\n\n---\n📞 [${timestamp}] ${newNote}`
+      : `📞 [${timestamp}] ${newNote}`;
+    const updates = { notes: appendedNotes };
+    if (stageUpdate) updates.stage = stageUpdate;
+    const { data, error } = await supabase.from('leads').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    set(state => ({ leads: state.leads.map(l => l.id === id ? data : l) }));
+    return data;
+  },
+
   deleteLead: async (id) => {
     const { error } = await supabase.from('leads').delete().eq('id', id);
     if (error) throw error;
