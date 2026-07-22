@@ -48,7 +48,14 @@ const LEAD_FIELDS = [
   { key: 'stage', label: 'Stage' }
 ];
 
-export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' }) {
+const CALLING_LIST_FIELDS = [
+  { key: 'company_name', label: 'Company Name' },
+  { key: 'contact_name', label: 'Contact Name' },
+  { key: 'phone', label: 'Phone Number' },
+  { key: 'email', label: 'Email Address' },
+];
+
+export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', onImportSuccess }) {
   const [step, setStep] = useState('upload'); // 'upload' | 'map' | 'importing' | 'done'
   const [file, setFile] = useState(null);
   const [headers, setHeaders] = useState([]);
@@ -61,7 +68,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
   const [importType, setImportType] = useState(type);
 
   const { bulkCreateContacts, bulkCreateCompanies, bulkCreateLeads, contacts, companies, leads } = useDataStore();
-  const crmFields = importType === 'contacts' ? CONTACT_FIELDS : importType === 'leads' ? LEAD_FIELDS : COMPANY_FIELDS;
+  const crmFields = importType === 'contacts' ? CONTACT_FIELDS : importType === 'leads' ? LEAD_FIELDS : importType === 'calling_list' ? CALLING_LIST_FIELDS : COMPANY_FIELDS;
 
   // Reset state when modal opens
   useEffect(() => {
@@ -131,6 +138,13 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
     if (importType === 'leads') {
       if (!mapping['company_name']) {
         setError('Company Name is required for Leads.');
+        return;
+      }
+    }
+
+    if (importType === 'calling_list') {
+      if (!mapping['phone'] && !mapping['company_name'] && !mapping['contact_name']) {
+        setError('Please map at least Phone, Company Name, or Contact Name.');
         return;
       }
     }
@@ -219,12 +233,22 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
       if (importType === 'contacts') {
         return obj.name && obj.name.trim() !== '';
       }
+      if (importType === 'calling_list') {
+        return obj.phone || obj.company_name || obj.contact_name;
+      }
       return obj.name && obj.name.trim() !== '';
     });
 
     if (mappedData.length === 0) {
       setError('No valid data found to import.');
       setStep('map');
+      return;
+    }
+
+    if (onImportSuccess) {
+      onImportSuccess(mappedData, importType);
+      setResults({ success: mappedData.length, failed: 0, skipped: 0 });
+      setStep('done');
       return;
     }
 
@@ -332,9 +356,15 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
         
         {step === 'upload' && (
           <div className="csv-tabs">
-            <button className={`csv-tab ${importType === 'contacts' ? 'active' : ''}`} onClick={() => setImportType('contacts')}>Contacts</button>
-            <button className={`csv-tab ${importType === 'companies' ? 'active' : ''}`} onClick={() => setImportType('companies')}>Accounts</button>
-            <button className={`csv-tab ${importType === 'leads' ? 'active' : ''}`} onClick={() => setImportType('leads')}>Leads</button>
+            {type === 'calling_list' ? (
+              <button className="csv-tab active">Calling List</button>
+            ) : (
+              <>
+                <button className={`csv-tab ${importType === 'contacts' ? 'active' : ''}`} onClick={() => setImportType('contacts')}>Contacts</button>
+                <button className={`csv-tab ${importType === 'companies' ? 'active' : ''}`} onClick={() => setImportType('companies')}>Accounts</button>
+                <button className={`csv-tab ${importType === 'leads' ? 'active' : ''}`} onClick={() => setImportType('leads')}>Leads</button>
+              </>
+            )}
           </div>
         )}
 
@@ -427,7 +457,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts' })
                 </p>
               )}
               <button className="btn btn-primary mt-4" onClick={onClose}>
-                View My {importType === 'contacts' ? 'Contacts' : importType === 'leads' ? 'Leads' : 'Accounts'}
+                {type === 'calling_list' ? 'View Calling List' : `View My ${importType === 'contacts' ? 'Contacts' : importType === 'leads' ? 'Leads' : 'Accounts'}`}
               </button>
             </div>
           )}

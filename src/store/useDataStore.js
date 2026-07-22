@@ -696,6 +696,33 @@ const useDataStore = create((set, get) => ({
     set(state => ({ tasks: state.tasks.filter(t => t.id !== id) }));
   },
 
+  bulkCreateTasks: async (tasksList) => {
+    const { user } = useAuthStore.getState();
+    await get().ensureProfile();
+    const orgId = await get()._getOrgId();
+    const records = tasksList.map(t => ({ 
+      ...t, 
+      owner_id: user?.id,
+      ...(orgId ? { organization_id: orgId } : {})
+    }));
+    const { data, error } = await supabase.from('tasks').insert(records).select();
+    if (error) throw error;
+    set(state => ({ tasks: [...data, ...state.tasks] }));
+    return data;
+  },
+
+  bulkUpdateTasks: async (tasksList) => {
+    const { data, error } = await supabase.from('tasks').upsert(tasksList).select();
+    if (error) throw error;
+    set(state => ({
+      tasks: state.tasks.map(t => {
+        const updated = data.find(d => d.id === t.id);
+        return updated || t;
+      })
+    }));
+    return data;
+  },
+
   // ── Proposals ──────────────────────────────
   createProposal: async (proposal) => {
     const { user } = useAuthStore.getState();
