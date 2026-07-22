@@ -440,8 +440,8 @@ Update status by clicking the status badge in the meeting row or inside the meet
     id: 'tasks',
     icon: CheckSquare,
     color: '#16a34a',
-    title: '✅ Tasks',
-    description: 'Task management and follow-ups',
+    title: '✅ Tasks & Cold Calling',
+    description: 'Task management, Power Dialer, and cold call logging',
     articles: [
       {
         title: 'Creating and Managing Tasks',
@@ -449,40 +449,118 @@ Update status by clicking the status badge in the meeting row or inside the meet
 Tasks in Huntlo can be created from two places:
 
 **1. Tasks Page (Global Tasks)**
-Sidebar → Tasks → "Add Task".
-Set title, due date, priority, and assign to a team member.
+Sidebar → Tasks → "Create Task" button (top right).
+Set title, due date, priority, type, and optionally link to a deal.
 
 **2. Deal Drawer → Tasks Tab (Deal-Specific Tasks)**
-Open any deal → Tasks tab → Type task title → set due date → click Add.
+Open any deal → Tasks tab → type task title → set due date → click Add.
 These tasks are linked to that specific deal.
 
-**Task Statuses:**
-- **Pending** — Not yet done
-- **In Progress** — Being worked on
-- **Completed** — Done ✅
+**Task Types:**
+- **Follow-up** — Generic follow-up action
+- **Email** — Email to send
+- **Call** — Scheduled call
+- **Cold Call** — Cold outreach call
+- **LinkedIn** — LinkedIn action
+- **Prep** — Meeting or proposal prep
 
-**Mark Complete:** Click the checkbox icon on any task row to toggle completion.
+**Task Tabs on the Tasks page:**
+| Tab | Shows |
+|-----|-------|
+| All tasks | All pending tasks (excluding calling list) |
+| Call tasks | Pending tasks of type "call" |
+| Email tasks | Pending tasks of type "email" |
+| LinkedIn tasks | Pending tasks of type "linkedin" |
+| 📞 Call Log | All completed cold call logs |
+| ⚡ Power Dialer | Your imported calling list |
+| Overdue | Tasks with a past due date |
+| Completed | All completed tasks |
 
-**Overdue Tasks:** Tasks with a past due date appear highlighted in red.
-The Dashboard shows overdue count in the Priorities grid.
+**Mark Complete:** Click the checkbox on any task row.
+
+**Keyboard shortcuts:** \`j/k\` to navigate, \`space\` to mark complete.
 `,
       },
       {
-        title: 'Task Filters & Views',
+        title: '⚡ Power Dialer — Bulk Calling Campaigns',
         content: `
-On the Tasks page, use the filter tabs:
-- **All** — Every task
-- **My Tasks** — Tasks assigned to you
-- **Overdue** — Past due date, not completed
-- **Today** — Due today
-- **Upcoming** — Due in the next 7 days
-- **Completed** — Done tasks
+The **Power Dialer** lets you run a high-speed calling campaign from a CSV list. It's designed for SDRs and founders who need to dial through 20–100+ contacts without switching between tools.
 
-**Search:** Type to find tasks by title.
+**Step 1: Import a Calling List CSV**
+Click **"Import Calling List"** (blue button, top right on Tasks page).
+Your CSV should have columns for:
+- **Contact Name** — Person's name
+- **Company Name** — Company / organisation
+- **Phone Number** — Mobile or direct number
+- **Email Address** — Optional but recommended
 
-**Priority colors:** High (red), Medium (yellow), Low (gray).
+Download the CSV template from the import modal for the exact format.
 
-Tasks with deal linkage show the linked deal name — click to jump directly to that deal.
+**Step 2: Map Your CSV Columns**
+The importer auto-detects columns. Confirm the mapping on the next screen → click **Import**.
+After import, you're automatically taken to the **⚡ Power Dialer** tab.
+
+**Step 3: Work Through the List**
+- Left sidebar shows all contacts with a colour dot:
+  - 🔵 Blue = pending (not yet called)
+  - 🟢 Green = logged
+  - ⚪ Gray = skipped
+- Progress bar at the top tracks how many you've completed
+- Click any contact to open their call card on the right
+
+**Step 4: Log Each Call**
+For each contact:
+1. Click the **outcome pill** (✅ Connected, 📩 Voicemail, 📵 No Answer, 🔴 Busy, etc.)
+2. Enter **Duration** (optional)
+3. Add **Notes** — key points, objections, next steps
+4. Click **✓ Log & Next** → saves the call and moves to the next contact
+5. Click **Skip** to skip without logging an outcome
+
+**Step 5: Push to CRM**
+Once you've worked through your list, click **"Push Completed Calls to CRM Leads"** at the bottom of the right panel.
+This will:
+- Create a **Lead record** for each logged call
+- Set Stage to "Engaged" if the outcome was Connected, otherwise "New Lead"
+- Add the call notes to the lead record
+- Convert the calling list items to **Cold Call Logs** (visible in the 📞 Call Log tab)
+
+💡 **Tips:**
+- Calling list items with the same company already in your CRM will be skipped during push (no duplicates)
+- You can re-log a previously logged contact by clicking it and pressing Log & Next again
+- Import a new list anytime with the "Import New Calling List" button at the bottom of the Power Dialer panel
+`,
+      },
+      {
+        title: '📞 Log Cold Call — Manual Call Logger',
+        content: `
+For ad-hoc calls (not part of a bulk campaign), use the **Log Cold Call** button (red button, top right on Tasks page).
+
+**What it does:**
+Records a single cold call instantly — without leaving the app.
+
+**Form fields:**
+- **Contact Name** — Who you called
+- **Company** — Their company (auto-matches existing leads as you type)
+- **Phone** — Number called
+- **Outcome** — Connected / Voicemail / No Answer / Busy / Wrong Number / Callback Requested
+- **Duration** — Call length in minutes
+- **Call Notes** — What was discussed, objections, next steps
+
+**Auto Lead Matching:**
+As you type Company or Contact Name, Huntlo scans your existing Leads and shows a match card if found. When matched:
+- The call is automatically linked to that lead
+- You can optionally update the lead's stage directly from the call form (e.g. move to "Engaged" after a successful connect)
+
+**Follow-up Task:**
+Toggle "Create follow-up task" at the bottom → set a due date → the task is created automatically when you log the call.
+
+**Where to see logged calls:**
+Go to the **📞 Call Log** tab on the Tasks page. Every logged call shows:
+- Outcome badge with colour coding
+- Company + contact name
+- Duration and phone number
+- Linked lead badge (if auto-matched)
+- Call notes preview
 `,
       },
     ],

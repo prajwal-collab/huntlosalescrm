@@ -467,6 +467,39 @@ const useDataStore = create((set, get) => ({
     return data;
   },
 
+  // Used by Power Dialer "Push to CRM" — contacts often have no email.
+  // Uses plain INSERT (ignoring duplicates by company_name) to avoid upsert
+  // constraint failure on null emails.
+  bulkCreateLeadsFromDialer: async (leadsList) => {
+    const { user } = useAuthStore.getState();
+    await get().ensureProfile();
+    const orgId = await get()._getOrgId();
+    const records = leadsList.map(l => ({
+      ...l,
+      owner_id: user?.id,
+      ...(orgId ? { organization_id: orgId } : {})
+    }));
+    // Insert one-by-one to gracefully skip conflicts on company_name per org
+    const inserted = [];
+    for (const record of records) {
+      const { data, error } = await supabase.from('leads').insert(record).select().single();
+      if (error) {
+        // 23505 = unique_violation (duplicate) — skip silently
+        if (error.code === '23505') {
+          console.log(`[Dialer] Skipped duplicate lead: ${record.company_name}`);
+        } else {
+          console.error('[Dialer] Lead insert error:', error.message);
+        }
+      } else if (data) {
+        inserted.push(data);
+      }
+    }
+    if (inserted.length > 0) {
+      set(state => ({ leads: [...inserted, ...state.leads] }));
+    }
+    return inserted;
+  },
+
   // ── Companies ─────────────────────────────
   createCompany: async (company) => {
     const { user } = useAuthStore.getState();

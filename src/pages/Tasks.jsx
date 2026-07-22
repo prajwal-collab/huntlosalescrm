@@ -1,7 +1,7 @@
 // ============================================
 // HUNTLO SALES OS — TASKS PAGE
 // ============================================
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Plus, CheckCircle, Clock, AlertCircle, X, Loader, Filter, BookOpen, Phone, Link2, ChevronDown, UploadCloud, Play, Save } from 'lucide-react';
 import { formatDistanceToNow, format, isPast, isValid } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -89,8 +89,9 @@ export default function Tasks() {
       return {
         id: t.id,
         status: t.status,
+        // contact_name stored in task.title; company_name stored in notes JSON (no `company` column in tasks table)
         contact_name: t.title || '',
-        company_name: t.company || '',
+        company_name: data.company_name || '',
         phone: data.phone || '',
         email: data.email || '',
         outcome: data.outcome || '',
@@ -103,17 +104,34 @@ export default function Tasks() {
   
   const [showImporter, setShowImporter] = useState(false);
   const [activeCallIdx, setActiveCallIdx] = useState(0);
+  const [activeCallForm, setActiveCallForm] = useState({ outcome: '', duration: '', notes: '' });
+
+  // Sync local form only when the user navigates to a different contact (not on every task update)
+  const prevActiveIdxRef = React.useRef(-1);
+  useEffect(() => {
+    if (activeCallIdx !== prevActiveIdxRef.current && callingList[activeCallIdx]) {
+      const c = callingList[activeCallIdx];
+      setActiveCallForm({ outcome: c.outcome || '', duration: c.duration || '', notes: c.notes || '' });
+      prevActiveIdxRef.current = activeCallIdx;
+    }
+  });
 
   const handleImportCallingList = async (mappedData) => {
+    if (!mappedData || mappedData.length === 0) {
+      alert('No valid rows found. Please check your CSV and column mapping.');
+      return;
+    }
     const newTasks = mappedData.map(d => ({
+      // tasks table columns: id, organization_id, deal_id, owner_id, title, type, priority, status, due, notes
+      // NO `company` column — store company_name inside the notes JSON blob
       title: d.contact_name || d.company_name || 'Unknown',
-      company: d.company_name || null,
       type: 'calling_list_item',
       status: 'pending',
       priority: 'medium',
       due: new Date().toISOString(),
       notes: JSON.stringify({
         _type: 'calling_list_data',
+        company_name: d.company_name || '',  // stored in JSON, not a DB column
         phone: d.phone || '',
         email: d.email || '',
         outcome: '',
@@ -125,9 +143,10 @@ export default function Tasks() {
       setSaving(true);
       await useDataStore.getState().bulkCreateTasks(newTasks);
       setShowImporter(false);
-      setFilter('power_dialer');
+      setActiveCallIdx(0);
+      setFilter('power_dialer'); // ← Navigate to Power Dialer tab after successful import
     } catch(e) {
-      alert("Error importing: " + e.message);
+      alert("Error importing calling list: " + e.message);
     } finally {
       setSaving(false);
     }
@@ -137,22 +156,22 @@ export default function Tasks() {
     const processed = callingList.filter(c => c.status === 'completed');
     if (processed.length === 0) return;
     
-    // Bulk create leads for the processed ones
     const leadsData = processed.map(c => ({
-      company_name: c.company_name || 'Unknown Company',
+      company_name: c.company_name || c.contact_name || 'Unknown Company',
       contact_name: c.contact_name || '',
       phone: c.phone || '',
-      email: c.email || '',
+      // Only include email if it exists — null emails cause upsert conflicts on unique constraint
+      ...(c.email ? { email: c.email } : {}),
       stage: c.outcome === 'connected' ? 'Engaged' : 'New Lead',
       source: 'Power Dialer',
-      notes: `📞 [${new Date().toLocaleDateString()}] ${c.outcomeLabel || c.outcome} — ${c.duration ? c.duration + ' min' : 'N/A'} — ${c.notes || 'No notes'}`
+      notes: `📞 [${new Date().toLocaleDateString()}] ${c.outcomeLabel || c.outcome || 'Called'} — ${c.duration ? c.duration + ' min' : 'N/A'} — ${c.notes || 'No notes'}`
     }));
 
     try {
       setSaving(true);
-      await useDataStore.getState().bulkCreateLeads(leadsData);
+      // Use bulkCreateLeadsFromDialer \u2014 handles contacts with no email (plain insert, not upsert)
+      const inserted = await useDataStore.getState().bulkCreateLeadsFromDialer(leadsData);
       
-      // Update the existing calling_list_item tasks to be cold_call logs
       const tasksToUpdate = processed.map(c => ({
         id: c.id,
         title: `Cold Call — ${c.company_name || c.contact_name || 'Unknown'} (${c.outcomeLabel || c.outcome})`,
@@ -171,8 +190,11 @@ export default function Tasks() {
         })
       }));
       await useDataStore.getState().bulkUpdateTasks(tasksToUpdate);
-      
-      alert(`Successfully pushed ${processed.length} leads and call logs to CRM!`);
+      const skipped = processed.length - inserted.length;
+      const msg = skipped > 0
+        ? `✅ ${inserted.length} new Lead${inserted.length !== 1 ? 's' : ''} created in CRM. ${skipped} skipped (already exist). Call logs updated.`
+        : `✅ ${inserted.length} Lead${inserted.length !== 1 ? 's' : ''} created in CRM from ${processed.length} logged call${processed.length !== 1 ? 's' : ''}!`;
+      alert(msg);
     } catch (err) {
       alert("Error pushing to CRM: " + err.message);
     } finally {
@@ -180,26 +202,29 @@ export default function Tasks() {
     }
   };
 
-  // Helper to update calling list item in DB
-  const updateCallingListItem = async (id, status, outcomeData) => {
-    const task = tasks.find(t => t.id === id);
-    if (!task) return;
+  const saveActiveCall = async (status) => {
+    const curr = callingList[activeCallIdx];
+    if (!curr) return;
+    const task = tasks.find(t => t.id === curr.id);
     let data = {};
     try { data = JSON.parse(task.notes); } catch(e) {}
     
+    const outcomeObj = CALL_OUTCOMES.find(o => o.value === activeCallForm.outcome);
     const newNotes = JSON.stringify({
       ...data,
-      ...outcomeData
+      outcome: activeCallForm.outcome,
+      outcomeLabel: outcomeObj?.label || '',
+      duration: activeCallForm.duration,
+      notes: activeCallForm.notes
     });
     
-    await useDataStore.getState().updateTask(id, { status, notes: newNotes });
+    await useDataStore.getState().updateTask(curr.id, { status, notes: newNotes });
   };
 
   useEffect(() => {
     localStorage.setItem('huntlo_scratchpad', scratchpad);
   }, [scratchpad]);
 
-  // Fuzzy match leads by company or contact name
   const matchedLead = useMemo(() => {
     if (!callForm.company && !callForm.contactName) return null;
     const q = (callForm.company || callForm.contactName).toLowerCase().trim();
@@ -211,26 +236,24 @@ export default function Tasks() {
     ) || null;
   }, [callForm.company, callForm.contactName, leads]);
 
-  // Auto-link lead when match found
   useEffect(() => {
     if (matchedLead && !callForm.linkedLeadId) {
       setCallForm(f => ({ ...f, linkedLeadId: matchedLead.id }));
     }
   }, [matchedLead]);
 
-  // Counts for each tab
-  const pendingCount = tasks.filter(t => t.status !== 'completed').length;
+  const pendingCount = tasks.filter(t => t.status !== 'completed' && t.type !== 'calling_list_item').length;
   const callCount = tasks.filter(t => t.type === 'call' && t.status !== 'completed').length;
   const coldCallsCompleted = tasks.filter(t => (t.type === 'call' || t.type === 'cold_call') && t.status === 'completed').length;
   const coldCallLogCount = tasks.filter(t => (t.type === 'cold_call' || t.type === 'call') && t.status === 'completed' && parseColdCallData(t)).length;
   const emailCount = tasks.filter(t => t.type === 'email' && t.status !== 'completed').length;
   const linkedinCount = tasks.filter(t => t.type === 'linkedin' && t.status !== 'completed').length;
   const overdueCount = tasks.filter(t => t.status !== 'completed' && safeIsPast(t.due)).length;
+  const dialerPendingCount = callingList.filter(c => c.status === 'pending').length;
 
   const filteredTasks = useMemo(() => {
     let result = tasks;
 
-    // Status/type filter
     if (filter === 'pending') {
       result = result.filter(t => t.status !== 'completed' && t.type !== 'calling_list_item');
     } else if (filter === 'completed') {
@@ -247,7 +270,6 @@ export default function Tasks() {
       result = result.filter(t => (t.type === 'cold_call' || t.type === 'call') && t.status === 'completed');
     }
 
-    // Search filter
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(t =>
@@ -290,7 +312,6 @@ export default function Tasks() {
     }
   };
 
-  // Cold Call Logger submit
   const handleLogColdCall = async (e) => {
     e.preventDefault();
     setCallSaving(true);
@@ -310,7 +331,6 @@ export default function Tasks() {
         timestamp: new Date().toISOString(),
       };
 
-      // Create the cold call task
       await createTask({
         title: `Cold Call — ${callForm.company || callForm.contactName || 'Unknown'} (${outcomeInfo.label})`,
         type: 'cold_call',
@@ -321,7 +341,6 @@ export default function Tasks() {
         notes: JSON.stringify(callData),
       });
 
-      // If linked to a lead, update it
       if (callForm.linkedLeadId) {
         const noteText = `${outcomeInfo.emoji} ${outcomeInfo.label} — ${callForm.duration ? callForm.duration + ' min' : 'N/A'} — ${callForm.notes || 'No notes'}`;
         await appendLeadNotes(
@@ -331,7 +350,6 @@ export default function Tasks() {
         );
       }
 
-      // Create follow-up task if requested
       if (callForm.createFollowUp && callForm.followUpDue) {
         await createTask({
           title: `Follow-up: ${callForm.company || callForm.contactName || 'Cold Call'}`,
@@ -410,19 +428,16 @@ export default function Tasks() {
           LinkedIn tasks <span className="apollo-tab-count">{linkedinCount}</span>
         </div>
         <div className={`apollo-tab ${filter === 'cold_call_log' ? 'active' : ''}`} onClick={() => setFilter('cold_call_log')}>
-          📞 Call Log <span className="apollo-tab-count" style={{ background: coldCallLogCount > 0 ? 'rgba(239,68,68,0.12)' : undefined, color: coldCallLogCount > 0 ? '#dc2626' : undefined }}>{coldCallLogCount || coldCallsCompleted}</span>
+          📞 Call Log <span className="apollo-tab-count" style={{ background: coldCallLogCount > 0 ? 'rgba(239,68,68,0.12)' : undefined, color: coldCallLogCount > 0 ? '#dc2626' : undefined }}>{coldCallLogCount}</span>
         </div>
         <div className={`apollo-tab ${filter === 'power_dialer' ? 'active' : ''}`} onClick={() => setFilter('power_dialer')}>
-          ⚡ Power Dialer <span className="apollo-tab-count" style={{ background: callingList.filter(c => c.status === 'pending').length > 0 ? 'var(--accent-blue)' : undefined, color: callingList.filter(c => c.status === 'pending').length > 0 ? '#fff' : undefined }}>{callingList.filter(c => c.status === 'pending').length}</span>
+          ⚡ Power Dialer <span className="apollo-tab-count" style={{ background: dialerPendingCount > 0 ? 'var(--accent-blue)' : undefined, color: dialerPendingCount > 0 ? '#fff' : undefined }}>{dialerPendingCount}</span>
         </div>
         <div className={`apollo-tab ${filter === 'overdue' ? 'active' : ''}`} onClick={() => setFilter('overdue')}>
           Overdue <span className="apollo-tab-count" style={{ background: overdueCount > 0 ? 'var(--danger)' : undefined }}>{overdueCount}</span>
         </div>
         <div className={`apollo-tab ${filter === 'completed' ? 'active' : ''}`} onClick={() => setFilter('completed')}>
           Completed
-        </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', padding: '0 8px' }}>
-          📞 <strong style={{ color: '#dc2626' }}>{coldCallsCompleted}</strong> cold calls logged
         </div>
       </div>
 
@@ -446,7 +461,7 @@ export default function Tasks() {
 
       {/* Task list */}
       <div className="tasks-list">
-        {filteredTasks.length === 0 ? (
+        {filter !== 'power_dialer' && filteredTasks.length === 0 ? (
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="apollo-empty-state">
             <div className="apollo-empty-img">
               <CheckCircle size={24} /> <span style={{ marginLeft: 8 }}>All clear!</span>
@@ -528,7 +543,98 @@ export default function Tasks() {
             );
           })}
           </AnimatePresence>
-        ) : filter !== 'power_dialer' ? (
+        ) : filter === 'power_dialer' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {callingList.length === 0 ? (
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="apollo-empty-state">
+                <div className="apollo-empty-img">
+                  <Play size={24} color="#3b82f6" />
+                </div>
+                <h3 style={{ fontSize: 18, color: 'var(--text-primary)', fontWeight: 500 }}>
+                  Ready to start a calling campaign?
+                </h3>
+                <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>
+                  Upload a CSV with names and phone numbers, dial through them rapidly, and push results to the CRM when finished.
+                </p>
+                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                  <button className="btn btn-primary btn-sm" onClick={() => setShowImporter(true)}><UploadCloud size={14}/> Import Calling List CSV</button>
+                </div>
+              </motion.div>
+            ) : (
+              <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                <div style={{ width: '320px', borderRight: '1px solid var(--border-light)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                   {callingList.map((c, idx) => (
+                      <div 
+                        key={c.id} 
+                        onClick={() => setActiveCallIdx(idx)}
+                        style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-light)', background: activeCallIdx === idx ? 'var(--bg-elevated)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}
+                      >
+                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: c.status === 'completed' ? '#16a34a' : c.status === 'skipped' ? '#94a3b8' : '#3b82f6' }} />
+                         <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.contact_name || c.company_name || 'Unknown'}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{c.phone}</div>
+                         </div>
+                      </div>
+                   ))}
+                </div>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+                   {callingList[activeCallIdx] && (
+                        <div className="contact-detail" style={{ maxWidth: 500, margin: '0 auto' }}>
+                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                              <div>
+                                 <h2 style={{ fontSize: 20, margin: '0 0 4px 0' }}>{callingList[activeCallIdx].contact_name || 'Unknown Contact'}</h2>
+                                 <div style={{ color: 'var(--text-secondary)', fontSize: 14 }}>{callingList[activeCallIdx].company_name}</div>
+                              </div>
+                              <div style={{ fontSize: 24, fontWeight: 600, color: '#3b82f6', userSelect: 'all' }}>{callingList[activeCallIdx].phone}</div>
+                           </div>
+                           
+                           <div style={{ padding: '16px', background: 'var(--bg-elevated)', borderRadius: 8, border: '1px solid var(--border-light)', marginBottom: 20 }}>
+                              <div className="form-group" style={{ marginBottom: 12 }}>
+                                <label className="label">Call Outcome</label>
+                                <select 
+                                  className="input-base" 
+                                  value={activeCallForm.outcome} 
+                                  onChange={e => setActiveCallForm({...activeCallForm, outcome: e.target.value})}
+                                >
+                                  <option value="">-- Select Outcome --</option>
+                                  {CALL_OUTCOMES.map(o => <option key={o.value} value={o.value}>{o.emoji} {o.label}</option>)}
+                                </select>
+                              </div>
+                              <div className="form-group" style={{ marginBottom: 12 }}>
+                                <label className="label">Duration (min)</label>
+                                <input className="input-base" type="number" min="0" value={activeCallForm.duration} onChange={e => setActiveCallForm({...activeCallForm, duration: e.target.value})} placeholder="e.g. 5" />
+                              </div>
+                              <div className="form-group">
+                                <label className="label">Notes</label>
+                                <textarea className="input-base" rows={3} value={activeCallForm.notes} onChange={e => setActiveCallForm({...activeCallForm, notes: e.target.value})} placeholder="Discussed next steps..." />
+                              </div>
+                           </div>
+
+                           <div style={{ display: 'flex', gap: 10 }}>
+                              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => {
+                                saveActiveCall('skipped');
+                                setActiveCallIdx(Math.min(activeCallIdx + 1, callingList.length - 1));
+                              }}>Skip</button>
+                              
+                              <button className="btn btn-primary" style={{ flex: 2, background: '#16a34a', borderColor: '#16a34a' }} onClick={() => {
+                                if (!activeCallForm.outcome) return alert('Select an outcome first');
+                                saveActiveCall('completed');
+                                setActiveCallIdx(Math.min(activeCallIdx + 1, callingList.length - 1));
+                              }}>Log & Next</button>
+                           </div>
+
+                           <div style={{ marginTop: 40, paddingTop: 20, borderTop: '1px solid var(--border-light)' }}>
+                              <button className="btn btn-primary btn-sm" disabled={saving || callingList.filter(c => c.status === 'completed').length === 0} onClick={handlePushToCRM} style={{ width: '100%' }}>
+                                <Save size={14} /> Push {callingList.filter(c => c.status === 'completed').length} completed calls to CRM Leads
+                              </button>
+                           </div>
+                        </div>
+                   )}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
           <AnimatePresence mode="popLayout">
             {filteredTasks.map((task, idx) => {
               const isCompleted = task.status === 'completed';
@@ -582,103 +688,6 @@ export default function Tasks() {
               );
             })}
           </AnimatePresence>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            {callingList.length === 0 ? (
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="apollo-empty-state">
-                <div className="apollo-empty-img">
-                  <Play size={24} color="#3b82f6" />
-                </div>
-                <h3 style={{ fontSize: 18, color: 'var(--text-primary)', fontWeight: 500 }}>
-                  Ready to start a calling campaign?
-                </h3>
-                <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>
-                  Upload a CSV with names and phone numbers, dial through them rapidly, and push results to the CRM when finished.
-                </p>
-                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                  <button className="btn btn-primary btn-sm" onClick={() => setShowImporter(true)}><UploadCloud size={14}/> Import Calling List CSV</button>
-                </div>
-              </motion.div>
-            ) : (
-              <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                <div style={{ width: '320px', borderRight: '1px solid var(--border-light)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-                   {callingList.map((c, idx) => (
-                      <div 
-                        key={c.id} 
-                        onClick={() => setActiveCallIdx(idx)}
-                        style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-light)', background: activeCallIdx === idx ? 'var(--bg-elevated)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}
-                      >
-                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: c.status === 'completed' ? '#16a34a' : c.status === 'skipped' ? '#94a3b8' : '#3b82f6' }} />
-                         <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.contact_name || c.company_name || 'Unknown'}</div>
-                            <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{c.phone}</div>
-                         </div>
-                      </div>
-                   ))}
-                </div>
-                <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
-                   {callingList[activeCallIdx] && (() => {
-                      const curr = callingList[activeCallIdx];
-                      return (
-                        <div className="contact-detail" style={{ maxWidth: 500, margin: '0 auto' }}>
-                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                              <div>
-                                 <h2 style={{ fontSize: 20, margin: '0 0 4px 0' }}>{curr.contact_name || 'Unknown Contact'}</h2>
-                                 <div style={{ color: 'var(--text-secondary)', fontSize: 14 }}>{curr.company_name}</div>
-                              </div>
-                              <div style={{ fontSize: 24, fontWeight: 600, color: '#3b82f6', userSelect: 'all' }}>{curr.phone}</div>
-                           </div>
-                           
-                           <div style={{ padding: '16px', background: 'var(--bg-elevated)', borderRadius: 8, border: '1px solid var(--border-light)', marginBottom: 20 }}>
-                              <div className="form-group" style={{ marginBottom: 12 }}>
-                                <label className="label">Call Outcome</label>
-                                <select 
-                                  className="input-base" 
-                                  value={curr.outcome || ''} 
-                                  onChange={e => {
-                                    const out = CALL_OUTCOMES.find(o => o.value === e.target.value);
-                                    updateCallingListItem(curr.id, curr.status, { outcome: e.target.value, outcomeLabel: out?.label });
-                                  }}
-                                >
-                                  <option value="">-- Select Outcome --</option>
-                                  {CALL_OUTCOMES.map(o => <option key={o.value} value={o.value}>{o.emoji} {o.label}</option>)}
-                                </select>
-                              </div>
-                              <div className="form-group" style={{ marginBottom: 12 }}>
-                                <label className="label">Duration (min)</label>
-                                <input className="input-base" type="number" min="0" value={curr.duration || ''} onChange={e => { updateCallingListItem(curr.id, curr.status, { duration: e.target.value }); }} placeholder="e.g. 5" />
-                              </div>
-                              <div className="form-group">
-                                <label className="label">Notes</label>
-                                <textarea className="input-base" rows={3} value={curr.notes || ''} onChange={e => { updateCallingListItem(curr.id, curr.status, { notes: e.target.value }); }} placeholder="Discussed next steps..." />
-                              </div>
-                           </div>
-
-                           <div style={{ display: 'flex', gap: 10 }}>
-                              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => {
-                                updateCallingListItem(curr.id, 'skipped', { outcome: curr.outcome, outcomeLabel: curr.outcomeLabel, duration: curr.duration, notes: curr.notes });
-                                setActiveCallIdx(Math.min(activeCallIdx + 1, callingList.length - 1));
-                              }}>Skip</button>
-                              
-                              <button className="btn btn-primary" style={{ flex: 2, background: '#16a34a', borderColor: '#16a34a' }} onClick={() => {
-                                if (!curr.outcome) return alert('Select an outcome first');
-                                updateCallingListItem(curr.id, 'completed', { outcome: curr.outcome, outcomeLabel: curr.outcomeLabel, duration: curr.duration, notes: curr.notes });
-                                setActiveCallIdx(Math.min(activeCallIdx + 1, callingList.length - 1));
-                              }}>Log & Next</button>
-                           </div>
-
-                           <div style={{ marginTop: 40, paddingTop: 20, borderTop: '1px solid var(--border-light)' }}>
-                              <button className="btn btn-primary btn-sm" disabled={saving || callingList.filter(c => c.status === 'completed').length === 0} onClick={handlePushToCRM} style={{ width: '100%' }}>
-                                <Save size={14} /> Push {callingList.filter(c => c.status === 'completed').length} completed calls to CRM Leads
-                              </button>
-                           </div>
-                        </div>
-                      )
-                   })()}
-                </div>
-              </div>
-            )}
-          </div>
         )}
       </div>
 
