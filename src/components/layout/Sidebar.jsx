@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BarChart3, Building2, Users, CheckSquare,
   Calendar, Zap, FileText, Settings, Bell, ChevronLeft,
   ChevronRight, LogOut, Sun, Moon, TrendingUp,
-  ChevronDown, Target, BookOpen, Calculator, Video, Link
+  ChevronDown, Target, BookOpen, Calculator, Video, Link, Phone
 } from 'lucide-react';
 import useUIStore from '../../store/useUIStore';
 import useAuthStore from '../../store/useAuthStore';
@@ -34,6 +34,7 @@ const NAV_GROUPS = [
     title: 'Workflow',
     items: [
       { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
+      { to: '/call-logs', icon: Phone, label: 'Call Logs' },
       { to: '/sequences', icon: Zap, label: 'Sequences' },
       { to: '/documents', icon: FileText, label: 'Documents' },
       { to: '/utm', icon: Link, label: 'LinkTrack' },
