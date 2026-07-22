@@ -1060,24 +1060,51 @@ Click on any Webinar card to open the **Webinar Detail** view.
 ];
 
 // ── Sub-components ────────────────────────────────────────────
-function ArticleCard({ article, isOpen, onToggle }) {
+import { motion, AnimatePresence } from 'framer-motion';
+
+function ArticleCard({ article, isOpen, onToggle, index, sectionColor, isRead }) {
   return (
-    <div className="ug-article">
+    <motion.div
+      className={`ug-article ${isOpen ? 'open' : ''} ${isRead ? 'read' : ''}`}
+      style={{ '--section-color': sectionColor }}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, delay: index * 0.06 }}
+    >
       <button className="ug-article-header" onClick={onToggle}>
-        <ChevronRight size={15} className={`ug-article-chevron ${isOpen ? 'open' : ''}`} />
-        <span className="ug-article-title">{article.title}</span>
-      </button>
-      {isOpen && (
-        <div className="ug-article-body">
-          <MarkdownContent content={article.content} />
+        <div className="ug-article-chevron-wrap">
+          <motion.span
+            animate={{ rotate: isOpen ? 90 : 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            style={{ display: 'flex' }}
+          >
+            <ChevronRight size={14} />
+          </motion.span>
         </div>
-      )}
-    </div>
+        <span className="ug-article-title">{article.title}</span>
+        {isRead && <span className="ug-read-badge">✓ Read</span>}
+      </button>
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            key="body"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="ug-article-body">
+              <MarkdownContent content={article.content} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
 function MarkdownContent({ content }) {
-  // Simple markdown renderer for bold, tables, code, lists
   const lines = content.trim().split('\n');
   const elements = [];
   let i = 0;
@@ -1086,8 +1113,6 @@ function MarkdownContent({ content }) {
     const line = lines[i];
 
     if (line.startsWith('```')) {
-      // Code block
-      const lang = line.slice(3).trim();
       const codeLines = [];
       i++;
       while (i < lines.length && !lines[i].startsWith('```')) {
@@ -1099,8 +1124,19 @@ function MarkdownContent({ content }) {
           <code>{codeLines.join('\n')}</code>
         </pre>
       );
+    } else if (line.startsWith('#### ')) {
+      elements.push(<h4 key={i} className="ug-h4">{line.slice(5)}</h4>);
+    } else if (line.startsWith('### ')) {
+      elements.push(<h3 key={i} className="ug-h3">{line.slice(4)}</h3>);
+    } else if (line.startsWith('## ')) {
+      elements.push(<h2 key={i} className="ug-h2">{line.slice(3)}</h2>);
+    } else if (line.startsWith('# ')) {
+      elements.push(<h1 key={i} className="ug-h1">{line.slice(2)}</h1>);
+    } else if (line.startsWith('**') && line.endsWith('**') && line.length > 4) {
+      elements.push(<p key={i} className="ug-para"><strong>{line.slice(2, -2)}</strong></p>);
+    } else if (line.startsWith('> ')) {
+      elements.push(<blockquote key={i} className="ug-blockquote"><InlineMarkdown text={line.slice(2)} /></blockquote>);
     } else if (line.startsWith('| ')) {
-      // Table
       const tableLines = [];
       while (i < lines.length && lines[i].startsWith('|')) {
         tableLines.push(lines[i]);
@@ -1129,19 +1165,22 @@ function MarkdownContent({ content }) {
       );
       continue;
     } else if (line.match(/^\d+\. /) || line.startsWith('- ') || line.startsWith('* ')) {
-      // List
       const listItems = [];
       const isOrdered = line.match(/^\d+\. /);
       while (i < lines.length && (lines[i].match(/^\d+\. /) || lines[i].startsWith('- ') || lines[i].startsWith('* '))) {
         const text = lines[i].replace(/^(\d+\. |- |\* )/, '');
-        listItems.push(text);
+        // Handle sub-items (2-space indent)
+        const subMatch = text.match(/^  (.+)/);
+        listItems.push({ text: subMatch ? subMatch[1] : text, isSub: !!subMatch });
         i++;
       }
       const Tag = isOrdered ? 'ol' : 'ul';
       elements.push(
         <Tag key={i} className="ug-list">
           {listItems.map((item, li) => (
-            <li key={li}><InlineMarkdown text={item} /></li>
+            <li key={li} style={{ marginLeft: item.isSub ? 16 : 0, opacity: item.isSub ? 0.8 : 1 }}>
+              <InlineMarkdown text={item.text} />
+            </li>
           ))}
         </Tag>
       );
@@ -1162,8 +1201,7 @@ function MarkdownContent({ content }) {
 }
 
 function InlineMarkdown({ text }) {
-  // Handle **bold** and `inline code`
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[.+?\]\(.+?\))/g);
   return (
     <>
       {parts.map((part, i) => {
@@ -1173,39 +1211,79 @@ function InlineMarkdown({ text }) {
         if (part.startsWith('`') && part.endsWith('`')) {
           return <code key={i} className="ug-inline-code">{part.slice(1, -1)}</code>;
         }
+        // Markdown links [text](url)
+        const linkMatch = part.match(/^\[(.+?)\]\((.+?)\)$/);
+        if (linkMatch) {
+          return <a key={i} href={linkMatch[2]} target="_blank" rel="noopener noreferrer" className="ug-link">{linkMatch[1]}</a>;
+        }
         return <span key={i}>{part}</span>;
       })}
     </>
   );
 }
 
-function SectionCard({ section, isActive, onClick }) {
+function SectionCard({ section, isActive, onClick, readCount }) {
   const Icon = section.icon;
+  const totalArticles = section.articles.length;
+  const progress = totalArticles > 0 ? (readCount / totalArticles) * 100 : 0;
+  const isComplete = readCount === totalArticles;
+
   return (
-    <button
+    <motion.button
       className={`ug-section-btn ${isActive ? 'active' : ''}`}
       style={{ '--section-color': section.color }}
       onClick={onClick}
+      whileHover={{ x: 2 }}
+      transition={{ duration: 0.15 }}
     >
-      <div className="ug-section-icon" style={{ background: section.color + '20', color: section.color }}>
-        <Icon size={18} />
+      <div className="ug-section-icon" style={{ background: section.color + '18', color: section.color }}>
+        <Icon size={16} />
       </div>
       <div className="ug-section-info">
         <span className="ug-section-title">{section.title}</span>
         <span className="ug-section-desc">{section.description}</span>
+        {readCount > 0 && (
+          <div className="ug-section-progress">
+            <div className="ug-section-progress-bar" style={{ width: `${progress}%`, background: section.color }} />
+          </div>
+        )}
       </div>
-      {section.badge && <span className="ug-section-badge">{section.badge}</span>}
-    </button>
+      {section.badge && !isComplete && <span className="ug-section-badge">{section.badge}</span>}
+      {isComplete && <span className="ug-complete-badge">✓</span>}
+    </motion.button>
   );
 }
 
 // ── Main Component ────────────────────────────────────────────
 export default function UserGuide() {
   const [activeSection, setActiveSection] = useState('quickstart');
-  const [openArticles, setOpenArticles] = useState({ 0: true }); // open first article by default
+  const [openArticles, setOpenArticles] = useState({ 0: true });
   const [search, setSearch] = useState('');
+  // Track which articles have been read (section_id:article_idx)
+  const [readArticles, setReadArticles] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('huntlo_guide_read') || '{}'); } catch { return {}; }
+  });
 
   const section = GUIDE_SECTIONS.find(s => s.id === activeSection);
+
+  // Persist read state
+  const markRead = (sectionId, articleIdx) => {
+    const key = `${sectionId}:${articleIdx}`;
+    setReadArticles(prev => {
+      const next = { ...prev, [key]: true };
+      try { localStorage.setItem('huntlo_guide_read', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+  const getReadCount = (sectionId) =>
+    GUIDE_SECTIONS.find(s => s.id === sectionId)?.articles.filter((_, i) =>
+      readArticles[`${sectionId}:${i}`]
+    ).length || 0;
+
+  const totalArticles = GUIDE_SECTIONS.reduce((a, s) => a + s.articles.length, 0);
+  const totalRead = Object.keys(readArticles).length;
+  const overallProgress = Math.round((totalRead / totalArticles) * 100);
 
   const searchResults = useMemo(() => {
     if (!search.trim()) return null;
@@ -1225,13 +1303,18 @@ export default function UserGuide() {
   }, [search]);
 
   const toggleArticle = (idx) => {
-    setOpenArticles(prev => ({ ...prev, [idx]: !prev[idx] }));
+    setOpenArticles(prev => {
+      const next = { ...prev, [idx]: !prev[idx] };
+      if (!prev[idx]) markRead(activeSection, idx); // mark as read when opened
+      return next;
+    });
   };
 
   const handleSectionChange = (id) => {
     setActiveSection(id);
     setOpenArticles({ 0: true });
     setSearch('');
+    markRead(id, 0); // mark first article as read when section opens
   };
 
   return (
@@ -1240,63 +1323,108 @@ export default function UserGuide() {
       <div className="ug-header">
         <div className="ug-header-left">
           <div className="ug-header-icon">
-            <BookOpen size={24} />
+            <BookOpen size={22} />
           </div>
           <div>
             <h2 className="ug-header-title">Huntlo User Guide</h2>
-            <p className="ug-header-sub">Complete documentation for the world-class Huntlo Sales CRM</p>
+            <p className="ug-header-sub">Everything you need to master your sales OS</p>
           </div>
         </div>
-        <div className="ug-search-wrap">
-          <Search size={14} className="ug-search-icon" />
-          <input
-            className="ug-search-input"
-            placeholder="Search documentation..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          {/* Overall progress */}
+          <div className="ug-overall-progress">
+            <div className="ug-overall-progress-label">
+              <span>Guide Progress</span>
+              <span className="ug-overall-progress-pct">{overallProgress}%</span>
+            </div>
+            <div className="ug-overall-progress-bar">
+              <motion.div
+                className="ug-overall-progress-fill"
+                animate={{ width: `${overallProgress}%` }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+              />
+            </div>
+          </div>
+          <div className="ug-search-wrap">
+            <Search size={13} className="ug-search-icon" />
+            <input
+              className="ug-search-input"
+              placeholder="Search documentation..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            {search && (
+              <button className="ug-search-clear" onClick={() => setSearch('')}>
+                <X size={12} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Version badge */}
+      {/* Version bar */}
       <div className="ug-version-bar">
-        <span className="ug-version-badge">v2.0 — June 2026</span>
-        <span className="ug-version-text">Includes: Auto-Link, Convert Lead→Deal, Smart Deal Form, Real Contacts in Deals, Functional Tasks, Dashboard Proposals</span>
+        <span className="ug-version-badge">v2.1 — July 2026</span>
+        <span className="ug-version-text">
+          Includes: Power Dialer, Cold Call Logger, Auto-Link Lead→Deal, Signal Scoring, Proposals, Webinars
+        </span>
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-tertiary)' }}>
+          {totalRead}/{totalArticles} articles read
+        </span>
       </div>
 
       {/* Search Results */}
-      {searchResults !== null && (
-        <div className="ug-search-results">
-          <div className="ug-search-results-title">
-            {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for "{search}"
-          </div>
-          {searchResults.length === 0 ? (
-            <div className="ug-no-results">
-              <Search size={28} style={{ opacity: 0.3 }} />
-              <p>No articles found. Try different keywords.</p>
+      <AnimatePresence>
+        {searchResults !== null && (
+          <motion.div
+            className="ug-search-results"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="ug-search-results-title">
+              {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for "{search}"
             </div>
-          ) : (
-            searchResults.map((r, i) => (
-              <div key={i} className="ug-search-result-item" onClick={() => {
-                setActiveSection(r.section.id);
-                setSearch('');
-                // Find article index and open it
-                const idx = r.section.articles.indexOf(r.article);
-                setOpenArticles({ [idx]: true });
-              }}>
-                <div className="ug-sr-icon" style={{ background: r.section.color + '20', color: r.section.color }}>
-                  <r.section.icon size={13} />
-                </div>
-                <div>
-                  <div className="ug-sr-title">{r.article.title}</div>
-                  <div className="ug-sr-section">{r.section.title}</div>
-                </div>
-                <ArrowRight size={13} style={{ marginLeft: 'auto', color: 'var(--text-tertiary)' }} />
+            {searchResults.length === 0 ? (
+              <div className="ug-no-results">
+                <Search size={28} style={{ opacity: 0.3 }} />
+                <p>No articles found. Try different keywords.</p>
               </div>
-            ))
-          )}
-        </div>
-      )}
+            ) : (
+              searchResults.map((r, i) => {
+                // BUG FIX #9: assign to uppercase var — JSX components must be uppercase
+                const Icon = r.section.icon;
+                return (
+                  <motion.div
+                    key={i}
+                    className="ug-search-result-item"
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.2, delay: i * 0.04 }}
+                    onClick={() => {
+                      setActiveSection(r.section.id);
+                      setSearch('');
+                      const idx = r.section.articles.indexOf(r.article);
+                      setOpenArticles({ [idx]: true });
+                      markRead(r.section.id, idx);
+                    }}
+                  >
+                    <div className="ug-sr-icon" style={{ background: r.section.color + '20', color: r.section.color }}>
+                      <Icon size={13} />
+                    </div>
+                    <div>
+                      <div className="ug-sr-title">{r.article.title}</div>
+                      <div className="ug-sr-section">{r.section.title}</div>
+                    </div>
+                    <ArrowRight size={13} style={{ marginLeft: 'auto', color: 'var(--text-tertiary)' }} />
+                  </motion.div>
+                );
+              })
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Layout */}
       {!searchResults && (
@@ -1310,65 +1438,102 @@ export default function UserGuide() {
                 section={sec}
                 isActive={activeSection === sec.id}
                 onClick={() => handleSectionChange(sec.id)}
+                readCount={getReadCount(sec.id)}
               />
             ))}
+            {/* Reset progress */}
+            {totalRead > 0 && (
+              <button
+                className="ug-reset-btn"
+                onClick={() => {
+                  setReadArticles({});
+                  try { localStorage.removeItem('huntlo_guide_read'); } catch {}
+                }}
+              >
+                Reset progress
+              </button>
+            )}
           </div>
 
           {/* Content */}
           <div className="ug-main">
-            {section && (
-              <>
-                <div className="ug-section-header">
-                  <div className="ug-sh-icon" style={{ background: section.color + '20', color: section.color }}>
-                    <section.icon size={22} />
+            <AnimatePresence mode="wait">
+              {section && (
+                <motion.div
+                  key={activeSection}
+                  initial={{ opacity: 0, x: 16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -16 }}
+                  transition={{ duration: 0.25, ease: 'easeInOut' }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}
+                >
+                  {/* Section header */}
+                  <div className="ug-section-header" style={{ '--section-color': section.color }}>
+                    <div className="ug-sh-icon" style={{ background: section.color + '20', color: section.color }}>
+                      <section.icon size={20} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <h2 className="ug-sh-title">{section.title}</h2>
+                      <p className="ug-sh-desc">
+                        {section.description} · {section.articles.length} article{section.articles.length !== 1 ? 's' : ''}
+                        {getReadCount(section.id) > 0 && (
+                          <span style={{ marginLeft: 8, color: section.color }}>
+                            · {getReadCount(section.id)}/{section.articles.length} read
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    {section.badge && (
+                      <span className="ug-section-badge" style={{ fontSize: 10 }}>{section.badge}</span>
+                    )}
                   </div>
-                  <div>
-                    <h2 className="ug-sh-title">{section.title}</h2>
-                    <p className="ug-sh-desc">{section.description} · {section.articles.length} article{section.articles.length !== 1 ? 's' : ''}</p>
+
+                  {/* Articles */}
+                  <div className="ug-articles-list">
+                    {section.articles.map((article, idx) => (
+                      <ArticleCard
+                        key={idx}
+                        index={idx}
+                        article={article}
+                        isOpen={!!openArticles[idx]}
+                        onToggle={() => toggleArticle(idx)}
+                        sectionColor={section.color}
+                        isRead={!!readArticles[`${section.id}:${idx}`]}
+                      />
+                    ))}
                   </div>
-                </div>
 
-                <div className="ug-articles-list">
-                  {section.articles.map((article, idx) => (
-                    <ArticleCard
-                      key={idx}
-                      article={article}
-                      isOpen={!!openArticles[idx]}
-                      onToggle={() => toggleArticle(idx)}
-                    />
-                  ))}
-                </div>
-
-                {/* Navigation */}
-                <div className="ug-nav-footer">
-                  {GUIDE_SECTIONS.findIndex(s => s.id === activeSection) > 0 && (
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => {
-                        const idx = GUIDE_SECTIONS.findIndex(s => s.id === activeSection);
-                        handleSectionChange(GUIDE_SECTIONS[idx - 1].id);
-                      }}
-                    >
-                      ← Prev
-                    </button>
-                  )}
-                  <span className="ug-nav-pos">
-                    {GUIDE_SECTIONS.findIndex(s => s.id === activeSection) + 1} / {GUIDE_SECTIONS.length}
-                  </span>
-                  {GUIDE_SECTIONS.findIndex(s => s.id === activeSection) < GUIDE_SECTIONS.length - 1 && (
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() => {
-                        const idx = GUIDE_SECTIONS.findIndex(s => s.id === activeSection);
-                        handleSectionChange(GUIDE_SECTIONS[idx + 1].id);
-                      }}
-                    >
-                      Next →
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
+                  {/* Navigation footer */}
+                  <div className="ug-nav-footer">
+                    {GUIDE_SECTIONS.findIndex(s => s.id === activeSection) > 0 && (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => {
+                          const idx = GUIDE_SECTIONS.findIndex(s => s.id === activeSection);
+                          handleSectionChange(GUIDE_SECTIONS[idx - 1].id);
+                        }}
+                      >
+                        ← Prev
+                      </button>
+                    )}
+                    <span className="ug-nav-pos">
+                      {GUIDE_SECTIONS.findIndex(s => s.id === activeSection) + 1} / {GUIDE_SECTIONS.length}
+                    </span>
+                    {GUIDE_SECTIONS.findIndex(s => s.id === activeSection) < GUIDE_SECTIONS.length - 1 && (
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => {
+                          const idx = GUIDE_SECTIONS.findIndex(s => s.id === activeSection);
+                          handleSectionChange(GUIDE_SECTIONS[idx + 1].id);
+                        }}
+                      >
+                        Next →
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       )}

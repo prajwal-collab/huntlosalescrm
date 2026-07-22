@@ -3,7 +3,7 @@
 // ============================================
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Plus, CheckCircle, Clock, AlertCircle, X, Loader, Filter, BookOpen, Phone, Link2, ChevronDown, UploadCloud, Play, Save } from 'lucide-react';
-import { formatDistanceToNow, format, isPast, isValid } from 'date-fns';
+import { format, isPast, isValid } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import useDataStore from '../store/useDataStore';
 import { useKeyboard } from '../hooks/useKeyboard';
@@ -81,40 +81,45 @@ export default function Tasks() {
   const [scratchpad, setScratchpad] = useState(() => localStorage.getItem('huntlo_scratchpad') || '');
 
   // Power Dialer state (from database)
-  const callingListRaw = tasks.filter(t => t.type === 'calling_list_item');
+  // BUG FIX #3: callingListRaw memoized INSIDE callingList useMemo to prevent
+  // constant memo invalidation on every render.
   const callingList = useMemo(() => {
-    return callingListRaw.map(t => {
-      let data = {};
-      try { data = JSON.parse(t.notes); } catch(e) {}
-      return {
-        id: t.id,
-        status: t.status,
-        // contact_name stored in task.title; company_name stored in notes JSON (no `company` column in tasks table)
-        contact_name: t.title || '',
-        company_name: data.company_name || '',
-        phone: data.phone || '',
-        email: data.email || '',
-        outcome: data.outcome || '',
-        outcomeLabel: data.outcomeLabel || '',
-        duration: data.duration || '',
-        notes: data.notes || '',
-      };
-    });
-  }, [callingListRaw]);
-  
+    return tasks
+      .filter(t => t.type === 'calling_list_item')
+      .map(t => {
+        let data = {};
+        try { data = JSON.parse(t.notes); } catch(e) {}
+        return {
+          id: t.id,
+          status: t.status,
+          // contact_name stored in task.title; company_name in notes JSON
+          contact_name: t.title || '',
+          company_name: data.company_name || '',
+          phone: data.phone || '',
+          email: data.email || '',
+          outcome: data.outcome || '',
+          outcomeLabel: data.outcomeLabel || '',
+          duration: data.duration || '',
+          notes: data.notes || '',
+        };
+      });
+  }, [tasks]);
+
   const [showImporter, setShowImporter] = useState(false);
   const [activeCallIdx, setActiveCallIdx] = useState(0);
   const [activeCallForm, setActiveCallForm] = useState({ outcome: '', duration: '', notes: '' });
+  const [dialerDone, setDialerDone] = useState(false); // Bug #6: "All Done" state
 
-  // Sync local form only when the user navigates to a different contact (not on every task update)
-  const prevActiveIdxRef = React.useRef(-1);
+  // BUG FIX #1: Dependency array added — only sync form when activeCallIdx changes,
+  // not on every render (was causing infinite loop risk).
   useEffect(() => {
-    if (activeCallIdx !== prevActiveIdxRef.current && callingList[activeCallIdx]) {
+    if (callingList[activeCallIdx]) {
       const c = callingList[activeCallIdx];
       setActiveCallForm({ outcome: c.outcome || '', duration: c.duration || '', notes: c.notes || '' });
-      prevActiveIdxRef.current = activeCallIdx;
+      setDialerDone(false);
     }
-  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCallIdx]);
 
   const handleImportCallingList = async (mappedData) => {
     if (!mappedData || mappedData.length === 0) {
@@ -195,6 +200,9 @@ export default function Tasks() {
         ? `✅ ${inserted.length} new Lead${inserted.length !== 1 ? 's' : ''} created in CRM. ${skipped} skipped (already exist). Call logs updated.`
         : `✅ ${inserted.length} Lead${inserted.length !== 1 ? 's' : ''} created in CRM from ${processed.length} logged call${processed.length !== 1 ? 's' : ''}!`;
       alert(msg);
+      // BUG FIX #7: Clamp activeCallIdx after items are removed from callingList
+      setActiveCallIdx(0);
+      setDialerDone(false);
     } catch (err) {
       alert("Error pushing to CRM: " + err.message);
     } finally {
@@ -205,10 +213,15 @@ export default function Tasks() {
   const saveActiveCall = async (status) => {
     const curr = callingList[activeCallIdx];
     if (!curr) return;
+    // BUG FIX #2 + #4: Guard against task not found in store (race condition)
     const task = tasks.find(t => t.id === curr.id);
+    if (!task) {
+      console.warn('[PowerDialer] Task not found in store for id:', curr.id);
+      return;
+    }
     let data = {};
-    try { data = JSON.parse(task.notes); } catch(e) {}
-    
+    try { data = JSON.parse(task.notes || '{}'); } catch(e) {}
+
     const outcomeObj = CALL_OUTCOMES.find(o => o.value === activeCallForm.outcome);
     const newNotes = JSON.stringify({
       ...data,
@@ -217,7 +230,53 @@ export default function Tasks() {
       duration: activeCallForm.duration,
       notes: activeCallForm.notes
     });
-    
+
+    await useDataStore.getState().updateTask(curr.id, { status, notes: newNotes });
+  };
+
+  // BUG FIX #5 + #6: Clears form immediately + detects when user finishes the list
+  const handleLogAndNext = async () => {
+    if (!activeCallForm.outcome) { alert('Please select a call outcome first.'); return; }
+    // Clear form immediately so the next contact starts fresh
+    const savedForm = { ...activeCallForm };
+    setActiveCallForm({ outcome: '', duration: '', notes: '' });
+    await saveActiveCallWithForm('completed', savedForm);
+    const nextIdx = activeCallIdx + 1;
+    if (nextIdx >= callingList.length) {
+      setDialerDone(true); // Bug #6: show All Done state
+    } else {
+      setActiveCallIdx(nextIdx);
+    }
+  };
+
+  const handleSkip = async () => {
+    const savedForm = { ...activeCallForm };
+    setActiveCallForm({ outcome: '', duration: '', notes: '' });
+    await saveActiveCallWithForm('skipped', savedForm);
+    const nextIdx = activeCallIdx + 1;
+    if (nextIdx >= callingList.length) {
+      setDialerDone(true);
+    } else {
+      setActiveCallIdx(nextIdx);
+    }
+  };
+
+  // Internal helper that accepts the form snapshot (avoids stale closure on async)
+  const saveActiveCallWithForm = async (status, form) => {
+    const curr = callingList[activeCallIdx];
+    if (!curr) return;
+    const task = tasks.find(t => t.id === curr.id);
+    if (!task) return;
+    let data = {};
+    try { data = JSON.parse(task.notes || '{}'); } catch(e) {}
+    const outcomeObj = CALL_OUTCOMES.find(o => o.value === form.outcome);
+    const newNotes = JSON.stringify({
+      ...data,
+      outcome: form.outcome,
+      outcomeLabel: outcomeObj?.label || '',
+      duration: form.duration,
+      notes: form.notes
+    });
     await useDataStore.getState().updateTask(curr.id, { status, notes: newNotes });
   };
 
@@ -578,7 +637,39 @@ export default function Tasks() {
                    ))}
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
-                   {callingList[activeCallIdx] && (
+                   {dialerDone ? (
+                     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                       style={{ maxWidth: 400, margin: '40px auto', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                       <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg,#16a34a,#22c55e)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, boxShadow: '0 8px 24px rgba(22,163,74,0.3)' }}>🎉</div>
+                       <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Campaign Complete!</h2>
+                       <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: 0 }}>
+                         You've worked through all {callingList.length} contacts.
+                       </p>
+                       <div style={{ display: 'flex', gap: 16, width: '100%', marginTop: 8 }}>
+                         {[
+                           { label: 'Total', val: callingList.length, color: '#3b82f6' },
+                           { label: 'Logged', val: callingList.filter(c => c.status === 'completed').length, color: '#16a34a' },
+                           { label: 'Skipped', val: callingList.filter(c => c.status === 'skipped').length, color: '#94a3b8' },
+                         ].map(s => (
+                           <div key={s.label} style={{ flex: 1, padding: '14px', background: 'var(--bg-elevated)', borderRadius: 10, border: `1px solid ${s.color}30` }}>
+                             <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.val}</div>
+                             <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{s.label}</div>
+                           </div>
+                         ))}
+                       </div>
+                       <div style={{ display: 'flex', gap: 10, width: '100%', marginTop: 8 }}>
+                         <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => { setDialerDone(false); setActiveCallIdx(0); }}>Review List</button>
+                         <button className="btn btn-primary btn-sm" style={{ flex: 2, background: '#16a34a', borderColor: '#16a34a' }}
+                           disabled={saving || callingList.filter(c => c.status === 'completed').length === 0}
+                           onClick={handlePushToCRM}>
+                           <Save size={14} /> Push {callingList.filter(c => c.status === 'completed').length} Calls to CRM
+                         </button>
+                       </div>
+                       <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-tertiary)', fontSize: 12, marginTop: 4 }} onClick={() => setShowImporter(true)}>
+                         <UploadCloud size={12} /> Import New Calling List
+                       </button>
+                     </motion.div>
+                   ) : callingList[activeCallIdx] ? (
                         <div className="contact-detail" style={{ maxWidth: 500, margin: '0 auto' }}>
                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                               <div>
@@ -588,17 +679,28 @@ export default function Tasks() {
                               <div style={{ fontSize: 24, fontWeight: 600, color: '#3b82f6', userSelect: 'all' }}>{callingList[activeCallIdx].phone}</div>
                            </div>
                            
+                           <div style={{ marginBottom: 16 }}>
+                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>
+                               <span>Contact {activeCallIdx + 1} of {callingList.length}</span>
+                               <span>{callingList.filter(c => c.status === 'completed').length} logged</span>
+                             </div>
+                             <div style={{ height: 4, background: 'var(--bg-border)', borderRadius: 4, overflow: 'hidden' }}>
+                               <div style={{ height: '100%', background: 'linear-gradient(90deg, #16a34a, #22c55e)', width: `${(callingList.filter(c=>c.status==='completed').length / callingList.length)*100}%`, transition: 'width 0.4s ease', borderRadius: 4 }} />
+                             </div>
+                           </div>
+
                            <div style={{ padding: '16px', background: 'var(--bg-elevated)', borderRadius: 8, border: '1px solid var(--border-light)', marginBottom: 20 }}>
                               <div className="form-group" style={{ marginBottom: 12 }}>
                                 <label className="label">Call Outcome</label>
-                                <select 
-                                  className="input-base" 
-                                  value={activeCallForm.outcome} 
-                                  onChange={e => setActiveCallForm({...activeCallForm, outcome: e.target.value})}
-                                >
-                                  <option value="">-- Select Outcome --</option>
-                                  {CALL_OUTCOMES.map(o => <option key={o.value} value={o.value}>{o.emoji} {o.label}</option>)}
-                                </select>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                                  {CALL_OUTCOMES.map(o => (
+                                    <button key={o.value} type="button"
+                                      onClick={() => setActiveCallForm({...activeCallForm, outcome: o.value})}
+                                      style={{ padding: '6px 12px', borderRadius: 20, border: `1.5px solid ${activeCallForm.outcome === o.value ? o.color : 'var(--bg-border)'}`, background: activeCallForm.outcome === o.value ? o.color + '18' : 'transparent', color: activeCallForm.outcome === o.value ? o.color : 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}>
+                                      {o.emoji} {o.label}
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
                               <div className="form-group" style={{ marginBottom: 12 }}>
                                 <label className="label">Duration (min)</label>
@@ -611,25 +713,17 @@ export default function Tasks() {
                            </div>
 
                            <div style={{ display: 'flex', gap: 10 }}>
-                              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => {
-                                saveActiveCall('skipped');
-                                setActiveCallIdx(Math.min(activeCallIdx + 1, callingList.length - 1));
-                              }}>Skip</button>
-                              
-                              <button className="btn btn-primary" style={{ flex: 2, background: '#16a34a', borderColor: '#16a34a' }} onClick={() => {
-                                if (!activeCallForm.outcome) return alert('Select an outcome first');
-                                saveActiveCall('completed');
-                                setActiveCallIdx(Math.min(activeCallIdx + 1, callingList.length - 1));
-                              }}>Log & Next</button>
+                             <button className="btn btn-ghost" style={{ flex: 1 }} onClick={handleSkip}>Skip</button>
+                             <button className="btn btn-primary" style={{ flex: 2, background: '#16a34a', borderColor: '#16a34a' }} onClick={handleLogAndNext}>✓ Log & Next</button>
                            </div>
 
-                           <div style={{ marginTop: 40, paddingTop: 20, borderTop: '1px solid var(--border-light)' }}>
+                           <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--border-light)' }}>
                               <button className="btn btn-primary btn-sm" disabled={saving || callingList.filter(c => c.status === 'completed').length === 0} onClick={handlePushToCRM} style={{ width: '100%' }}>
                                 <Save size={14} /> Push {callingList.filter(c => c.status === 'completed').length} completed calls to CRM Leads
                               </button>
                            </div>
                         </div>
-                   )}
+                   ) : null}
                 </div>
               </div>
             )}
