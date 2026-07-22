@@ -528,7 +528,7 @@ export default function Tasks() {
             );
           })}
           </AnimatePresence>
-        ) : (
+        ) : filter !== 'power_dialer' ? (
           <AnimatePresence mode="popLayout">
             {filteredTasks.map((task, idx) => {
               const isCompleted = task.status === 'completed';
@@ -582,7 +582,7 @@ export default function Tasks() {
               );
             })}
           </AnimatePresence>
-        ) : filter === 'power_dialer' ? (
+        ) : (
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {callingList.length === 0 ? (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="apollo-empty-state">
@@ -679,7 +679,7 @@ export default function Tasks() {
               </div>
             )}
           </div>
-        ) : null}
+        )}
       </div>
 
       {/* Keyboard hints */}
