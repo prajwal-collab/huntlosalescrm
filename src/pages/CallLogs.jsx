@@ -329,36 +329,43 @@ export default function CallLogs() {
 
   // UI Renderers
   const renderHistory = () => (
-    <div className="logs-content-inner">
-      <div className="logs-toolbar">
-        <div className="search-bar">
-          <Search size={16} />
+    <motion.div 
+      className="cl-history-view"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="cl-toolbar">
+        <div className="cl-search-wrapper">
+          <Search size={16} className="cl-search-icon" />
           <input 
             type="text" 
             placeholder="Search contact, company, or phone..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            className="cl-search-input"
           />
         </div>
         
-        <div className="filter-dropdown">
-          <Filter size={16} />
+        <div className="cl-filter-wrapper">
+          <Filter size={14} className="cl-filter-icon" />
           <select 
             value={filterOutcome} 
             onChange={(e) => setFilterOutcome(e.target.value)}
+            className="cl-filter-select"
           >
             <option value="all">All Outcomes</option>
             {CALL_OUTCOMES.map(o => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
-          <ChevronDown size={14} className="dropdown-icon" />
+          <ChevronDown size={14} className="cl-dropdown-icon" />
         </div>
       </div>
 
-      <div className="logs-content-layout">
-        <div className="logs-table-wrapper">
-          <table className="logs-table">
+      <div className="cl-table-container">
+        <div className="cl-table-scroll">
+          <table className="cl-table">
             <thead>
               <tr>
                 <th>Date & Time</th>
@@ -372,13 +379,15 @@ export default function CallLogs() {
             <tbody>
               {filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="empty-state-cell">
-                    <div className="empty-state">
-                      <Phone size={48} className="empty-icon" />
+                  <td colSpan="6" className="cl-empty-cell">
+                    <div className="cl-empty-state">
+                      <div className="cl-empty-icon-wrap">
+                        <Phone size={32} />
+                      </div>
                       <h3>No calls found</h3>
-                      <p>Start making calls from the Power Dialer.</p>
-                      <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setActiveTab('dialer')}>
-                        Go to Power Dialer
+                      <p>Get started by launching a Power Dialer campaign or logging a cold call manually.</p>
+                      <button className="btn btn-primary" onClick={() => setActiveTab('dialer')}>
+                        Launch Power Dialer
                       </button>
                     </div>
                   </td>
@@ -386,58 +395,42 @@ export default function CallLogs() {
               ) : (
                 filteredLogs.map(call => {
                   const style = CALL_OUTCOMES.find(o => o.value === call.outcome) || CALL_OUTCOMES[2];
-                  const Icon = style.icon;
                   
                   return (
                     <tr 
                       key={call.id} 
                       onClick={() => setSelectedCall(call)}
-                      className={selectedCall?.id === call.id ? 'selected-row' : ''}
+                      className={selectedCall?.id === call.id ? 'active-row' : ''}
                     >
                       <td>
-                        <div className="cell-content">
-                          <Calendar size={14} className="cell-icon" />
-                          <span className="date-text">{safeFormatDate(call.createdAt)}</span>
+                        <div className="cl-cell-date">
+                          <span className="cl-date">{safeFormatDate(call.createdAt)}</span>
                         </div>
                       </td>
                       <td>
-                        <div className="contact-info">
-                          <span className="contact-name">{call.contactName || '—'}</span>
-                          {call.phone && <span className="contact-phone">{call.phone}</span>}
+                        <div className="cl-cell-contact">
+                          <span className="cl-name">{call.contactName || '—'}</span>
+                          {call.phone && <span className="cl-phone">{call.phone}</span>}
                         </div>
                       </td>
                       <td>
-                        <div className="cell-content">
-                          {call.company ? (
-                            <>
-                              <Building2 size={14} className="cell-icon" />
-                              <span className="company-text">{call.company}</span>
-                            </>
-                          ) : '—'}
+                        <div className="cl-cell-company">
+                          {call.company || '—'}
                         </div>
                       </td>
                       <td>
-                        <div 
-                          className="outcome-badge"
-                          style={{ backgroundColor: style.color + '18', color: style.color, border: `1px solid ${style.color}30` }}
-                        >
+                        <div className="cl-outcome-pill" style={{ '--pill-color': style.color }}>
                           {style.emoji} {style.label}
                         </div>
                       </td>
                       <td>
-                        <div className="cell-content">
-                          <Clock size={14} className="cell-icon" />
-                          <span>{call.duration ? `${call.duration}m` : '—'}</span>
+                        <div className="cl-cell-duration">
+                          {call.duration ? `${call.duration}m` : '—'}
                         </div>
                       </td>
                       <td>
-                        <div className="notes-preview">
-                          {call.notes ? (
-                            <>
-                              <FileText size={14} className="cell-icon" />
-                              <span className="truncate">{call.notes}</span>
-                            </>
-                          ) : '—'}
+                        <div className="cl-cell-notes">
+                          <span className="cl-truncate">{call.notes || '—'}</span>
                         </div>
                       </td>
                     </tr>
@@ -451,31 +444,28 @@ export default function CallLogs() {
         <AnimatePresence>
           {selectedCall && (
             <motion.div 
-              className="call-details-panel"
-              initial={{ opacity: 0, x: 20 }}
+              className="cl-details-sidebar"
+              initial={{ opacity: 0, x: '100%' }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.2 }}
+              exit={{ opacity: 0, x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             >
-              <div className="panel-header">
+              <div className="cl-details-header">
                 <h3>Call Details</h3>
-                <button 
-                  className="close-panel-btn" 
-                  onClick={() => setSelectedCall(null)}
-                >
-                  &times;
+                <button className="btn-icon" onClick={() => setSelectedCall(null)}>
+                  <X size={18} />
                 </button>
               </div>
               
-              <div className="panel-body">
+              <div className="cl-details-body">
                 {(() => {
                   const style = CALL_OUTCOMES.find(o => o.value === selectedCall.outcome) || CALL_OUTCOMES[2];
                   return (
-                    <div className="detail-hero">
-                      <div className="detail-avatar" style={{ backgroundColor: style.color + '18', color: style.color }}>
-                        <span style={{ fontSize: 24 }}>{style.emoji}</span>
+                    <div className="cl-details-hero">
+                      <div className="cl-hero-avatar" style={{ '--avatar-color': style.color }}>
+                        {style.emoji}
                       </div>
-                      <div className="detail-hero-info">
+                      <div className="cl-hero-text">
                         <h4>{selectedCall.contactName || 'Unknown Contact'}</h4>
                         <p>{selectedCall.company || 'Unknown Company'}</p>
                       </div>
@@ -483,33 +473,33 @@ export default function CallLogs() {
                   );
                 })()}
 
-                <div className="detail-section">
+                <div className="cl-details-section">
                   <h5>Overview</h5>
-                  <div className="detail-grid">
-                    <div className="detail-item">
-                      <span className="label">Date</span>
-                      <span className="value">{safeFormatDate(selectedCall.createdAt)}</span>
+                  <div className="cl-details-grid">
+                    <div className="cl-detail-item">
+                      <span className="cl-label">Date</span>
+                      <span className="cl-value">{safeFormatDate(selectedCall.createdAt)}</span>
                     </div>
-                    <div className="detail-item">
-                      <span className="label">Phone</span>
-                      <span className="value">{selectedCall.phone || '—'}</span>
+                    <div className="cl-detail-item">
+                      <span className="cl-label">Phone</span>
+                      <span className="cl-value">{selectedCall.phone || '—'}</span>
                     </div>
-                    <div className="detail-item">
-                      <span className="label">Outcome</span>
-                      <span className="value">
+                    <div className="cl-detail-item">
+                      <span className="cl-label">Outcome</span>
+                      <span className="cl-value">
                         {CALL_OUTCOMES.find(o => o.value === selectedCall.outcome)?.label || selectedCall.outcome}
                       </span>
                     </div>
-                    <div className="detail-item">
-                      <span className="label">Duration</span>
-                      <span className="value">{selectedCall.duration ? `${selectedCall.duration} minutes` : '—'}</span>
+                    <div className="cl-detail-item">
+                      <span className="cl-label">Duration</span>
+                      <span className="cl-value">{selectedCall.duration ? `${selectedCall.duration} min` : '—'}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="detail-section">
+                <div className="cl-details-section">
                   <h5>Notes</h5>
-                  <div className="notes-box">
+                  <div className="cl-notes-box">
                     {selectedCall.notes || 'No notes provided for this call.'}
                   </div>
                 </div>
@@ -518,135 +508,131 @@ export default function CallLogs() {
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 
   const renderDialer = () => (
-    <div className="dialer-content-inner">
+    <motion.div 
+      className="cl-dialer-view"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       {callingList.length === 0 ? (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="empty-state">
-          <Play size={48} className="empty-icon" style={{ color: 'var(--accent-blue)', opacity: 0.8 }} />
-          <h3 style={{ fontSize: 20 }}>Ready to start a calling campaign?</h3>
-          <p style={{ maxWidth: 400, margin: '0 auto 24px', lineHeight: 1.5 }}>
-            Upload a CSV with names and phone numbers, dial through them rapidly, and push results to the CRM when finished.
-          </p>
+        <div className="cl-empty-state dialer-empty">
+          <div className="cl-empty-icon-wrap primary">
+            <Play size={40} />
+          </div>
+          <h2>Ready to start a calling campaign?</h2>
+          <p>Upload a CSV with names and phone numbers, dial through them rapidly, and push results to the CRM when finished.</p>
           <button className="btn btn-primary" onClick={() => setShowImporter(true)}>
             <UploadCloud size={16} /> Import Calling List CSV
           </button>
-        </motion.div>
+        </div>
       ) : (
-        <div className="dialer-layout">
-          <div className="dialer-sidebar">
-            <div className="dialer-sidebar-header">
-              <span style={{ fontSize: 13, fontWeight: 600 }}>Up Next</span>
-              <span className="badge" style={{ background: 'var(--accent-blue)', color: '#fff' }}>{callingList.length}</span>
+        <div className="cl-dialer-layout">
+          <div className="cl-dialer-sidebar">
+            <div className="cl-sidebar-header">
+              <span>Up Next</span>
+              <span className="cl-badge">{callingList.length}</span>
             </div>
-            <div className="dialer-list">
+            <div className="cl-sidebar-list">
               {callingList.map((c, idx) => (
                 <div 
                   key={c.id} 
                   onClick={() => setActiveCallIdx(idx)}
-                  className={`dialer-list-item ${activeCallIdx === idx ? 'active' : ''}`}
+                  className={`cl-list-item ${activeCallIdx === idx ? 'active' : ''}`}
                 >
-                  <div className="status-dot" style={{ background: c.status === 'completed' ? '#16a34a' : c.status === 'skipped' ? '#94a3b8' : '#3b82f6' }} />
-                  <div className="item-details">
-                    <div className="item-name">{c.contact_name || c.company_name || 'Unknown'}</div>
-                    <div className="item-phone">{c.phone}</div>
+                  <div className={`cl-status-dot ${c.status}`} />
+                  <div className="cl-item-text">
+                    <div className="cl-item-title">{c.contact_name || c.company_name || 'Unknown'}</div>
+                    <div className="cl-item-sub">{c.phone}</div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-          <div className="dialer-main">
+          <div className="cl-dialer-main">
             {dialerDone ? (
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="dialer-done-state">
-                <div className="done-icon">🎉</div>
+              <div className="cl-done-state">
+                <div className="cl-done-icon">🎉</div>
                 <h2>Campaign Complete!</h2>
                 <p>You've worked through all {callingList.length} contacts.</p>
-                <div className="done-stats">
-                  <div className="done-stat-card">
-                    <div className="val" style={{ color: '#3b82f6' }}>{callingList.length}</div>
-                    <div className="label">Total</div>
+                <div className="cl-done-stats">
+                  <div className="cl-done-card">
+                    <div className="cl-val blue">{callingList.length}</div>
+                    <div className="cl-label">Total</div>
                   </div>
-                  <div className="done-stat-card">
-                    <div className="val" style={{ color: '#16a34a' }}>{callingList.filter(c => c.status === 'completed').length}</div>
-                    <div className="label">Logged</div>
+                  <div className="cl-done-card">
+                    <div className="cl-val green">{callingList.filter(c => c.status === 'completed').length}</div>
+                    <div className="cl-label">Logged</div>
                   </div>
-                  <div className="done-stat-card">
-                    <div className="val" style={{ color: '#94a3b8' }}>{callingList.filter(c => c.status === 'skipped').length}</div>
-                    <div className="label">Skipped</div>
+                  <div className="cl-done-card">
+                    <div className="cl-val gray">{callingList.filter(c => c.status === 'skipped').length}</div>
+                    <div className="cl-label">Skipped</div>
                   </div>
                 </div>
-                <div className="done-actions">
+                <div className="cl-done-actions">
                   <button className="btn btn-ghost" onClick={() => { setDialerDone(false); setActiveCallIdx(0); }}>Review List</button>
-                  <button className="btn btn-primary" style={{ background: '#16a34a', borderColor: '#16a34a' }}
-                    disabled={saving || callingList.filter(c => c.status === 'completed').length === 0}
-                    onClick={handlePushToCRM}>
+                  <button className="btn btn-success" disabled={saving || callingList.filter(c => c.status === 'completed').length === 0} onClick={handlePushToCRM}>
                     <Save size={16} /> Push {callingList.filter(c => c.status === 'completed').length} Calls to CRM
                   </button>
                 </div>
-                <button className="btn btn-ghost" style={{ marginTop: 12, color: 'var(--text-tertiary)' }} onClick={() => setShowImporter(true)}>
-                  <UploadCloud size={14} /> Import New Calling List
-                </button>
-              </motion.div>
+              </div>
             ) : callingList[activeCallIdx] ? (
-              <div className="active-call-container">
-                <div className="active-call-header">
+              <div className="cl-active-call">
+                <div className="cl-active-header">
                   <div>
-                    <h2>{callingList[activeCallIdx].contact_name || 'Unknown Contact'}</h2>
-                    <div className="active-company">{callingList[activeCallIdx].company_name}</div>
+                    <h2 className="cl-active-name">{callingList[activeCallIdx].contact_name || 'Unknown Contact'}</h2>
+                    <div className="cl-active-company">{callingList[activeCallIdx].company_name}</div>
                   </div>
-                  <div className="active-phone">{callingList[activeCallIdx].phone}</div>
+                  <div className="cl-active-phone">{callingList[activeCallIdx].phone}</div>
                 </div>
                 
-                <div className="progress-bar-container">
-                  <div className="progress-text">
+                <div className="cl-progress">
+                  <div className="cl-progress-text">
                     <span>Contact {activeCallIdx + 1} of {callingList.length}</span>
                     <span>{callingList.filter(c => c.status === 'completed').length} logged</span>
                   </div>
-                  <div className="progress-track">
-                    <div className="progress-fill" style={{ width: `${(callingList.filter(c=>c.status==='completed').length / callingList.length)*100}%` }} />
+                  <div className="cl-progress-track">
+                    <div className="cl-progress-fill" style={{ width: `${(callingList.filter(c=>c.status==='completed').length / callingList.length)*100}%` }} />
                   </div>
                 </div>
 
-                <div className="call-form-card">
-                  <div className="form-group">
-                    <label className="label">Call Outcome</label>
-                    <div className="outcome-buttons">
+                <div className="cl-form-card">
+                  <div className="cl-form-group">
+                    <label>Call Outcome</label>
+                    <div className="cl-outcome-grid">
                       {CALL_OUTCOMES.map(o => (
                         <button 
                           key={o.value} 
                           type="button"
                           onClick={() => setActiveCallForm({...activeCallForm, outcome: o.value})}
-                          className={`outcome-btn ${activeCallForm.outcome === o.value ? 'selected' : ''}`}
-                          style={activeCallForm.outcome === o.value ? {
-                            borderColor: o.color,
-                            backgroundColor: o.color + '18',
-                            color: o.color
-                          } : {}}
+                          className={`cl-outcome-btn ${activeCallForm.outcome === o.value ? 'selected' : ''}`}
+                          style={{ '--btn-color': o.color }}
                         >
                           {o.emoji} {o.label}
                         </button>
                       ))}
                     </div>
                   </div>
-                  <div className="form-group">
-                    <label className="label">Duration (min)</label>
+                  <div className="cl-form-group">
+                    <label>Duration (min)</label>
                     <input className="input-base" type="number" min="0" value={activeCallForm.duration} onChange={e => setActiveCallForm({...activeCallForm, duration: e.target.value})} placeholder="e.g. 5" />
                   </div>
-                  <div className="form-group">
-                    <label className="label">Notes</label>
+                  <div className="cl-form-group">
+                    <label>Notes</label>
                     <textarea className="input-base" rows={4} value={activeCallForm.notes} onChange={e => setActiveCallForm({...activeCallForm, notes: e.target.value})} placeholder="Discussed next steps..." />
                   </div>
                 </div>
 
-                <div className="call-actions">
-                  <button className="btn btn-ghost" onClick={handleSkip}>Skip</button>
-                  <button className="btn btn-primary" style={{ background: '#16a34a', borderColor: '#16a34a' }} onClick={handleLogAndNext}>✓ Log & Next</button>
+                <div className="cl-active-actions">
+                  <button className="btn btn-ghost" onClick={handleSkip}>Skip Contact</button>
+                  <button className="btn btn-success" onClick={handleLogAndNext}>✓ Log & Next</button>
                 </div>
 
-                <div className="push-actions">
-                  <button className="btn btn-primary btn-sm push-btn" disabled={saving || callingList.filter(c => c.status === 'completed').length === 0} onClick={handlePushToCRM}>
+                <div className="cl-push-section">
+                  <button className="btn btn-outline-success" disabled={saving || callingList.filter(c => c.status === 'completed').length === 0} onClick={handlePushToCRM}>
                     <Save size={14} /> Push {callingList.filter(c => c.status === 'completed').length} completed calls to CRM
                   </button>
                 </div>
@@ -655,54 +641,61 @@ export default function CallLogs() {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 
   return (
-    <div className="call-logs-container page-enter">
-      <header className="page-header">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div>
-            <h1 className="page-title">
-              <Phone className="title-icon" /> Call Center
-            </h1>
-            <p className="page-subtitle">Track, analyze, and execute your cold calling campaigns</p>
+    <div className="cl-container page-enter">
+      <header className="cl-header">
+        <div className="cl-header-top">
+          <div className="cl-title-section">
+            <div className="cl-title-icon"><Phone size={24} /></div>
+            <div>
+              <h1 className="cl-title">Call Center</h1>
+              <p className="cl-subtitle">Track, analyze, and execute your cold calling campaigns</p>
+            </div>
           </div>
           
-          <div className="crm-tabs">
-            <button className={`crm-tab ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
+          <div className="cl-header-actions">
+            <div className="cl-stats">
+              <div className="cl-stat-box success">
+                <div className="cl-stat-val">{connectedCalls}</div>
+                <div className="cl-stat-label">Connected</div>
+              </div>
+              <div className="cl-stat-box">
+                <div className="cl-stat-val">{totalDuration}<small>m</small></div>
+                <div className="cl-stat-label">Talk Time</div>
+              </div>
+            </div>
+            <div className="cl-actions-group">
+              <button className="btn btn-ghost" onClick={() => setShowImporter(true)}>
+                <UploadCloud size={16} /> Import List
+              </button>
+              <button className="btn btn-primary" onClick={() => setShowCallLogger(true)}>
+                <Phone size={14} /> Log Cold Call
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="cl-header-bottom">
+          <div className="cl-segmented-tabs">
+            <button className={`cl-seg-tab ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
               Call History
             </button>
-            <button className={`crm-tab ${activeTab === 'dialer' ? 'active' : ''}`} onClick={() => setActiveTab('dialer')}>
-              <Play size={14} /> Power Dialer
+            <button className={`cl-seg-tab ${activeTab === 'dialer' ? 'active' : ''}`} onClick={() => setActiveTab('dialer')}>
+              Power Dialer
               {callingList.filter(c => c.status === 'pending').length > 0 && (
-                <span className="tab-badge">{callingList.filter(c => c.status === 'pending').length}</span>
+                <span className="cl-tab-badge">{callingList.filter(c => c.status === 'pending').length}</span>
               )}
             </button>
           </div>
         </div>
-        
-        <div className="header-right-actions">
-          <button className="btn btn-ghost" onClick={() => setShowImporter(true)}>
-            <UploadCloud size={16} /> Import List
-          </button>
-          <button className="btn btn-primary log-btn" onClick={() => setShowCallLogger(true)}>
-            <Phone size={14} /> Log Cold Call
-          </button>
-          <div className="call-stats-mini">
-            <div className="stat-card">
-              <span className="stat-value success">{connectedCalls}</span>
-              <span className="stat-label">Connected</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-value">{totalDuration}<small>m</small></span>
-              <span className="stat-label">Talk Time</span>
-            </div>
-          </div>
-        </div>
       </header>
 
-      {activeTab === 'history' ? renderHistory() : renderDialer()}
+      <main className="cl-main-content">
+        {activeTab === 'history' ? renderHistory() : renderDialer()}
+      </main>
 
       {showImporter && (
         <CsvImporterModal
@@ -720,63 +713,58 @@ export default function CallLogs() {
             <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="contact-detail log-call-modal">
               <div className="panel-header">
                 <h2>Log a Call</h2>
-                <button className="btn btn-ghost btn-sm" style={{ padding: 4 }} onClick={() => setShowCallLogger(false)}><X size={18} /></button>
+                <button className="btn-icon" onClick={() => setShowCallLogger(false)}><X size={18} /></button>
               </div>
               <div className="panel-content">
                 {error && <div className="alert-error" style={{ marginBottom: 16 }}>{error}</div>}
                 <form onSubmit={handleLogColdCall} className="form-layout">
-                  <div className="form-group">
-                    <label className="label">Contact Name *</label>
+                  <div className="cl-form-group">
+                    <label>Contact Name *</label>
                     <input required className="input-base" value={callForm.contactName} onChange={e => setCallForm({ ...callForm, contactName: e.target.value })} placeholder="John Doe" />
                   </div>
-                  <div className="form-group">
-                    <label className="label">Company</label>
+                  <div className="cl-form-group">
+                    <label>Company</label>
                     <input className="input-base" value={callForm.company} onChange={e => setCallForm({ ...callForm, company: e.target.value })} placeholder="Acme Corp" />
                   </div>
                   
                   {matchedLead && (
-                    <div style={{ padding: '8px 12px', background: 'rgba(59,130,246,0.1)', borderRadius: 8, fontSize: 13, color: '#3b82f6', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 16 }}>🔗</span> Link to CRM Lead: <strong>{matchedLead.company_name || matchedLead.contact_name}</strong>
+                    <div className="cl-matched-lead">
+                      <span className="emoji">🔗</span> Link to CRM Lead: <strong>{matchedLead.company_name || matchedLead.contact_name}</strong>
                     </div>
                   )}
 
-                  <div className="form-group">
-                    <label className="label">Phone</label>
+                  <div className="cl-form-group">
+                    <label>Phone</label>
                     <input className="input-base" value={callForm.phone} onChange={e => setCallForm({ ...callForm, phone: e.target.value })} placeholder="+1 (555) 000-0000" />
                   </div>
-                  <div className="form-group">
-                    <label className="label">Outcome</label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <div className="cl-form-group">
+                    <label>Outcome</label>
+                    <div className="cl-outcome-grid small">
                       {CALL_OUTCOMES.map(o => (
                         <button key={o.value} type="button" onClick={() => setCallForm({ ...callForm, outcome: o.value })}
-                          style={{
-                            padding: '8px 12px', borderRadius: 8, textAlign: 'left',
-                            border: `1px solid ${callForm.outcome === o.value ? o.color : 'var(--bg-border)'}`,
-                            background: callForm.outcome === o.value ? o.color + '18' : 'transparent',
-                            color: callForm.outcome === o.value ? o.color : 'var(--text-secondary)',
-                            fontSize: 13, fontWeight: 500
-                          }}>
+                          className={`cl-outcome-btn ${callForm.outcome === o.value ? 'selected' : ''}`}
+                          style={{ '--btn-color': o.color }}>
                           {o.emoji} {o.label}
                         </button>
                       ))}
                     </div>
                   </div>
-                  <div className="form-group">
-                    <label className="label">Duration (min)</label>
+                  <div className="cl-form-group">
+                    <label>Duration (min)</label>
                     <input className="input-base" type="number" min="0" value={callForm.duration} onChange={e => setCallForm({ ...callForm, duration: e.target.value })} placeholder="5" />
                   </div>
-                  <div className="form-group">
-                    <label className="label">Notes</label>
+                  <div className="cl-form-group">
+                    <label>Notes</label>
                     <textarea className="input-base" rows={4} value={callForm.notes} onChange={e => setCallForm({ ...callForm, notes: e.target.value })} placeholder="Call details..." />
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8, padding: 16, background: 'var(--bg-elevated)', borderRadius: 8, border: '1px solid var(--border-light)' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
-                      <input type="checkbox" checked={callForm.createFollowUp} onChange={e => setCallForm({ ...callForm, createFollowUp: e.target.checked })} style={{ width: 16, height: 16 }} />
+                  <div className="cl-followup-box">
+                    <label className="cl-checkbox-label">
+                      <input type="checkbox" checked={callForm.createFollowUp} onChange={e => setCallForm({ ...callForm, createFollowUp: e.target.checked })} />
                       Create a follow-up task
                     </label>
                     {callForm.createFollowUp && (
-                      <input type="datetime-local" className="input-base" style={{ fontSize: 13 }} value={callForm.followUpDue} onChange={e => setCallForm({ ...callForm, followUpDue: e.target.value })} />
+                      <input type="datetime-local" className="input-base" style={{ marginTop: 12 }} value={callForm.followUpDue} onChange={e => setCallForm({ ...callForm, followUpDue: e.target.value })} />
                     )}
                   </div>
                 </form>
