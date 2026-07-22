@@ -292,7 +292,6 @@ export default function CallLogs() {
         priority: 'medium',
         due: new Date().toISOString(),
         status: 'completed',
-        company: callForm.company || null,
         notes: JSON.stringify(callData),
       });
 
@@ -308,7 +307,6 @@ export default function CallLogs() {
           priority: 'medium',
           due: callForm.followUpDue,
           status: 'pending',
-          company: callForm.company || null,
         });
       }
 
