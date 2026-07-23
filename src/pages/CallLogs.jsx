@@ -96,16 +96,24 @@ export default function CallLogs() {
   const callingList = useMemo(() => {
     return tasks
       .filter(t => t.type === 'calling_list_item')
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
       .map(t => {
         let data = {};
         try { data = JSON.parse(t.notes); } catch(e) {}
+        
+        const cleanStr = (str) => {
+          if (!str || typeof str !== 'string') return str || '';
+          if (str.includes('#ERROR') || str.includes('#REF!') || str.includes('#VALUE!')) return '';
+          return str;
+        };
+
         return {
           id: t.id,
           status: t.status,
-          contact_name: t.title || '',
-          company_name: data.company_name || '',
-          phone: data.phone || '',
-          email: data.email || '',
+          contact_name: cleanStr(t.title),
+          company_name: cleanStr(data.company_name),
+          phone: cleanStr(data.phone),
+          email: cleanStr(data.email),
           outcome: data.outcome || '',
           outcomeLabel: data.outcomeLabel || '',
           duration: data.duration || '',
@@ -211,17 +219,24 @@ export default function CallLogs() {
       alert('No valid rows found. Please check your CSV and column mapping.');
       return;
     }
+
+    const cleanStr = (str) => {
+      if (!str || typeof str !== 'string') return str || '';
+      if (str.includes('#ERROR') || str.includes('#REF!') || str.includes('#VALUE!')) return '';
+      return str;
+    };
+
     const newTasks = mappedData.map(d => ({
-      title: d.contact_name || d.company_name || 'Unknown',
+      title: cleanStr(d.contact_name) || cleanStr(d.company_name) || 'Unknown',
       type: 'calling_list_item',
       status: 'pending',
       priority: 'medium',
       due: new Date().toISOString(),
       notes: JSON.stringify({
         _type: 'calling_list_data',
-        company_name: d.company_name || '',
-        phone: d.phone || '',
-        email: d.email || '',
+        company_name: cleanStr(d.company_name),
+        phone: cleanStr(d.phone),
+        email: cleanStr(d.email),
         outcome: '',
         duration: '',
         notes: ''
