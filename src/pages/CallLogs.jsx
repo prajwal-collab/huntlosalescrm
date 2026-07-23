@@ -670,8 +670,9 @@ export default function CallLogs() {
 
       {showImporter && (
         <CsvImporterModal
+          isOpen={true}
           onClose={() => setShowImporter(false)}
-          onImport={handleImportCallingList}
+          onImportSuccess={handleImportCallingList}
           type="calling_list"
         />
       )}
