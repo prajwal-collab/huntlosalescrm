@@ -172,6 +172,8 @@ export default function CallLogs() {
     } finally {
       setSaving(false);
     }
+  };
+
   const saveActiveCallWithForm = async (status, form) => {
     const curr = callingList[activeCallIdx];
     if (!curr) return;
