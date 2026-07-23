@@ -57,7 +57,7 @@ export default function CallLogs() {
   // Extract and parse cold call logs from tasks (for History view)
   const callLogs = useMemo(() => {
     return tasks
-      .filter(t => t.type === 'cold_call')
+      .filter(t => t.type === 'cold_call' || (t.type === 'call' && t.notes && t.notes.includes('_type":"cold_call_log"')) || (t.type === 'calling_list_item' && t.status === 'completed'))
       .map(t => {
         let callData = {};
         try { callData = JSON.parse(t.notes); } catch (e) {}
@@ -65,8 +65,8 @@ export default function CallLogs() {
           id: t.id,
           title: t.title,
           createdAt: t.created_at || callData.timestamp,
-          contactName: callData.contactName || '',
-          company: callData.company || '',
+          contactName: callData.contactName || t.title || '',
+          company: callData.company || callData.company_name || '',
           phone: callData.phone || '',
           outcome: callData.outcome || 'unknown',
           duration: callData.duration || '',
@@ -172,58 +172,6 @@ export default function CallLogs() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handlePushToCRM = async () => {
-    const processed = callingList.filter(c => c.status === 'completed');
-    if (processed.length === 0) return;
-    
-    const leadsData = processed.map(c => ({
-      company_name: c.company_name || c.contact_name || 'Unknown Company',
-      contact_name: c.contact_name || '',
-      phone: c.phone || '',
-      ...(c.email ? { email: c.email } : {}),
-      stage: c.outcome === 'connected' ? 'Engaged' : 'New Lead',
-      source: 'Power Dialer',
-      notes: `📞 [${new Date().toLocaleDateString()}] ${c.outcomeLabel || c.outcome || 'Called'} — ${c.duration ? c.duration + ' min' : 'N/A'} — ${c.notes || 'No notes'}`
-    }));
-
-    try {
-      setSaving(true);
-      const inserted = await useDataStore.getState().bulkCreateLeadsFromDialer(leadsData);
-      
-      const tasksToUpdate = processed.map(c => ({
-        id: c.id,
-        title: `Cold Call — ${c.company_name || c.contact_name || 'Unknown'} (${c.outcomeLabel || c.outcome})`,
-        type: 'cold_call',
-        status: 'completed',
-        notes: JSON.stringify({
-          _type: 'cold_call_log',
-          contactName: c.contact_name,
-          company: c.company_name,
-          phone: c.phone,
-          outcome: c.outcome,
-          outcomeLabel: c.outcomeLabel || c.outcome,
-          duration: c.duration,
-          notes: c.notes,
-          timestamp: new Date().toISOString()
-        })
-      }));
-      await useDataStore.getState().bulkUpdateTasks(tasksToUpdate);
-      const skipped = processed.length - inserted.length;
-      const msg = skipped > 0
-        ? `✅ ${inserted.length} new Lead${inserted.length !== 1 ? 's' : ''} created in CRM. ${skipped} skipped (already exist). Call logs updated.`
-        : `✅ ${inserted.length} Lead${inserted.length !== 1 ? 's' : ''} created in CRM from ${processed.length} logged call${processed.length !== 1 ? 's' : ''}!`;
-      alert(msg);
-      setActiveCallIdx(0);
-      setDialerDone(false);
-    } catch (err) {
-      alert("Error pushing to CRM: " + err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const saveActiveCallWithForm = async (status, form) => {
     const curr = callingList[activeCallIdx];
     if (!curr) return;
@@ -244,14 +192,41 @@ export default function CallLogs() {
 
   const handleLogAndNext = async () => {
     if (!activeCallForm.outcome) { alert('Please select a call outcome first.'); return; }
-    const savedForm = { ...activeCallForm };
-    setActiveCallForm({ outcome: '', duration: '', notes: '' });
-    await saveActiveCallWithForm('completed', savedForm);
-    const nextIdx = activeCallIdx + 1;
-    if (nextIdx >= callingList.length) {
-      setDialerDone(true);
-    } else {
-      setActiveCallIdx(nextIdx);
+    
+    setSaving(true);
+    try {
+      const curr = callingList[activeCallIdx];
+      const savedForm = { ...activeCallForm };
+      
+      // 1. Save locally to tasks
+      await saveActiveCallWithForm('completed', savedForm);
+
+      // 2. Immediately push to CRM
+      const outcomeObj = CALL_OUTCOMES.find(o => o.value === savedForm.outcome);
+      const leadData = {
+        company_name: curr.company_name || curr.contact_name || 'Unknown Company',
+        contact_name: curr.contact_name || '',
+        phone: curr.phone || '',
+        ...(curr.email ? { email: curr.email } : {}),
+        stage: savedForm.outcome === 'connected' ? 'Engaged' : 'New Lead',
+        source: 'Power Dialer',
+        notes: `📞 [${new Date().toLocaleDateString()}] ${outcomeObj?.label || savedForm.outcome} — ${savedForm.duration ? savedForm.duration + ' min' : 'N/A'} — ${savedForm.notes || 'No notes'}`
+      };
+      
+      await useDataStore.getState().bulkCreateLeadsFromDialer([leadData]);
+      
+      // Cleanup and move to next
+      setActiveCallForm({ outcome: '', duration: '', notes: '' });
+      const nextIdx = activeCallIdx + 1;
+      if (nextIdx >= callingList.length) {
+        setDialerDone(true);
+      } else {
+        setActiveCallIdx(nextIdx);
+      }
+    } catch(e) {
+      alert("Error logging call: " + e.message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -572,8 +547,8 @@ export default function CallLogs() {
                 </div>
                 <div className="cl-done-actions">
                   <button className="btn btn-ghost" onClick={() => { setDialerDone(false); setActiveCallIdx(0); }}>Review List</button>
-                  <button className="btn btn-success" disabled={saving || callingList.filter(c => c.status === 'completed').length === 0} onClick={handlePushToCRM}>
-                    <Save size={16} /> Push {callingList.filter(c => c.status === 'completed').length} Calls to CRM
+                  <button className="btn btn-success" onClick={() => setActiveTab('history')}>
+                    View Call History
                   </button>
                 </div>
               </div>
@@ -629,11 +604,7 @@ export default function CallLogs() {
                   <button className="btn btn-success" onClick={handleLogAndNext}>✓ Log & Next</button>
                 </div>
 
-                <div className="cl-push-section">
-                  <button className="btn btn-outline-success" disabled={saving || callingList.filter(c => c.status === 'completed').length === 0} onClick={handlePushToCRM}>
-                    <Save size={14} /> Push {callingList.filter(c => c.status === 'completed').length} completed calls to CRM
-                  </button>
-                </div>
+
               </div>
             ) : null}
           </div>

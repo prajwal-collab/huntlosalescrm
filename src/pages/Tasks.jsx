@@ -70,31 +70,13 @@ export default function Tasks() {
     localStorage.setItem('huntlo_scratchpad', scratchpad);
   }, [scratchpad]);
 
-  const matchedLead = useMemo(() => {
-    if (!callForm.company && !callForm.contactName) return null;
-    const q = (callForm.company || callForm.contactName).toLowerCase().trim();
-    if (q.length < 2) return null;
-    return leads.find(l =>
-      (l.company_name && l.company_name.toLowerCase().includes(q)) ||
-      (l.contact_name && l.contact_name.toLowerCase().includes(q)) ||
-      (l.email && l.email.toLowerCase().includes(q))
-    ) || null;
-  }, [callForm.company, callForm.contactName, leads]);
 
-  useEffect(() => {
-    if (matchedLead && !callForm.linkedLeadId) {
-      setCallForm(f => ({ ...f, linkedLeadId: matchedLead.id }));
-    }
-  }, [matchedLead]);
 
   const pendingCount = tasks.filter(t => t.status !== 'completed' && t.type !== 'calling_list_item').length;
   const callCount = tasks.filter(t => t.type === 'call' && t.status !== 'completed').length;
-  const coldCallsCompleted = tasks.filter(t => (t.type === 'call' || t.type === 'cold_call') && t.status === 'completed').length;
-  const coldCallLogCount = tasks.filter(t => (t.type === 'cold_call' || t.type === 'call') && t.status === 'completed' && parseColdCallData(t)).length;
   const emailCount = tasks.filter(t => t.type === 'email' && t.status !== 'completed').length;
   const linkedinCount = tasks.filter(t => t.type === 'linkedin' && t.status !== 'completed').length;
   const overdueCount = tasks.filter(t => t.status !== 'completed' && safeIsPast(t.due)).length;
-  const dialerPendingCount = callingList.filter(c => c.status === 'pending').length;
 
   const filteredTasks = useMemo(() => {
     let result = tasks;
