@@ -898,3 +898,82 @@
 .btn-outline-success:hover {
   background: rgba(22,163,74,0.05);
 }
+  
+/* AUTOCOMPLETE DROPDOWN */ 
+.cl-autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 0;
+  width: 100%;
+  max-width: 320px;
+  background-color: #21191a;
+  border-radius: 8px;
+  padding: 8px 0;
+  z-index: 100;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05);
+}
+
+/* Caret Arrow pointing up */
+.cl-autocomplete-dropdown::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 24px;
+  width: 12px;
+  height: 12px;
+  background-color: #21191a;
+  transform: rotate(45deg);
+  border-top: 1px solid rgba(255,255,255,0.05);
+  border-left: 1px solid rgba(255,255,255,0.05);
+  z-index: -1;
+}
+
+.cl-autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cl-autocomplete-item:hover {
+  background-color: rgba(255,255,255,0.05);
+}
+
+.cl-autocomplete-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.cl-autocomplete-text {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cl-autocomplete-name {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.cl-autocomplete-company {
+  color: #fca5a5; /* Light soft red/orange matching Apollo mock */
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}

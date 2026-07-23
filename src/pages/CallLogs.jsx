@@ -30,7 +30,7 @@ function safeFormatDate(dateStr) {
 }
 
 export default function CallLogs() {
-  const { tasks, leads, createTask, appendLeadNotes } = useDataStore();
+  const { tasks, leads, contacts, createTask, appendLeadNotes } = useDataStore();
   const [activeTab, setActiveTab] = useState('history'); // 'history' or 'dialer'
   
   // History Tab State
@@ -47,6 +47,7 @@ export default function CallLogs() {
   });
   const [callSaving, setCallSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   
   const [showImporter, setShowImporter] = useState(false);
   const [activeCallIdx, setActiveCallIdx] = useState(0);
@@ -138,6 +139,71 @@ export default function CallLogs() {
       setCallForm(f => ({ ...f, linkedLeadId: matchedLead.id }));
     }
   }, [matchedLead]);
+
+  const searchResults = useMemo(() => {
+    if (!callForm.contactName || callForm.contactName.length < 2) return [];
+    const q = callForm.contactName.toLowerCase();
+    const results = [];
+    
+    // Search calling list
+    callingList.forEach(c => {
+      if ((c.contact_name && c.contact_name.toLowerCase().includes(q)) || 
+          (c.company_name && c.company_name.toLowerCase().includes(q))) {
+        results.push({
+          type: 'calling_list',
+          id: c.id,
+          name: c.contact_name || c.company_name,
+          company: c.company_name || 'Calling List Contact',
+          phone: c.phone || '',
+        });
+      }
+    });
+
+    // Search contacts
+    if (contacts) {
+      contacts.forEach(c => {
+        if ((c.name && c.name.toLowerCase().includes(q)) || 
+            (c.email && c.email.toLowerCase().includes(q))) {
+          results.push({
+            type: 'contact',
+            id: c.id,
+            name: c.name,
+            company: c.designation || 'CRM Contact',
+            phone: c.whatsapp || '',
+          });
+        }
+      });
+    }
+
+    // Search leads
+    if (leads) {
+      leads.forEach(l => {
+        if ((l.contact_name && l.contact_name.toLowerCase().includes(q)) || 
+            (l.company_name && l.company_name.toLowerCase().includes(q))) {
+          results.push({
+            type: 'lead',
+            id: l.id,
+            name: l.contact_name || l.company_name,
+            company: l.company_name || 'CRM Lead',
+            phone: l.phone || '',
+          });
+        }
+      });
+    }
+
+    // Deduplicate by name/company and limit to 5
+    const unique = [];
+    const seen = new Set();
+    for (let r of results) {
+      const key = `${r.name}-${r.company}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(r);
+        if (unique.length >= 6) break;
+      }
+    }
+    return unique;
+  }, [callForm.contactName, callingList, contacts, leads]);
 
   // --- Handlers ---
   const handleImportCallingList = async (mappedData) => {
@@ -690,9 +756,55 @@ export default function CallLogs() {
               <div className="panel-content">
                 {error && <div className="alert-error" style={{ marginBottom: 16 }}>{error}</div>}
                 <form onSubmit={handleLogColdCall} className="form-layout">
-                  <div className="cl-form-group">
+                  <div className="cl-form-group" style={{ position: 'relative' }}>
                     <label>Contact Name *</label>
-                    <input required className="input-base" value={callForm.contactName} onChange={e => setCallForm({ ...callForm, contactName: e.target.value })} placeholder="John Doe" />
+                    <input 
+                      required 
+                      className="input-base" 
+                      value={callForm.contactName} 
+                      onChange={e => {
+                        setCallForm({ ...callForm, contactName: e.target.value });
+                        setDropdownOpen(true);
+                      }} 
+                      onFocus={() => setDropdownOpen(true)}
+                      onBlur={() => setTimeout(() => setDropdownOpen(false), 200)}
+                      placeholder="John Doe" 
+                    />
+                    <AnimatePresence>
+                      {dropdownOpen && searchResults.length > 0 && (
+                        <motion.div 
+                          className="cl-autocomplete-dropdown"
+                          initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                          transition={{ duration: 0.15 }}
+                        >
+                          {searchResults.map((r, i) => (
+                            <div 
+                              key={i} 
+                              className="cl-autocomplete-item"
+                              onClick={() => {
+                                setCallForm({
+                                  ...callForm,
+                                  contactName: r.name,
+                                  company: r.company && r.company !== 'CRM Contact' && r.company !== 'Calling List Contact' && r.company !== 'CRM Lead' ? r.company : callForm.company,
+                                  phone: r.phone || callForm.phone
+                                });
+                                setDropdownOpen(false);
+                              }}
+                            >
+                              <div className="cl-autocomplete-icon">
+                                <User size={14} />
+                              </div>
+                              <div className="cl-autocomplete-text">
+                                <div className="cl-autocomplete-name">{r.name}</div>
+                                <div className="cl-autocomplete-company">{r.company}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                   <div className="cl-form-group">
                     <label>Company</label>
