@@ -31,7 +31,11 @@ function safeFormatDate(dateStr) {
 
 export default function CallLogs() {
   const { tasks, leads, contacts, createTask, appendLeadNotes } = useDataStore();
-  const [activeTab, setActiveTab] = useState('history'); // 'history' or 'dialer'
+  const [activeTab, setActiveTab] = useState('history'); // 'history', 'dialer', 'bulk'
+  
+  // Bulk Tab State
+  const [bulkSelected, setBulkSelected] = useState([]);
+  const [bulkOutcome, setBulkOutcome] = useState('');
   
   // History Tab State
   const [search, setSearch] = useState('');
@@ -237,9 +241,9 @@ export default function CallLogs() {
         company_name: cleanStr(d.company_name),
         phone: cleanStr(d.phone),
         email: cleanStr(d.email),
-        outcome: '',
-        duration: '',
-        notes: ''
+        outcome: cleanStr(d.outcome) || '',
+        duration: cleanStr(d.duration) || '',
+        notes: cleanStr(d.notes) || ''
       })
     }));
     try {
@@ -380,6 +384,81 @@ export default function CallLogs() {
       setError(err.message || 'Failed to log cold call');
     } finally {
       setCallSaving(false);
+    }
+  };
+
+  const toggleBulkSelect = (id) => {
+    setBulkSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+  
+  const selectAllBulk = () => {
+    if (bulkSelected.length === callingList.length) setBulkSelected([]);
+    else setBulkSelected(callingList.map(c => c.id));
+  };
+
+  const handleBulkUpdateOutcome = async () => {
+    if (!bulkOutcome || bulkSelected.length === 0) return;
+    setSaving(true);
+    try {
+      const outcomeObj = CALL_OUTCOMES.find(o => o.value === bulkOutcome);
+      const updates = [];
+      for (const id of bulkSelected) {
+        const task = tasks.find(t => t.id === id);
+        if (!task) continue;
+        let data = {};
+        try { data = JSON.parse(task.notes || '{}'); } catch(e) {}
+        const newNotes = JSON.stringify({
+          ...data,
+          outcome: bulkOutcome,
+          outcomeLabel: outcomeObj?.label || ''
+        });
+        updates.push(useDataStore.getState().updateTask(id, { notes: newNotes }));
+      }
+      await Promise.all(updates);
+      setBulkSelected([]);
+      setBulkOutcome('');
+    } catch(e) {
+      alert("Error updating outcomes: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleBulkLog = async () => {
+    if (bulkSelected.length === 0) return;
+    setSaving(true);
+    try {
+      const leadsToCreate = [];
+      const updates = [];
+      for (const id of bulkSelected) {
+        const curr = callingList.find(c => c.id === id);
+        if (!curr || !curr.outcome) continue; // Only log if outcome is set
+        const task = tasks.find(t => t.id === id);
+        const outcomeObj = CALL_OUTCOMES.find(o => o.value === curr.outcome);
+        
+        updates.push(useDataStore.getState().updateTask(id, { status: 'completed' }));
+        
+        leadsToCreate.push({
+          company_name: curr.company_name || curr.contact_name || 'Unknown Company',
+          contact_name: curr.contact_name || '',
+          phone: curr.phone || '',
+          ...(curr.email ? { email: curr.email } : {}),
+          stage: curr.outcome === 'connected' ? 'Engaged' : 'New Lead',
+          source: 'Bulk Import',
+          notes: `📞 [${new Date().toLocaleDateString()}] ${outcomeObj?.label || curr.outcome} — ${curr.duration ? curr.duration + ' min' : 'N/A'} — ${curr.notes || 'No notes'}`
+        });
+      }
+      
+      await Promise.all(updates);
+      if (leadsToCreate.length > 0) {
+        await useDataStore.getState().bulkCreateLeadsFromDialer(leadsToCreate);
+      }
+      setBulkSelected([]);
+      setActiveTab('history');
+    } catch(e) {
+      alert("Error bulk logging calls: " + e.message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -696,6 +775,104 @@ export default function CallLogs() {
     </motion.div>
   );
 
+  const renderBulk = () => (
+    <motion.div 
+      className="cl-history-view"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="cl-toolbar">
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <select 
+            className="input-base" 
+            style={{ width: '200px' }}
+            value={bulkOutcome}
+            onChange={(e) => setBulkOutcome(e.target.value)}
+          >
+            <option value="">-- Update Outcome --</option>
+            {CALL_OUTCOMES.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <button className="btn btn-ghost" onClick={handleBulkUpdateOutcome} disabled={saving || !bulkOutcome || bulkSelected.length === 0}>
+            Apply to {bulkSelected.length}
+          </button>
+        </div>
+        <div>
+          <button className="btn btn-primary" onClick={handleBulkLog} disabled={saving || bulkSelected.length === 0}>
+            <Save size={14} style={{ marginRight: 6 }} /> Log Selected to History
+          </button>
+        </div>
+      </div>
+      <div className="cl-table-container">
+        <div className="cl-table-scroll">
+          <table className="cl-table">
+            <thead>
+              <tr>
+                <th style={{ width: '40px' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={callingList.length > 0 && bulkSelected.length === callingList.length}
+                    onChange={selectAllBulk}
+                  />
+                </th>
+                <th>Contact / Company</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th>Outcome</th>
+              </tr>
+            </thead>
+            <tbody>
+              {callingList.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="cl-empty-cell">
+                    <div className="cl-empty-state">
+                      <p>No contacts in the calling list. Import a CSV to get started.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                callingList.map(c => {
+                  const style = CALL_OUTCOMES.find(o => o.value === c.outcome);
+                  return (
+                    <tr key={c.id}>
+                      <td>
+                        <input 
+                          type="checkbox" 
+                          checked={bulkSelected.includes(c.id)}
+                          onChange={() => toggleBulkSelect(c.id)}
+                        />
+                      </td>
+                      <td>
+                        <div className="cl-cell-contact">
+                          <span className="cl-name">{c.contact_name || '—'}</span>
+                          <span className="cl-company">{c.company_name}</span>
+                        </div>
+                      </td>
+                      <td>{c.phone || '—'}</td>
+                      <td>
+                        <span className={`cl-status-dot ${c.status}`} style={{ display: 'inline-block', marginRight: '6px', width: '8px', height: '8px', borderRadius: '50%', background: c.status === 'completed' ? 'var(--success)' : c.status === 'skipped' ? 'var(--text-tertiary)' : 'var(--primary)' }} />
+                        <span style={{ textTransform: 'capitalize' }}>{c.status}</span>
+                      </td>
+                      <td>
+                        {style ? (
+                          <div className="cl-outcome-pill" style={{ '--pill-color': style.color, display: 'inline-block' }}>
+                            {style.emoji} {style.label}
+                          </div>
+                        ) : '—'}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </motion.div>
+  );
+
   return (
     <div className="cl-container page-enter">
       <header className="cl-header">
@@ -741,12 +918,15 @@ export default function CallLogs() {
                 <span className="cl-tab-badge">{callingList.filter(c => c.status === 'pending').length}</span>
               )}
             </button>
+            <button className={`cl-seg-tab ${activeTab === 'bulk' ? 'active' : ''}`} onClick={() => setActiveTab('bulk')}>
+              Bulk Process
+            </button>
           </div>
         </div>
       </header>
 
       <main className="cl-main-content">
-        {activeTab === 'history' ? renderHistory() : renderDialer()}
+        {activeTab === 'history' ? renderHistory() : activeTab === 'bulk' ? renderBulk() : renderDialer()}
       </main>
 
       {showImporter && (

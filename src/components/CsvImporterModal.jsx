@@ -53,6 +53,9 @@ const CALLING_LIST_FIELDS = [
   { key: 'contact_name', label: 'Contact Name' },
   { key: 'phone', label: 'Phone Number' },
   { key: 'email', label: 'Email Address' },
+  { key: 'notes', label: 'Notes' },
+  { key: 'outcome', label: 'Outcome' },
+  { key: 'duration', label: 'Duration (min)' },
 ];
 
 export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', onImportSuccess }) {
