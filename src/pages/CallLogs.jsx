@@ -74,8 +74,11 @@ export default function CallLogs() {
           company: callData.company || callData.company_name || '',
           phone: callData.phone || '',
           outcome: callData.outcome || 'unknown',
+          outcomeLabel: callData.outcomeLabel || '',
           duration: callData.duration || '',
           notes: callData.notes || '',
+          pushedToLead: callData.pushedToLead || false,
+          isDialerCall: t.type === 'calling_list_item'
         };
       })
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -259,7 +262,7 @@ export default function CallLogs() {
     }
   };
 
-  const saveActiveCallWithForm = async (status, form) => {
+  const saveActiveCallWithForm = async (status, form, isPushed = false) => {
     const curr = callingList[activeCallIdx];
     if (!curr) return;
     const task = tasks.find(t => t.id === curr.id);
@@ -272,7 +275,8 @@ export default function CallLogs() {
       outcome: form.outcome,
       outcomeLabel: outcomeObj?.label || '',
       duration: form.duration,
-      notes: form.notes
+      notes: form.notes,
+      ...(isPushed ? { pushedToLead: true } : {})
     });
     await useDataStore.getState().updateTask(curr.id, { status, notes: newNotes });
   };
@@ -286,7 +290,7 @@ export default function CallLogs() {
       const savedForm = { ...activeCallForm };
       
       // 1. Save locally to tasks
-      await saveActiveCallWithForm('completed', savedForm);
+      await saveActiveCallWithForm('completed', savedForm, true);
 
       // 2. Immediately push to CRM
       const outcomeObj = CALL_OUTCOMES.find(o => o.value === savedForm.outcome);
@@ -387,6 +391,35 @@ export default function CallLogs() {
     }
   };
 
+  const handleManualPush = async (call) => {
+    if (!call || call.pushedToLead) return;
+    setSaving(true);
+    try {
+      const leadsToCreate = [{
+        company_name: call.company || 'Unknown Company',
+        contact_name: call.contactName || '',
+        phone: call.phone || '',
+        stage: call.outcome === 'connected' ? 'Engaged' : 'New Lead',
+        source: 'Manual Push from History',
+        notes: `📞 [${new Date().toLocaleDateString()}] ${call.outcomeLabel || call.outcome} — ${call.duration ? call.duration + ' min' : 'N/A'} — ${call.notes || 'No notes'}`
+      }];
+      await useDataStore.getState().bulkCreateLeadsFromDialer(leadsToCreate);
+
+      const task = tasks.find(t => t.id === call.id);
+      if (task) {
+        let data = {};
+        try { data = JSON.parse(task.notes || '{}'); } catch(e) {}
+        const newNotes = JSON.stringify({ ...data, pushedToLead: true });
+        await useDataStore.getState().updateTask(task.id, { notes: newNotes });
+      }
+      setSelectedCall({ ...call, pushedToLead: true });
+    } catch(e) {
+      alert("Error pushing to lead: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const toggleBulkSelect = (id) => {
     setBulkSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
@@ -436,7 +469,11 @@ export default function CallLogs() {
         const task = tasks.find(t => t.id === id);
         const outcomeObj = CALL_OUTCOMES.find(o => o.value === curr.outcome);
         
-        updates.push(useDataStore.getState().updateTask(id, { status: 'completed' }));
+        let data = {};
+        try { data = JSON.parse(task.notes || '{}'); } catch(e) {}
+        const newNotes = JSON.stringify({ ...data, pushedToLead: true });
+
+        updates.push(useDataStore.getState().updateTask(id, { status: 'completed', notes: newNotes }));
         
         leadsToCreate.push({
           company_name: curr.company_name || curr.contact_name || 'Unknown Company',
@@ -637,6 +674,19 @@ export default function CallLogs() {
                   <div className="cl-notes-box">
                     {selectedCall.notes || 'No notes provided for this call.'}
                   </div>
+                  
+                  {selectedCall.isDialerCall && !selectedCall.pushedToLead && (
+                    <div style={{ marginTop: '16px' }}>
+                      <button className="btn btn-primary" onClick={() => handleManualPush(selectedCall)} disabled={saving} style={{ width: '100%' }}>
+                        Push to CRM Lead
+                      </button>
+                    </div>
+                  )}
+                  {selectedCall.pushedToLead && (
+                    <div style={{ marginTop: '16px', color: 'var(--success)', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Save size={14} /> Pushed to Lead successfully
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>

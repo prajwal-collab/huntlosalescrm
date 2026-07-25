@@ -154,6 +154,9 @@ const useDataStore = create((set, get) => ({
 
       // Set up Realtime subscriptions for team transparency
       get().setupRealtime();
+
+      // Auto-push missed call logs from previous days
+      get().autoPushMissedCallLogs();
     } catch (error) {
       console.error('[DataStore] Fetch error:', error);
       set({ error: error.message, loading: false });
@@ -324,6 +327,63 @@ const useDataStore = create((set, get) => ({
     if (!user) return null;
     const { data } = await supabase.from('profiles').select('organization_id').eq('id', user.id).maybeSingle();
     return data?.organization_id || null;
+  },
+
+  // Auto-push missed call logs from previous days
+  autoPushMissedCallLogs: async () => {
+    try {
+      const { tasks, bulkCreateLeadsFromDialer, bulkUpdateTasks } = get();
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const missedTasks = tasks.filter(t => {
+        if (t.type !== 'calling_list_item' || t.status !== 'completed') return false;
+        
+        let data = {};
+        try { data = JSON.parse(t.notes || '{}'); } catch(e) {}
+        
+        if (data.pushedToLead) return false;
+        if (!data.outcome) return false;
+        
+        const taskDate = new Date(t.created_at || t.due);
+        return taskDate < today;
+      });
+
+      if (missedTasks.length === 0) return;
+
+      const leadsToCreate = [];
+      const tasksToUpdate = [];
+
+      for (const t of missedTasks) {
+        let data = {};
+        try { data = JSON.parse(t.notes || '{}'); } catch(e) {}
+        
+        leadsToCreate.push({
+          company_name: data.company_name || t.title || 'Unknown Company',
+          contact_name: t.title && t.title !== data.company_name ? t.title : '',
+          phone: data.phone || '',
+          ...(data.email ? { email: data.email } : {}),
+          stage: data.outcome === 'connected' ? 'Engaged' : 'New Lead',
+          source: 'Auto-Push Missed Call',
+          notes: `📞 [${new Date().toLocaleDateString()}] ${data.outcomeLabel || data.outcome} — ${data.duration ? data.duration + ' min' : 'N/A'} — ${data.notes || 'No notes'}`
+        });
+
+        tasksToUpdate.push({
+          id: t.id,
+          notes: JSON.stringify({ ...data, pushedToLead: true })
+        });
+      }
+
+      if (leadsToCreate.length > 0) {
+        await bulkCreateLeadsFromDialer(leadsToCreate);
+        await bulkUpdateTasks(tasksToUpdate);
+        console.log(`[DataStore] Auto-pushed ${leadsToCreate.length} missed call logs to leads.`);
+      }
+
+    } catch (err) {
+      console.error('[DataStore] Failed to auto-push missed calls:', err);
+    }
   },
 
 
