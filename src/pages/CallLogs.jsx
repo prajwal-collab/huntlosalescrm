@@ -40,6 +40,7 @@ export default function CallLogs() {
   // History Tab State
   const [search, setSearch] = useState('');
   const [filterOutcome, setFilterOutcome] = useState('all');
+  const [filterDate, setFilterDate] = useState('today');
   const [selectedCall, setSelectedCall] = useState(null);
 
   // Dialer & Call Logger State
@@ -91,9 +92,32 @@ export default function CallLogs() {
         (call.company || '').toLowerCase().includes(search.toLowerCase()) ||
         (call.phone || '').includes(search);
       const matchesOutcome = filterOutcome === 'all' || call.outcome === filterOutcome;
-      return matchesSearch && matchesOutcome;
+      
+      let matchesDate = true;
+      if (filterDate !== 'all' && call.createdAt) {
+        const callDate = new Date(call.createdAt);
+        const today = new Date();
+        const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        
+        if (filterDate === 'today') {
+          matchesDate = callDate >= startOfToday;
+        } else if (filterDate === 'yesterday') {
+          const startOfYesterday = new Date(startOfToday);
+          startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+          matchesDate = callDate >= startOfYesterday && callDate < startOfToday;
+        } else if (filterDate === 'this_week') {
+          const startOfWeek = new Date(startOfToday);
+          startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
+          matchesDate = callDate >= startOfWeek;
+        } else if (filterDate === 'this_month') {
+          const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+          matchesDate = callDate >= startOfMonth;
+        }
+      }
+
+      return matchesSearch && matchesOutcome && matchesDate;
     });
-  }, [callLogs, search, filterOutcome]);
+  }, [callLogs, search, filterOutcome, filterDate]);
 
   const totalCalls = callLogs.length;
   const connectedCalls = callLogs.filter(c => c.outcome === 'connected').length;
@@ -391,6 +415,46 @@ export default function CallLogs() {
     }
   };
 
+  const handlePushAllPending = async () => {
+    const pendingLogs = filteredLogs.filter(call => !call.pushedToLead);
+    if (pendingLogs.length === 0) return;
+    
+    setSaving(true);
+    try {
+      const leadsToCreate = pendingLogs.map(call => ({
+        company_name: call.company || 'Unknown Company',
+        contact_name: call.contactName || '',
+        phone: call.phone || '',
+        stage: call.outcome === 'connected' ? 'Engaged' : 'New Lead',
+        source: 'Bulk Push from History',
+        notes: `📞 [${new Date().toLocaleDateString()}] ${call.outcomeLabel || call.outcome} — ${call.duration ? call.duration + ' min' : 'N/A'} — ${call.notes || 'No notes'}`
+      }));
+
+      await useDataStore.getState().bulkCreateLeadsFromDialer(leadsToCreate);
+
+      const updates = pendingLogs.map(call => {
+        const task = tasks.find(t => t.id === call.id);
+        if (task) {
+          let data = {};
+          try { data = JSON.parse(task.notes || '{}'); } catch(e) {}
+          const newNotes = JSON.stringify({ ...data, pushedToLead: true });
+          return useDataStore.getState().updateTask(task.id, { notes: newNotes });
+        }
+        return Promise.resolve();
+      });
+
+      await Promise.all(updates);
+      
+      if (selectedCall && pendingLogs.some(p => p.id === selectedCall.id)) {
+         setSelectedCall({ ...selectedCall, pushedToLead: true });
+      }
+    } catch(e) {
+      alert("Error pushing pending leads: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleManualPush = async (call) => {
     if (!call || call.pushedToLead) return;
     setSaving(true);
@@ -519,19 +583,46 @@ export default function CallLogs() {
           />
         </div>
         
-        <div className="cl-filter-wrapper">
-          <Filter size={14} className="cl-filter-icon" />
-          <select 
-            value={filterOutcome} 
-            onChange={(e) => setFilterOutcome(e.target.value)}
-            className="cl-filter-select"
-          >
-            <option value="all">All Outcomes</option>
-            {CALL_OUTCOMES.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          <ChevronDown size={14} className="cl-dropdown-icon" />
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {filteredLogs.some(c => !c.pushedToLead) && (
+            <button 
+              className="btn btn-primary" 
+              onClick={handlePushAllPending} 
+              disabled={saving}
+              style={{ height: '36px', padding: '0 12px', fontSize: '13px', display: 'flex', alignItems: 'center' }}
+            >
+              <Save size={14} style={{ marginRight: 6 }} /> Push Pending
+            </button>
+          )}
+          <div className="cl-filter-wrapper">
+            <Calendar size={14} className="cl-filter-icon" />
+            <select 
+              value={filterDate} 
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="cl-filter-select"
+            >
+              <option value="all">All Time</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="this_week">This Week</option>
+              <option value="this_month">This Month</option>
+            </select>
+            <ChevronDown size={14} className="cl-dropdown-icon" />
+          </div>
+          <div className="cl-filter-wrapper">
+            <Filter size={14} className="cl-filter-icon" />
+            <select 
+              value={filterOutcome} 
+              onChange={(e) => setFilterOutcome(e.target.value)}
+              className="cl-filter-select"
+            >
+              <option value="all">All Outcomes</option>
+              {CALL_OUTCOMES.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="cl-dropdown-icon" />
+          </div>
         </div>
       </div>
 
@@ -546,12 +637,13 @@ export default function CallLogs() {
                 <th>Outcome</th>
                 <th>Duration</th>
                 <th>Notes</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="cl-empty-cell">
+                  <td colSpan="7" className="cl-empty-cell">
                     <div className="cl-empty-state">
                       <div className="cl-empty-icon-wrap">
                         <Phone size={32} />
@@ -604,6 +696,21 @@ export default function CallLogs() {
                         <div className="cl-cell-notes">
                           <span className="cl-truncate">{call.notes || '—'}</span>
                         </div>
+                      </td>
+                      <td>
+                        {!call.pushedToLead ? (
+                          <button 
+                            className="cl-push-btn" 
+                            onClick={(e) => { e.stopPropagation(); handleManualPush(call); }}
+                            disabled={saving}
+                          >
+                            Push to CRM
+                          </button>
+                        ) : (
+                          <span className="cl-pushed-badge">
+                            <Save size={12} /> Pushed
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -675,7 +782,8 @@ export default function CallLogs() {
                     {selectedCall.notes || 'No notes provided for this call.'}
                   </div>
                   
-                  {selectedCall.isDialerCall && !selectedCall.pushedToLead && (
+                  {/* The manual push button is now available in the table view as well */}
+                  {!selectedCall.pushedToLead && (
                     <div style={{ marginTop: '16px' }}>
                       <button className="btn btn-primary" onClick={() => handleManualPush(selectedCall)} disabled={saving} style={{ width: '100%' }}>
                         Push to CRM Lead
@@ -683,7 +791,7 @@ export default function CallLogs() {
                     </div>
                   )}
                   {selectedCall.pushedToLead && (
-                    <div style={{ marginTop: '16px', color: 'var(--success)', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ marginTop: '16px', color: 'var(--success)', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
                       <Save size={14} /> Pushed to Lead successfully
                     </div>
                   )}

@@ -552,6 +552,11 @@ const useDataStore = create((set, get) => ({
         }
       } else if (data) {
         inserted.push(data);
+        try {
+          await get()._autoLinkLeadToEntities(data, orgId);
+        } catch (linkErr) {
+          console.warn('[DataStore] Auto-link failed (non-fatal):', linkErr.message);
+        }
       }
     }
     if (inserted.length > 0) {
