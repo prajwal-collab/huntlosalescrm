@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, PhoneCall, PhoneOff, PhoneForwarded, 
   Clock, Calendar, User, Building2, FileText, 
-  Filter, ChevronDown, Phone, Play, UploadCloud, Save, X
+  Filter, ChevronDown, Phone, Play, UploadCloud, Save, X, AlertTriangle
 } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -178,6 +178,40 @@ export default function CallLogs() {
       setCallForm(f => ({ ...f, linkedLeadId: matchedLead.id }));
     }
   }, [matchedLead]);
+
+  // ── Strict duplicate detection for Call Logger ─────────────────────────
+  // Checks contactName and phone against ALL existing leads
+  const callDuplicateWarnings = useMemo(() => {
+    const warnings = [];
+    const name  = callForm.contactName.trim().toLowerCase();
+    const phone = callForm.phone.trim().replace(/\s+/g, '');
+
+    for (const lead of leads) {
+      // ── Name duplicate ────────────────────────────────────────────────
+      if (name && lead.contact_name?.trim().toLowerCase() === name) {
+        warnings.push({
+          field: 'name',
+          message: `"${callForm.contactName.trim()}" already exists in CRM`,
+          detail: `Found at ${lead.company_name || 'another company'} (${lead.email || lead.phone || 'no contact info'})`,
+        });
+      }
+      // ── Phone duplicate ───────────────────────────────────────────────
+      if (phone && lead.phone?.replace(/\s+/g, '') === phone) {
+        warnings.push({
+          field: 'phone',
+          message: `Phone "${callForm.phone.trim()}" is already registered`,
+          detail: `Used by ${lead.contact_name || 'unknown contact'} at ${lead.company_name || 'another company'}`,
+        });
+      }
+    }
+    // Deduplicate by field
+    const seen = new Set();
+    return warnings.filter(w => {
+      if (seen.has(w.field)) return false;
+      seen.add(w.field);
+      return true;
+    });
+  }, [callForm.contactName, callForm.phone, leads]);
 
   const searchResults = useMemo(() => {
     if (!callForm.contactName || callForm.contactName.length < 2) return [];
@@ -359,6 +393,13 @@ export default function CallLogs() {
 
   const handleLogColdCall = async (e) => {
     e.preventDefault();
+    // ── Block if duplicates detected ─────────────────────────────────
+    if (callDuplicateWarnings.length > 0) {
+      const fieldLabels = { name: 'Contact Name', phone: 'Phone' };
+      const fields = callDuplicateWarnings.map(w => fieldLabels[w.field]).join(', ');
+      setError(`Duplicate detected: ${fields} already exist in the CRM. Each person must have a unique name and phone number.`);
+      return;
+    }
     setCallSaving(true);
     setError(null);
     try {
@@ -1108,12 +1149,32 @@ export default function CallLogs() {
               </div>
               <div className="panel-content">
                 {error && <div className="alert-error" style={{ marginBottom: 16 }}>{error}</div>}
+
+                {/* Live duplicate warnings for call logger */}
+                {callDuplicateWarnings.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+                    {callDuplicateWarnings.map((w, i) => (
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'flex-start', gap: 8,
+                        background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
+                        borderRadius: 8, padding: '9px 12px', fontSize: 12, color: '#b45309'
+                      }}>
+                        <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1, color: '#d97706' }} />
+                        <div>
+                          <strong>{w.message}</strong>
+                          <div style={{ marginTop: 2, color: '#92400e', fontSize: 11 }}>{w.detail}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <form onSubmit={handleLogColdCall} className="form-layout">
                   <div className="cl-form-group" style={{ position: 'relative' }}>
                     <label>Contact Name *</label>
                     <input 
                       required 
-                      className="input-base" 
+                      className={`input-base${callDuplicateWarnings.some(w => w.field === 'name') ? ' input-error-amber' : ''}`}
                       value={callForm.contactName} 
                       onChange={e => {
                         setCallForm({ ...callForm, contactName: e.target.value });
@@ -1123,6 +1184,11 @@ export default function CallLogs() {
                       onBlur={() => setTimeout(() => setDropdownOpen(false), 200)}
                       placeholder="John Doe" 
                     />
+                    {callDuplicateWarnings.some(w => w.field === 'name') && (
+                      <span style={{ fontSize: 11, color: '#d97706', marginTop: 3, display: 'block' }}>
+                        ⚠ This name is already in the CRM
+                      </span>
+                    )}
                     <AnimatePresence>
                       {dropdownOpen && searchResults.length > 0 && (
                         <motion.div 
@@ -1172,7 +1238,17 @@ export default function CallLogs() {
 
                   <div className="cl-form-group">
                     <label>Phone</label>
-                    <input className="input-base" value={callForm.phone} onChange={e => setCallForm({ ...callForm, phone: e.target.value })} placeholder="+1 (555) 000-0000" />
+                    <input
+                      className={`input-base${callDuplicateWarnings.some(w => w.field === 'phone') ? ' input-error-amber' : ''}`}
+                      value={callForm.phone}
+                      onChange={e => setCallForm({ ...callForm, phone: e.target.value })}
+                      placeholder="+1 (555) 000-0000"
+                    />
+                    {callDuplicateWarnings.some(w => w.field === 'phone') && (
+                      <span style={{ fontSize: 11, color: '#d97706', marginTop: 3, display: 'block' }}>
+                        ⚠ This phone is already registered in the CRM
+                      </span>
+                    )}
                   </div>
                   <div className="cl-form-group">
                     <label>Outcome</label>
@@ -1208,7 +1284,13 @@ export default function CallLogs() {
               </div>
               <div className="panel-footer">
                 <button className="btn btn-ghost" onClick={() => setShowCallLogger(false)}>Cancel</button>
-                <button className="btn btn-primary" onClick={handleLogColdCall} disabled={callSaving}>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleLogColdCall}
+                  disabled={callSaving || callDuplicateWarnings.length > 0}
+                  style={{ opacity: callDuplicateWarnings.length > 0 ? 0.5 : 1, cursor: callDuplicateWarnings.length > 0 ? 'not-allowed' : 'pointer' }}
+                  title={callDuplicateWarnings.length > 0 ? 'Fix duplicate fields before saving' : ''}
+                >
                   {callSaving ? 'Saving...' : 'Save Call Log'}
                 </button>
               </div>

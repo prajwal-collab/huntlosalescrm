@@ -3,7 +3,7 @@
 // Intelligent data entry — auto-links Company + Contact
 // ============================================
 import { useState, useMemo } from 'react';
-import { X, Building2, User, Zap, Info, Link2 } from 'lucide-react';
+import { X, Building2, User, Zap, Info, Link2, AlertTriangle } from 'lucide-react';
 import useDataStore from '../../store/useDataStore';
 
 const COMPANY_TYPES = ['Recruitment Agency', 'Staffing Firm', 'Startup', 'Enterprise', 'Other'];
@@ -23,7 +23,7 @@ const defaultSignals = {
 };
 
 export default function NewLeadForm({ onClose }) {
-  const { createLead, companies } = useDataStore();
+  const { createLead, companies, leads } = useDataStore();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
@@ -69,6 +69,50 @@ export default function NewLeadForm({ onClose }) {
     return items;
   }, [form.company_name, form.contact_name, form.email, existingCompany]);
 
+  // ── Strict duplicate detection ─────────────────────────────────────────
+  // Same company is allowed (multiple contacts per company).
+  // Block if: same contact name, same email, OR same phone exists in ANY lead.
+  const duplicateWarnings = useMemo(() => {
+    const warnings = [];
+    const name  = form.contact_name.trim().toLowerCase();
+    const email = form.email.trim().toLowerCase();
+    const phone = form.phone.trim().replace(/\s+/g, '');
+
+    for (const lead of leads) {
+      // ── Name duplicate ────────────────────────────────────────────────
+      if (name && lead.contact_name?.trim().toLowerCase() === name) {
+        warnings.push({
+          field: 'name',
+          message: `Contact name "${form.contact_name.trim()}" already exists`,
+          detail: `Found in ${lead.company_name || 'another company'} (${lead.email || lead.phone || 'no contact info'})`,
+        });
+      }
+      // ── Email duplicate ───────────────────────────────────────────────
+      if (email && lead.email?.trim().toLowerCase() === email) {
+        warnings.push({
+          field: 'email',
+          message: `Email "${form.email.trim()}" is already registered`,
+          detail: `Used by ${lead.contact_name || 'unknown contact'} at ${lead.company_name || 'another company'}`,
+        });
+      }
+      // ── Phone duplicate ───────────────────────────────────────────────
+      if (phone && lead.phone?.replace(/\s+/g, '') === phone) {
+        warnings.push({
+          field: 'phone',
+          message: `Phone "${form.phone.trim()}" is already registered`,
+          detail: `Used by ${lead.contact_name || 'unknown contact'} at ${lead.company_name || 'another company'}`,
+        });
+      }
+    }
+    // Deduplicate by field
+    const seen = new Set();
+    return warnings.filter(w => {
+      if (seen.has(w.field)) return false;
+      seen.add(w.field);
+      return true;
+    });
+  }, [form.contact_name, form.email, form.phone, leads]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.company_name.trim()) {
@@ -77,6 +121,13 @@ export default function NewLeadForm({ onClose }) {
     }
     if (!form.email.trim() && !form.phone.trim()) {
       setError('Please provide at least an Email or a Phone number.');
+      return;
+    }
+    // ── Block submission if any duplicate detected ────────────────────
+    if (duplicateWarnings.length > 0) {
+      const fieldLabels = { name: 'Contact Name', email: 'Email', phone: 'Phone' };
+      const fields = duplicateWarnings.map(w => fieldLabels[w.field]).join(', ');
+      setError(`Duplicate detected: ${fields} already exist in the system. Each person must have a unique name, email, and phone number.`);
       return;
     }
     setSaving(true);
@@ -169,6 +220,25 @@ export default function NewLeadForm({ onClose }) {
               </div>
             )}
 
+            {/* Live duplicate warnings */}
+            {duplicateWarnings.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {duplicateWarnings.map((w, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 8,
+                    background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
+                    borderRadius: 8, padding: '9px 12px', fontSize: 12, color: '#b45309'
+                  }}>
+                    <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1, color: '#d97706' }} />
+                    <div>
+                      <strong>{w.message}</strong>
+                      <div style={{ marginTop: 2, color: '#92400e', fontSize: 11 }}>{w.detail}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Company Info */}
             <div className="form-section-title">Company</div>
 
@@ -251,9 +321,16 @@ export default function NewLeadForm({ onClose }) {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Contact Name</label>
-                <input className="form-input" placeholder="Jane Doe"
+                <input
+                  className={`form-input${duplicateWarnings.some(w => w.field === 'name') ? ' input-error' : ''}`}
+                  placeholder="Jane Doe"
                   value={form.contact_name}
                   onChange={e => set('contact_name', e.target.value)} />
+                {duplicateWarnings.some(w => w.field === 'name') && (
+                  <span style={{ fontSize: 11, color: '#d97706', marginTop: 3, display: 'block' }}>
+                    ⚠ This name is already in use
+                  </span>
+                )}
               </div>
               <div className="form-group">
                 <label className="form-label">Designation</label>
@@ -265,15 +342,30 @@ export default function NewLeadForm({ onClose }) {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Email <span style={{fontSize:10, color:'var(--text-tertiary)'}}>(Required if no phone)</span></label>
-                <input type="email" className="form-input" placeholder="jane@acme.com"
+                <input
+                  type="email"
+                  className={`form-input${duplicateWarnings.some(w => w.field === 'email') ? ' input-error' : ''}`}
+                  placeholder="jane@acme.com"
                   value={form.email}
                   onChange={e => set('email', e.target.value)} />
+                {duplicateWarnings.some(w => w.field === 'email') && (
+                  <span style={{ fontSize: 11, color: '#d97706', marginTop: 3, display: 'block' }}>
+                    ⚠ This email is already registered
+                  </span>
+                )}
               </div>
               <div className="form-group">
                 <label className="form-label">Phone / WhatsApp <span style={{fontSize:10, color:'var(--text-tertiary)'}}>(Required if no email)</span></label>
-                <input className="form-input" placeholder="+44 7700 900000"
+                <input
+                  className={`form-input${duplicateWarnings.some(w => w.field === 'phone') ? ' input-error' : ''}`}
+                  placeholder="+44 7700 900000"
                   value={form.phone}
                   onChange={e => set('phone', e.target.value)} />
+                {duplicateWarnings.some(w => w.field === 'phone') && (
+                  <span style={{ fontSize: 11, color: '#d97706', marginTop: 3, display: 'block' }}>
+                    ⚠ This phone is already registered
+                  </span>
+                )}
               </div>
             </div>
 
@@ -350,7 +442,13 @@ export default function NewLeadForm({ onClose }) {
 
           <div className="modal-footer">
             <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary btn-sm" disabled={saving} style={{ gap: 6 }}>
+            <button
+              type="submit"
+              className="btn btn-primary btn-sm"
+              disabled={saving || duplicateWarnings.length > 0}
+              style={{ gap: 6, opacity: duplicateWarnings.length > 0 ? 0.5 : 1, cursor: duplicateWarnings.length > 0 ? 'not-allowed' : 'pointer' }}
+              title={duplicateWarnings.length > 0 ? 'Fix duplicate fields before submitting' : ''}
+            >
               <Zap size={14} />{saving ? 'Creating…' : 'Create Lead'}
             </button>
           </div>
