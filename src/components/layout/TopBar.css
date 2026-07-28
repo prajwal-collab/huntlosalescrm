@@ -1,5 +1,5 @@
 /* ============================================
-   TOPBAR — Premium Header
+   TOPBAR — Premium Enterprise Header v3
    ============================================ */
 .topbar {
   height: var(--topbar-height);
@@ -7,38 +7,48 @@
   border-bottom: 1px solid var(--bg-border);
   display: flex;
   align-items: center;
-  padding: 0 var(--space-6);
-  gap: var(--space-4);
+  padding: 0 16px 0 20px;
+  gap: 12px;
   flex-shrink: 0;
-  box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+  position: relative;
+  z-index: 40;
 }
 
-.topbar-left { display: flex; align-items: center; min-width: 160px; }
-.page-title { 
-  font-size: 15px; 
-  font-weight: 700; 
-  color: var(--text-primary); 
-  letter-spacing: -0.02em; 
+/* ── Left: page breadcrumb ── */
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 140px;
 }
 
+.page-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+/* ── Center: search bar ── */
 .topbar-center { flex: 1; display: flex; justify-content: center; }
 
 .ai-search-trigger {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: var(--bg-base);
   border: 1px solid var(--bg-border);
-  border-radius: var(--radius-md);
-  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  height: 32px;
   cursor: pointer;
   width: 100%;
-  max-width: 480px;
+  max-width: 420px;
   transition: var(--transition-base);
   color: var(--text-tertiary);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
-  box-shadow: var(--shadow-inner);
 }
 .ai-search-trigger:hover, .ai-search-trigger.focused {
   border-color: var(--accent-blue);
@@ -46,6 +56,7 @@
   color: var(--text-secondary);
   box-shadow: 0 0 0 3px var(--accent-blue-glow);
 }
+.search-icon { flex-shrink: 0; opacity: 0.6; }
 .search-placeholder { flex: 1; text-align: left; }
 
 .kbd {
@@ -54,9 +65,9 @@
   gap: 2px;
   background: var(--bg-surface);
   border: 1px solid var(--bg-border);
-  border-radius: 5px;
-  padding: 2px 7px;
-  font-size: 11px;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 10px;
   color: var(--text-tertiary);
   font-family: var(--font-mono);
   white-space: nowrap;
@@ -64,11 +75,21 @@
   box-shadow: 0 1px 0 rgba(0,0,0,0.04);
 }
 
-.topbar-right { display: flex; align-items: center; gap: 8px; min-width: 160px; justify-content: flex-end; }
+/* ── Right: actions + user ── */
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 200px;
+  justify-content: flex-end;
+}
 
 .icon-btn {
-  width: 34px; height: 34px;
-  display: flex; align-items: center; justify-content: center;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: 1px solid var(--bg-border);
   border-radius: var(--radius-sm);
@@ -77,26 +98,55 @@
   transition: var(--transition-fast);
   position: relative;
 }
-.icon-btn:hover { 
-  background: var(--bg-hover); 
-  color: var(--text-primary); 
-  border-color: #cbd5e1;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+.icon-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: #c4c4cc;
 }
-.icon-btn:active { transform: translateY(0); }
+.icon-btn:active { transform: scale(0.96); }
+
+.topbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--bg-border);
+  margin: 0 4px;
+}
+
+/* ── User avatar in topbar ── */
+.topbar-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px var(--bg-border);
+}
+.topbar-user-avatar:hover {
+  box-shadow: 0 0 0 2px var(--accent-blue);
+}
 
 .notif-badge {
   position: absolute;
-  top: -5px; right: -5px;
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  top: -4px;
+  right: -4px;
+  background: var(--danger);
   color: #fff;
   font-size: 9px;
   font-weight: 700;
-  width: 18px; height: 18px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  border: 2px solid var(--bg-surface);
-  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
-  animation: pop-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  padding: 0 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--bg-surface);
+  animation: pop-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }

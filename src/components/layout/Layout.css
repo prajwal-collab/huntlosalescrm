@@ -1,5 +1,5 @@
 /* ============================================
-   LAYOUT — App Shell
+   LAYOUT — App Shell v3
    ============================================ */
 .app-shell {
   display: flex;
@@ -18,11 +18,12 @@
   background: var(--bg-base);
 }
 
+/* Default page content — for dashboard/simple pages */
 .page-content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: var(--space-6);
+  padding: var(--space-5) var(--space-6);
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
