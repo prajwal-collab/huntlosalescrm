@@ -384,23 +384,47 @@ export default function CallLogs() {
       await saveActiveCallWithForm('completed', savedForm, true);
 
       // 2. Immediately push to CRM.
-      // Use a unique company_name key per contact so that contacts without a
-      // company_name don't all collide into a single "Unknown Company" upsert.
       const outcomeObj = CALL_OUTCOMES.find(o => o.value === savedForm.outcome);
-      const uniqueCompany = curr.company_name
-        || (curr.contact_name ? `${curr.contact_name} (Individual)` : null)
-        || `Dialer-${curr.id}`;
-      const leadData = {
-        company_name: uniqueCompany,
-        contact_name: curr.contact_name || '',
-        phone: curr.phone || '',
-        ...(curr.email ? { email: curr.email } : {}),
-        stage: savedForm.outcome === 'connected' ? 'Engaged' : 'New Lead',
-        source: 'Power Dialer',
-        notes: `📞 [${new Date().toLocaleDateString()}] ${outcomeObj?.label || savedForm.outcome} — ${savedForm.duration ? savedForm.duration + ' min' : 'N/A'} — ${savedForm.notes || 'No notes'}`
-      };
-      
-      await useDataStore.getState().bulkCreateLeadsFromDialer([leadData]);
+      const callNote = `📞 [${new Date().toLocaleDateString()}] ${outcomeObj?.label || savedForm.outcome} — ${savedForm.duration ? savedForm.duration + ' min' : 'N/A'} — ${savedForm.notes || 'No notes'}`;
+
+      // Try to find an exact matching lead in the store (by phone, contact name, or company)
+      const currentLeads = useDataStore.getState().leads;
+      const existingLead = currentLeads.find(l => {
+        if (curr.phone && l.phone && l.phone.replace(/\s+/g, '') === curr.phone.replace(/\s+/g, '')) return true;
+        if (curr.email && l.email && l.email.toLowerCase() === curr.email.toLowerCase()) return true;
+        if (curr.contact_name && l.contact_name && l.contact_name.toLowerCase() === curr.contact_name.toLowerCase()) return true;
+        if (curr.company_name && l.company_name && l.company_name.toLowerCase() === curr.company_name.toLowerCase()) return true;
+        return false;
+      });
+
+      if (existingLead) {
+        // Append call note to the matched existing lead
+        const stageOrder = [
+          'New Lead','Researching','Ready for Outreach','Outreach Started',
+          'Engaged','Qualified','Demo Scheduled','Demo Complete',
+          'Trial Started','Customer','Lost'
+        ];
+        const currentStageIdx = stageOrder.indexOf(existingLead.stage || 'New Lead');
+        const newStage = savedForm.outcome === 'connected' ? 'Engaged' : 'New Lead';
+        const newStageIdx = stageOrder.indexOf(newStage);
+        const stageUpdate = newStageIdx > currentStageIdx ? newStage : null;
+        await useDataStore.getState().appendLeadNotes(existingLead.id, callNote, stageUpdate);
+      } else {
+        // No existing lead found — create a new CRM lead via the dialer function
+        const uniqueCompany = curr.company_name
+          || (curr.contact_name ? `${curr.contact_name} (Individual)` : null)
+          || `Dialer-${curr.id}`;
+        const leadData = {
+          company_name: uniqueCompany,
+          contact_name: curr.contact_name || '',
+          phone: curr.phone || '',
+          ...(curr.email ? { email: curr.email } : {}),
+          stage: savedForm.outcome === 'connected' ? 'Engaged' : 'New Lead',
+          source: 'Power Dialer',
+          notes: callNote,
+        };
+        await useDataStore.getState().bulkCreateLeadsFromDialer([leadData]);
+      }
       
       // 3. Clear the form and move to next pending contact
       setActiveCallForm({ outcome: '', duration: '', notes: '' });
@@ -412,6 +436,7 @@ export default function CallLogs() {
     }
   };
 
+
   const handleSkip = async () => {
     const savedForm = { ...activeCallForm };
     setActiveCallForm({ outcome: '', duration: '', notes: '' });
@@ -421,17 +446,26 @@ export default function CallLogs() {
 
   const handleLogColdCall = async (e) => {
     e.preventDefault();
-    // ── Block if duplicates detected ─────────────────────────────────
-    if (callDuplicateWarnings.length > 0) {
-      const fieldLabels = { name: 'Contact Name', phone: 'Phone' };
-      const fields = callDuplicateWarnings.map(w => fieldLabels[w.field]).join(', ');
-      setError(`Duplicate detected: ${fields} already exist in the CRM. Each person must have a unique name and phone number.`);
-      return;
-    }
     setCallSaving(true);
     setError(null);
     try {
       const outcomeInfo = CALL_OUTCOMES.find(o => o.value === callForm.outcome) || CALL_OUTCOMES[0];
+      const noteText = `${outcomeInfo.emoji} ${outcomeInfo.label} — ${callForm.duration ? callForm.duration + ' min' : 'N/A'} — ${callForm.notes || 'No notes'}`;
+
+      // ── Auto-detect existing lead (from explicit link OR duplicate match) ──
+      let linkedLeadId = callForm.linkedLeadId || null;
+
+      if (!linkedLeadId && callDuplicateWarnings.length > 0) {
+        // A duplicate was detected — auto-link to the matched lead instead of blocking
+        const nameLower = callForm.contactName.trim().toLowerCase();
+        const phoneClean = callForm.phone.trim().replace(/\s+/g, '');
+        const matchedLead = leads.find(l =>
+          (nameLower && l.contact_name?.trim().toLowerCase() === nameLower) ||
+          (phoneClean && l.phone?.replace(/\s+/g, '') === phoneClean)
+        );
+        if (matchedLead) linkedLeadId = matchedLead.id;
+      }
+
       const callData = {
         _type: 'cold_call_log',
         contactName: callForm.contactName,
@@ -441,7 +475,7 @@ export default function CallLogs() {
         outcomeLabel: outcomeInfo.label,
         duration: callForm.duration,
         notes: callForm.notes,
-        linkedLeadId: callForm.linkedLeadId || null,
+        linkedLeadId: linkedLeadId || null,
         timestamp: new Date().toISOString(),
         pushedToLead: true,
       };
@@ -455,14 +489,21 @@ export default function CallLogs() {
         notes: JSON.stringify(callData),
       });
 
-      if (callForm.linkedLeadId) {
+      if (linkedLeadId) {
         // ── Update existing lead with call notes ──────────────────────
-        const noteText = `${outcomeInfo.emoji} ${outcomeInfo.label} — ${callForm.duration ? callForm.duration + ' min' : 'N/A'} — ${callForm.notes || 'No notes'}`;
-        await appendLeadNotes(callForm.linkedLeadId, noteText, callForm.updateLeadStage || null);
+        const stageOrder = [
+          'New Lead','Researching','Ready for Outreach','Outreach Started',
+          'Engaged','Qualified','Demo Scheduled','Demo Complete',
+          'Trial Started','Customer','Lost'
+        ];
+        const existingLead = leads.find(l => l.id === linkedLeadId);
+        const currentStageIdx = stageOrder.indexOf(existingLead?.stage || 'New Lead');
+        const newStage = callForm.outcome === 'connected' ? 'Engaged' : existingLead?.stage;
+        const newStageIdx = stageOrder.indexOf(newStage || 'New Lead');
+        const stageUpdate = callForm.updateLeadStage || (newStageIdx > currentStageIdx ? newStage : null);
+        await appendLeadNotes(linkedLeadId, noteText, stageUpdate);
       } else {
         // ── No existing lead linked → auto-create a new CRM lead ──────
-        // This is the KEY FIX: previously brand-new contacts were never
-        // pushed to Leads CRM when logged via the manual cold call logger.
         const uniqueCompany = callForm.company
           || (callForm.contactName ? `${callForm.contactName} (Individual)` : `Contact-${Date.now()}`);
         await useDataStore.getState().bulkCreateLeadsFromDialer([{
@@ -471,9 +512,10 @@ export default function CallLogs() {
           phone: callForm.phone || '',
           stage: callForm.outcome === 'connected' ? 'Engaged' : 'New Lead',
           source: 'Cold Call Log',
-          notes: `📞 [${new Date().toLocaleDateString()}] ${outcomeInfo.label} — ${callForm.duration ? callForm.duration + ' min' : 'N/A'} — ${callForm.notes || 'No notes'}`
+          notes: `📞 [${new Date().toLocaleDateString()}] ${noteText}`
         }]);
       }
+
 
       if (callForm.createFollowUp && callForm.followUpDue) {
         await createTask({
@@ -1223,19 +1265,19 @@ export default function CallLogs() {
               <div className="panel-content">
                 {error && <div className="alert-error" style={{ marginBottom: 16 }}>{error}</div>}
 
-                {/* Live duplicate warnings for call logger */}
+                {/* Existing lead found — show as info notice (call notes will be appended) */}
                 {callDuplicateWarnings.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
                     {callDuplicateWarnings.map((w, i) => (
                       <div key={i} style={{
                         display: 'flex', alignItems: 'flex-start', gap: 8,
-                        background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
-                        borderRadius: 8, padding: '9px 12px', fontSize: 12, color: '#b45309'
+                        background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.25)',
+                        borderRadius: 8, padding: '9px 12px', fontSize: 12, color: '#15803d'
                       }}>
-                        <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1, color: '#d97706' }} />
+                        <span style={{ flexShrink: 0, marginTop: 1, fontSize: 14 }}>✅</span>
                         <div>
-                          <strong>{w.message}</strong>
-                          <div style={{ marginTop: 2, color: '#92400e', fontSize: 11 }}>{w.detail}</div>
+                          <strong>Existing lead found — call will be appended</strong>
+                          <div style={{ marginTop: 2, color: '#166534', fontSize: 11 }}>{w.detail} · Notes will be added to the existing lead record.</div>
                         </div>
                       </div>
                     ))}
@@ -1247,7 +1289,7 @@ export default function CallLogs() {
                     <label>Contact Name *</label>
                     <input 
                       required 
-                      className={`input-base${callDuplicateWarnings.some(w => w.field === 'name') ? ' input-error-amber' : ''}`}
+                      className={`input-base${callDuplicateWarnings.some(w => w.field === 'name') ? ' input-success-green' : ''}`}
                       value={callForm.contactName} 
                       onChange={e => {
                         setCallForm({ ...callForm, contactName: e.target.value });

@@ -539,56 +539,119 @@ const useDataStore = create((set, get) => ({
   },
 
   // Used by Power Dialer "Push to CRM" — contacts often have no email.
-  // Uses plain INSERT (ignoring duplicates by company_name) to avoid upsert
-  // constraint failure on null emails.
+  // For existing leads (matched by company_name), call notes are APPENDED to
+  // the existing notes rather than overwritten. For new leads, a fresh record is created.
   bulkCreateLeadsFromDialer: async (leadsList) => {
     const { user } = useAuthStore.getState();
     await get().ensureProfile();
     const orgId = await get()._getOrgId();
-    const records = leadsList.map(l => ({
-      ...l,
-      owner_id: user?.id,
-      ...(orgId ? { organization_id: orgId } : {})
-    }));
-    // Upsert one-by-one: on duplicate (organization_id, company_name), merge
-    // notes, phone, and contact_name so existing leads are enriched rather than dropped.
+
     const inserted = [];
-    const merged = [];
-    for (const record of records) {
-      const { data, error } = await supabase
-        .from('leads')
-        .upsert(record, {
-          onConflict: 'organization_id,company_name',
-          ignoreDuplicates: false,
-        })
-        .select()
-        .single();
-      if (error) {
-        console.error('[Dialer] Lead upsert error:', error.message, record.company_name);
-      } else if (data) {
-        // Determine if this was a new insert or an update to an existing lead
-        const existsBefore = get().leads.some(l => l.id === data.id);
-        if (existsBefore) {
-          merged.push(data);
-          // Update in-place in the store
+    const mergedLeads = [];
+
+    for (const lead of leadsList) {
+      const record = {
+        ...lead,
+        owner_id: user?.id,
+        ...(orgId ? { organization_id: orgId } : {})
+      };
+
+      // ── Check if a lead already exists for this company in this org ──
+      const existingLead = orgId
+        ? get().leads.find(
+            l =>
+              l.organization_id === orgId &&
+              l.company_name?.toLowerCase().trim() === lead.company_name?.toLowerCase().trim()
+          )
+        : null;
+
+      if (existingLead) {
+        // ── Existing lead: APPEND call note to existing notes ───────────
+        const timestamp = new Date().toLocaleString('en-IN', {
+          day: 'numeric', month: 'short', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+        const existingNotes = existingLead.notes || '';
+        const newCallNote = lead.notes || '';
+        const appendedNotes = existingNotes
+          ? `${existingNotes}\n\n---\n${newCallNote}`
+          : newCallNote;
+
+        // Only update stage if the new stage is "more advanced" than current
+        const stageOrder = [
+          'New Lead','Researching','Ready for Outreach','Outreach Started',
+          'Engaged','Qualified','Demo Scheduled','Demo Complete',
+          'Trial Started','Customer','Lost'
+        ];
+        const currentStageIdx = stageOrder.indexOf(existingLead.stage || 'New Lead');
+        const newStageIdx = stageOrder.indexOf(lead.stage || 'New Lead');
+        const updatedStage = newStageIdx > currentStageIdx ? lead.stage : existingLead.stage;
+
+        const updates = {
+          notes: appendedNotes,
+          stage: updatedStage,
+          // Enrich phone/contact_name if missing on existing lead
+          ...(lead.phone && !existingLead.phone ? { phone: lead.phone } : {}),
+          ...(lead.contact_name && !existingLead.contact_name ? { contact_name: lead.contact_name } : {}),
+          ...(lead.email && !existingLead.email ? { email: lead.email } : {}),
+        };
+
+        const { data, error } = await supabase
+          .from('leads')
+          .update(updates)
+          .eq('id', existingLead.id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('[Dialer] Lead update error:', error.message, lead.company_name);
+        } else if (data) {
+          mergedLeads.push(data);
           set(state => ({
             leads: state.leads.map(l => l.id === data.id ? data : l)
           }));
-        } else {
-          inserted.push(data);
-          set(state => ({ leads: [data, ...state.leads] }));
         }
-        try {
-          await get()._autoLinkLeadToEntities(data, orgId);
-        } catch (linkErr) {
-          console.warn('[DataStore] Auto-link failed (non-fatal):', linkErr.message);
+      } else {
+        // ── New lead: upsert (handles race conditions / DB-level duplicates) ──
+        const { data, error } = await supabase
+          .from('leads')
+          .upsert(record, {
+            onConflict: 'organization_id,company_name',
+            ignoreDuplicates: false,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('[Dialer] Lead upsert error:', error.message, lead.company_name);
+        } else if (data) {
+          // Double-check: was it actually new or did it merge at DB level?
+          const existsBefore = get().leads.some(l => l.id === data.id);
+          if (existsBefore) {
+            mergedLeads.push(data);
+            set(state => ({
+              leads: state.leads.map(l => l.id === data.id ? data : l)
+            }));
+          } else {
+            inserted.push(data);
+            set(state => ({ leads: [data, ...state.leads] }));
+          }
+          try {
+            await get()._autoLinkLeadToEntities(data, orgId);
+          } catch (linkErr) {
+            console.warn('[DataStore] Auto-link failed (non-fatal):', linkErr.message);
+          }
         }
       }
     }
-    if (merged.length > 0) {
-      console.log(`[Dialer] Merged ${merged.length} existing lead(s) with new call data.`);
+
+    if (mergedLeads.length > 0) {
+      console.log(`[Dialer] Appended notes to ${mergedLeads.length} existing lead(s).`);
     }
-    return [...inserted, ...merged];
+    if (inserted.length > 0) {
+      console.log(`[Dialer] Created ${inserted.length} new lead(s).`);
+    }
+    return [...inserted, ...mergedLeads];
   },
 
   // ── Companies ─────────────────────────────
