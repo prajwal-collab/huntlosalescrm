@@ -124,20 +124,20 @@ export default function CallLogs() {
   const totalDuration = callLogs.reduce((acc, curr) => acc + (parseFloat(curr.duration) || 0), 0);
 
   // Power Dialer Derived State
+  // Sort: pending first (preserving import order), then completed/skipped at the bottom.
+  // This ensures activeCallIdx always points to a contact that hasn't been dialed yet.
   const callingList = useMemo(() => {
-    return tasks
+    const cleanStr = (str) => {
+      if (!str || typeof str !== 'string') return str || '';
+      if (str.includes('#ERROR') || str.includes('#REF!') || str.includes('#VALUE!')) return '';
+      return str;
+    };
+    const mapped = tasks
       .filter(t => t.type === 'calling_list_item')
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at)) // oldest first = import order
       .map(t => {
         let data = {};
         try { data = JSON.parse(t.notes); } catch(e) {}
-        
-        const cleanStr = (str) => {
-          if (!str || typeof str !== 'string') return str || '';
-          if (str.includes('#ERROR') || str.includes('#REF!') || str.includes('#VALUE!')) return '';
-          return str;
-        };
-
         return {
           id: t.id,
           status: t.status,
@@ -151,12 +151,23 @@ export default function CallLogs() {
           notes: data.notes || '',
         };
       });
+    // Pending contacts first, then completed, then skipped
+    const statusOrder = { pending: 0, completed: 1, skipped: 2 };
+    return mapped.sort((a, b) => (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1));
   }, [tasks]);
 
+  // Separate list used by the dialer to navigate — only pending contacts.
+  // The sidebar still shows the full callingList for visibility.
+  const pendingDialerList = useMemo(
+    () => callingList.filter(c => c.status === 'pending'),
+    [callingList]
+  );
+
   useEffect(() => {
-    if (callingList[activeCallIdx]) {
-      const c = callingList[activeCallIdx];
-      setActiveCallForm({ outcome: c.outcome || '', duration: c.duration || '', notes: c.notes || '' });
+    const current = callingList[activeCallIdx];
+    // Only pre-fill the form if the contact is still pending (not already logged)
+    if (current && current.status === 'pending') {
+      setActiveCallForm({ outcome: current.outcome || '', duration: current.duration || '', notes: current.notes || '' });
       setDialerDone(false);
     }
   }, [activeCallIdx, callingList]);

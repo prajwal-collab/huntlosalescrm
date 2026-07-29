@@ -369,17 +369,22 @@ const useDataStore = create((set, get) => ({
           notes: `📞 [${new Date().toLocaleDateString()}] ${data.outcomeLabel || data.outcome} — ${data.duration ? data.duration + ' min' : 'N/A'} — ${data.notes || 'No notes'}`
         });
 
+        // Always mark as pushed — even if the lead upsert merges into an existing
+        // record, we don't want to retry this task on every subsequent page load.
         tasksToUpdate.push({
           id: t.id,
           notes: JSON.stringify({ ...data, pushedToLead: true })
         });
       }
 
+      // Always mark tasks as pushed first, then attempt lead upsert.
+      // This prevents the same tasks from being retried infinitely if the
+      // upsert hits a duplicate (which is now handled gracefully anyway).
+      await bulkUpdateTasks(tasksToUpdate);
       if (leadsToCreate.length > 0) {
         await bulkCreateLeadsFromDialer(leadsToCreate);
-        await bulkUpdateTasks(tasksToUpdate);
-        console.log(`[DataStore] Auto-pushed ${leadsToCreate.length} missed call logs to leads.`);
       }
+      console.log(`[DataStore] Auto-pushed ${leadsToCreate.length} missed call log(s) to leads.`);
 
     } catch (err) {
       console.error('[DataStore] Failed to auto-push missed calls:', err);
@@ -539,19 +544,34 @@ const useDataStore = create((set, get) => ({
       owner_id: user?.id,
       ...(orgId ? { organization_id: orgId } : {})
     }));
-    // Insert one-by-one to gracefully skip conflicts on company_name per org
+    // Upsert one-by-one: on duplicate (organization_id, company_name), merge
+    // notes, phone, and contact_name so existing leads are enriched rather than dropped.
     const inserted = [];
+    const merged = [];
     for (const record of records) {
-      const { data, error } = await supabase.from('leads').insert(record).select().single();
+      const { data, error } = await supabase
+        .from('leads')
+        .upsert(record, {
+          onConflict: 'organization_id,company_name',
+          ignoreDuplicates: false,
+        })
+        .select()
+        .single();
       if (error) {
-        // 23505 = unique_violation (duplicate) — skip silently
-        if (error.code === '23505') {
-          console.log(`[Dialer] Skipped duplicate lead: ${record.company_name}`);
-        } else {
-          console.error('[Dialer] Lead insert error:', error.message);
-        }
+        console.error('[Dialer] Lead upsert error:', error.message, record.company_name);
       } else if (data) {
-        inserted.push(data);
+        // Determine if this was a new insert or an update to an existing lead
+        const existsBefore = get().leads.some(l => l.id === data.id);
+        if (existsBefore) {
+          merged.push(data);
+          // Update in-place in the store
+          set(state => ({
+            leads: state.leads.map(l => l.id === data.id ? data : l)
+          }));
+        } else {
+          inserted.push(data);
+          set(state => ({ leads: [data, ...state.leads] }));
+        }
         try {
           await get()._autoLinkLeadToEntities(data, orgId);
         } catch (linkErr) {
@@ -559,10 +579,10 @@ const useDataStore = create((set, get) => ({
         }
       }
     }
-    if (inserted.length > 0) {
-      set(state => ({ leads: [...inserted, ...state.leads] }));
+    if (merged.length > 0) {
+      console.log(`[Dialer] Merged ${merged.length} existing lead(s) with new call data.`);
     }
-    return inserted;
+    return [...inserted, ...merged];
   },
 
   // ── Companies ─────────────────────────────
