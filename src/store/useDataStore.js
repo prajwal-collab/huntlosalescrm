@@ -329,13 +329,13 @@ const useDataStore = create((set, get) => ({
     return data?.organization_id || null;
   },
 
-  // Auto-push missed call logs from previous days
+  // Auto-push all un-pushed completed call logs to Leads CRM on app load.
+  // Previously this only ran for calls from previous days (taskDate < today).
+  // Now it covers ALL un-pushed completed calls including same-day calls so
+  // that leads are never missed if the SDR forgot to click "Log & Next".
   autoPushMissedCallLogs: async () => {
     try {
       const { tasks, bulkCreateLeadsFromDialer, bulkUpdateTasks } = get();
-      
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
 
       const missedTasks = tasks.filter(t => {
         if (t.type !== 'calling_list_item' || t.status !== 'completed') return false;
@@ -346,8 +346,7 @@ const useDataStore = create((set, get) => ({
         if (data.pushedToLead) return false;
         if (!data.outcome) return false;
         
-        const taskDate = new Date(t.created_at || t.due);
-        return taskDate < today;
+        return true; // Push all un-pushed completed calls regardless of date
       });
 
       if (missedTasks.length === 0) return;
@@ -359,8 +358,15 @@ const useDataStore = create((set, get) => ({
         let data = {};
         try { data = JSON.parse(t.notes || '{}'); } catch(e) {}
         
+        // Use a unique company_name per contact to avoid upsert collisions.
+        // Contacts without a company_name fall back to "[Name] (Individual)" or
+        // a unique ID-based key so they never merge into a shared "Unknown Company".
+        const uniqueCompany = data.company_name
+          || (t.title ? `${t.title} (Individual)` : null)
+          || `AutoPush-${t.id}`;
+
         leadsToCreate.push({
-          company_name: data.company_name || t.title || 'Unknown Company',
+          company_name: uniqueCompany,
           contact_name: t.title && t.title !== data.company_name ? t.title : '',
           phone: data.phone || '',
           ...(data.email ? { email: data.email } : {}),

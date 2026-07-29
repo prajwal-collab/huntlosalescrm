@@ -31,6 +31,7 @@ function safeFormatDate(dateStr) {
 
 export default function CallLogs() {
   const { tasks, leads, contacts, createTask, appendLeadNotes } = useDataStore();
+  const [sdrBannerDismissed, setSdrBannerDismissed] = useState(false);
   const [activeTab, setActiveTab] = useState('history'); // 'history', 'dialer', 'bulk'
   
   // Bulk Tab State
@@ -379,13 +380,18 @@ export default function CallLogs() {
       const curr = callingList[activeCallIdx];
       const savedForm = { ...activeCallForm };
       
-      // 1. Save locally to tasks
+      // 1. Save locally to tasks (marks as completed + pushedToLead)
       await saveActiveCallWithForm('completed', savedForm, true);
 
-      // 2. Immediately push to CRM (upsert — safe even if lead already exists)
+      // 2. Immediately push to CRM.
+      // Use a unique company_name key per contact so that contacts without a
+      // company_name don't all collide into a single "Unknown Company" upsert.
       const outcomeObj = CALL_OUTCOMES.find(o => o.value === savedForm.outcome);
+      const uniqueCompany = curr.company_name
+        || (curr.contact_name ? `${curr.contact_name} (Individual)` : null)
+        || `Dialer-${curr.id}`;
       const leadData = {
-        company_name: curr.company_name || curr.contact_name || 'Unknown Company',
+        company_name: uniqueCompany,
         contact_name: curr.contact_name || '',
         phone: curr.phone || '',
         ...(curr.email ? { email: curr.email } : {}),
@@ -437,6 +443,7 @@ export default function CallLogs() {
         notes: callForm.notes,
         linkedLeadId: callForm.linkedLeadId || null,
         timestamp: new Date().toISOString(),
+        pushedToLead: true,
       };
 
       await createTask({
@@ -449,8 +456,23 @@ export default function CallLogs() {
       });
 
       if (callForm.linkedLeadId) {
+        // ── Update existing lead with call notes ──────────────────────
         const noteText = `${outcomeInfo.emoji} ${outcomeInfo.label} — ${callForm.duration ? callForm.duration + ' min' : 'N/A'} — ${callForm.notes || 'No notes'}`;
         await appendLeadNotes(callForm.linkedLeadId, noteText, callForm.updateLeadStage || null);
+      } else {
+        // ── No existing lead linked → auto-create a new CRM lead ──────
+        // This is the KEY FIX: previously brand-new contacts were never
+        // pushed to Leads CRM when logged via the manual cold call logger.
+        const uniqueCompany = callForm.company
+          || (callForm.contactName ? `${callForm.contactName} (Individual)` : `Contact-${Date.now()}`);
+        await useDataStore.getState().bulkCreateLeadsFromDialer([{
+          company_name: uniqueCompany,
+          contact_name: callForm.contactName || '',
+          phone: callForm.phone || '',
+          stage: callForm.outcome === 'connected' ? 'Engaged' : 'New Lead',
+          source: 'Cold Call Log',
+          notes: `📞 [${new Date().toLocaleDateString()}] ${outcomeInfo.label} — ${callForm.duration ? callForm.duration + ' min' : 'N/A'} — ${callForm.notes || 'No notes'}`
+        }]);
       }
 
       if (callForm.createFollowUp && callForm.followUpDue) {
@@ -484,8 +506,11 @@ export default function CallLogs() {
     
     setSaving(true);
     try {
+      // Use unique company key per call to prevent upsert collisions
       const leadsToCreate = pendingLogs.map(call => ({
-        company_name: call.company || 'Unknown Company',
+        company_name: call.company
+          || (call.contactName ? `${call.contactName} (Individual)` : null)
+          || `Contact-${call.id}`,
         contact_name: call.contactName || '',
         phone: call.phone || '',
         stage: call.outcome === 'connected' ? 'Engaged' : 'New Lead',
@@ -597,13 +622,17 @@ export default function CallLogs() {
         const outcomeObj = CALL_OUTCOMES.find(o => o.value === curr.outcome);
         
         let data = {};
-        try { data = JSON.parse(task.notes || '{}'); } catch(e) {}
+        try { data = JSON.parse(task?.notes || '{}'); } catch(e) {}
         const newNotes = JSON.stringify({ ...data, pushedToLead: true });
 
         updates.push(useDataStore.getState().updateTask(id, { status: 'completed', notes: newNotes }));
-        
+
+        // Use unique company key per contact to prevent upsert collisions
+        const uniqueCompany = curr.company_name
+          || (curr.contact_name ? `${curr.contact_name} (Individual)` : null)
+          || `Dialer-${curr.id}`;
         leadsToCreate.push({
-          company_name: curr.company_name || curr.contact_name || 'Unknown Company',
+          company_name: uniqueCompany,
           contact_name: curr.contact_name || '',
           phone: curr.phone || '',
           ...(curr.email ? { email: curr.email } : {}),
@@ -1145,6 +1174,28 @@ export default function CallLogs() {
           </div>
         </div>
       </header>
+
+      {/* ── SDR Guidance Banner ─────────────────────────────────────────────── */}
+      {!sdrBannerDismissed && (
+        <div className="sdr-guidance-banner">
+          <div className="sdr-banner-inner">
+            <div className="sdr-banner-icon">📋</div>
+            <div className="sdr-banner-content">
+              <strong>SDR Quick Reference — How Leads Get Into CRM</strong>
+              <ul className="sdr-banner-steps">
+                <li><span className="sdr-step-pill dialer">Power Dialer</span> Always click <strong>"Log &amp; Next"</strong> — this instantly creates the lead. Clicking <em>Skip</em> does NOT push to CRM.</li>
+                <li><span className="sdr-step-pill bulk">Bulk Process</span> For any skipped or pending contacts — select all → set an outcome → click <strong>"Log Selected to History"</strong>.</li>
+                <li><span className="sdr-step-pill history">Call History</span> If you see a <strong>"Push to CRM"</strong> button on any row, click it or use <strong>"Push Pending"</strong> at the top to push all at once.</li>
+                <li><span className="sdr-step-pill manual">Log Cold Call</span> Fill in <strong>Contact Name + Company</strong> — the system will auto-create a new lead. If the contact already exists, select them from the autocomplete to update their existing lead.</li>
+                <li><span className="sdr-step-pill warn">CSV Import</span> Always include a <strong>Company Name</strong> column. Contacts without a company are saved as "[Name] (Individual)" to keep each lead unique.</li>
+              </ul>
+            </div>
+            <button className="sdr-banner-close" onClick={() => setSdrBannerDismissed(true)} title="Dismiss">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       <main className="cl-main-content">
         {activeTab === 'history' ? renderHistory() : activeTab === 'bulk' ? renderBulk() : renderDialer()}
