@@ -350,6 +350,27 @@ export default function CallLogs() {
     await useDataStore.getState().updateTask(curr.id, { status, notes: newNotes });
   };
 
+  // Advance to the next pending contact in the full callingList.
+  // Because callingList puts pending contacts first, we just need the next
+  // index that still has status === 'pending'.
+  const advanceToNextPending = (afterIdx) => {
+    for (let i = afterIdx + 1; i < callingList.length; i++) {
+      if (callingList[i].status === 'pending') {
+        setActiveCallIdx(i);
+        return;
+      }
+    }
+    // No more pending contacts — also check from the start in case the list
+    // was re-sorted after a save (shouldn't happen but safety net)
+    for (let i = 0; i <= afterIdx; i++) {
+      if (callingList[i]?.status === 'pending') {
+        setActiveCallIdx(i);
+        return;
+      }
+    }
+    setDialerDone(true);
+  };
+
   const handleLogAndNext = async () => {
     if (!activeCallForm.outcome) { alert('Please select a call outcome first.'); return; }
     
@@ -361,7 +382,7 @@ export default function CallLogs() {
       // 1. Save locally to tasks
       await saveActiveCallWithForm('completed', savedForm, true);
 
-      // 2. Immediately push to CRM
+      // 2. Immediately push to CRM (upsert — safe even if lead already exists)
       const outcomeObj = CALL_OUTCOMES.find(o => o.value === savedForm.outcome);
       const leadData = {
         company_name: curr.company_name || curr.contact_name || 'Unknown Company',
@@ -375,14 +396,9 @@ export default function CallLogs() {
       
       await useDataStore.getState().bulkCreateLeadsFromDialer([leadData]);
       
-      // Cleanup and move to next
+      // 3. Clear the form and move to next pending contact
       setActiveCallForm({ outcome: '', duration: '', notes: '' });
-      const nextIdx = activeCallIdx + 1;
-      if (nextIdx >= callingList.length) {
-        setDialerDone(true);
-      } else {
-        setActiveCallIdx(nextIdx);
-      }
+      advanceToNextPending(activeCallIdx);
     } catch(e) {
       alert("Error logging call: " + e.message);
     } finally {
@@ -394,12 +410,7 @@ export default function CallLogs() {
     const savedForm = { ...activeCallForm };
     setActiveCallForm({ outcome: '', duration: '', notes: '' });
     await saveActiveCallWithForm('skipped', savedForm);
-    const nextIdx = activeCallIdx + 1;
-    if (nextIdx >= callingList.length) {
-      setDialerDone(true);
-    } else {
-      setActiveCallIdx(nextIdx);
-    }
+    advanceToNextPending(activeCallIdx);
   };
 
   const handleLogColdCall = async (e) => {
@@ -924,7 +935,7 @@ export default function CallLogs() {
                   </button>
                 </div>
               </div>
-            ) : callingList[activeCallIdx] ? (
+            ) : callingList[activeCallIdx] && callingList[activeCallIdx].status === 'pending' ? (
               <div className="cl-active-call">
                 <div className="cl-active-header">
                   <div>
@@ -936,7 +947,7 @@ export default function CallLogs() {
                 
                 <div className="cl-progress">
                   <div className="cl-progress-text">
-                    <span>Contact {activeCallIdx + 1} of {callingList.length}</span>
+                    <span>{pendingDialerList.length} remaining of {callingList.length} total</span>
                     <span>{callingList.filter(c => c.status === 'completed').length} logged</span>
                   </div>
                   <div className="cl-progress-track">
