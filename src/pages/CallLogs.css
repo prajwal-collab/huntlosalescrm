@@ -721,3 +721,100 @@
   background: var(--bg-hover);
 }
 
+
+/* -- Pending Push Alert Bar -- */
+.cl-pending-alert-bar {
+  padding: 8px 20px 0 20px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+.cl-pending-alert-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: linear-gradient(135deg, rgba(239,68,68,0.1) 0%, rgba(245,158,11,0.08) 100%);
+  border: 1.5px solid rgba(239,68,68,0.35);
+  border-radius: 10px;
+  padding: 12px 16px;
+  animation: cl-alert-pulse 2.5s ease-in-out infinite;
+}
+@keyframes cl-alert-pulse {
+  0%, 100% { border-color: rgba(239,68,68,0.35); box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+  50% { border-color: rgba(239,68,68,0.65); box-shadow: 0 0 0 4px rgba(239,68,68,0.08); }
+}
+.cl-pending-alert-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+.cl-pending-alert-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(239,68,68,0.12);
+  border: 1px solid rgba(239,68,68,0.2);
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.cl-pending-alert-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #b91c1c;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+.cl-pending-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 20px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 0 6px;
+}
+.cl-pending-alert-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+.cl-pending-alert-sub strong {
+  font-weight: 700;
+  color: #991b1b;
+}
+.cl-pending-alert-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.1s;
+  box-shadow: 0 2px 8px rgba(220,38,38,0.35);
+}
+.cl-pending-alert-btn:hover:not(:disabled) {
+  background: #b91c1c;
+  transform: translateY(-1px);
+}
+.cl-pending-alert-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

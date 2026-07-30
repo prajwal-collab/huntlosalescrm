@@ -5,7 +5,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, PhoneCall, PhoneOff, PhoneForwarded, 
   Clock, Calendar, User, Building2, FileText, 
-  Filter, ChevronDown, Phone, Play, UploadCloud, Save, X, AlertTriangle
+  Filter, ChevronDown, Phone, Play, UploadCloud, Save, X, AlertTriangle,
+  Bell, ArrowRight
 } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -1239,6 +1240,39 @@ export default function CallLogs() {
         </div>
       )}
 
+      {/* ── Pending Push Alert Bar ─────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {callLogs.filter(c => !c.pushedToLead).length > 0 && (
+          <motion.div
+            className="cl-pending-alert-bar"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+          >
+            <div className="cl-pending-alert-inner">
+              <div className="cl-pending-alert-left">
+                <div className="cl-pending-alert-icon"><Bell size={16} /></div>
+                <div>
+                  <div className="cl-pending-alert-title">
+                    <span className="cl-pending-count-badge">{callLogs.filter(c => !c.pushedToLead).length}</span>
+                    &nbsp;call log{callLogs.filter(c => !c.pushedToLead).length !== 1 ? 's' : ''} not pushed to CRM yet
+                  </div>
+                  <div className="cl-pending-alert-sub">All SDRs: please push your pending call logs <strong>before</strong> adding new leads or closing today's session.</div>
+                </div>
+              </div>
+              <button
+                className="cl-pending-alert-btn"
+                onClick={() => { setActiveTab('history'); handlePushAllPending(); }}
+                disabled={saving}
+              >
+                {saving ? 'Pushing…' : <><Save size={13} style={{ marginRight: 5 }} />Push All Pending <ArrowRight size={13} style={{ marginLeft: 4 }} /></>}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <main className="cl-main-content">
         {activeTab === 'history' ? renderHistory() : activeTab === 'bulk' ? renderBulk() : renderDialer()}
       </main>
@@ -1402,11 +1436,9 @@ export default function CallLogs() {
                 <button
                   className="btn btn-primary"
                   onClick={handleLogColdCall}
-                  disabled={callSaving || callDuplicateWarnings.length > 0}
-                  style={{ opacity: callDuplicateWarnings.length > 0 ? 0.5 : 1, cursor: callDuplicateWarnings.length > 0 ? 'not-allowed' : 'pointer' }}
-                  title={callDuplicateWarnings.length > 0 ? 'Fix duplicate fields before saving' : ''}
+                  disabled={callSaving}
                 >
-                  {callSaving ? 'Saving...' : 'Save Call Log'}
+                  {callSaving ? 'Saving...' : callDuplicateWarnings.length > 0 ? 'Append to Existing Lead' : 'Save Call Log'}
                 </button>
               </div>
             </motion.div>
