@@ -175,22 +175,34 @@ export default function CallLogs() {
   }, [activeCallIdx, callingList]);
 
   // Lead matching for manual call log
-  const matchedLead = useMemo(() => {
+  // Memoize only the matched lead's ID (a stable primitive) to avoid
+  // triggering effects on every render due to new object references.
+  const matchedLeadId = useMemo(() => {
     if (!callForm.company && !callForm.contactName) return null;
     const q = (callForm.company || callForm.contactName).toLowerCase().trim();
     if (q.length < 2) return null;
-    return leads.find(l =>
+    const found = leads.find(l =>
       (l.company_name && l.company_name.toLowerCase().includes(q)) ||
       (l.contact_name && l.contact_name.toLowerCase().includes(q)) ||
       (l.email && l.email.toLowerCase().includes(q))
-    ) || null;
+    );
+    return found ? found.id : null;
   }, [callForm.company, callForm.contactName, leads]);
 
+  // Derive the full lead object from the stable ID for use in JSX
+  const matchedLead = useMemo(
+    () => (matchedLeadId ? leads.find(l => l.id === matchedLeadId) ?? null : null),
+    [matchedLeadId, leads]
+  );
+
   useEffect(() => {
-    if (matchedLead && !callForm.linkedLeadId) {
-      setCallForm(f => ({ ...f, linkedLeadId: matchedLead.id }));
+    // Only auto-fill once: when a matched lead is found and linkedLeadId is not yet set.
+    // Including callForm.linkedLeadId in deps prevents the infinite loop where
+    // setCallForm → re-render → matchedLeadId unchanged but effect still fires.
+    if (matchedLeadId && !callForm.linkedLeadId) {
+      setCallForm(f => ({ ...f, linkedLeadId: matchedLeadId }));
     }
-  }, [matchedLead]);
+  }, [matchedLeadId, callForm.linkedLeadId]);
 
   // ── Strict duplicate detection for Call Logger ─────────────────────────
   // Checks contactName and phone against ALL existing leads
