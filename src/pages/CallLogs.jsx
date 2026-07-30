@@ -544,25 +544,58 @@ export default function CallLogs() {
   };
 
   const handlePushAllPending = async () => {
-    const pendingLogs = filteredLogs.filter(call => !call.pushedToLead);
+    // Use ALL call logs (not just current date filter) so nothing gets missed
+    const pendingLogs = callLogs.filter(call => !call.pushedToLead);
     if (pendingLogs.length === 0) return;
     
     setSaving(true);
     try {
-      // Use unique company key per call to prevent upsert collisions
-      const leadsToCreate = pendingLogs.map(call => ({
-        company_name: call.company
-          || (call.contactName ? `${call.contactName} (Individual)` : null)
-          || `Contact-${call.id}`,
-        contact_name: call.contactName || '',
-        phone: call.phone || '',
-        stage: call.outcome === 'connected' ? 'Engaged' : 'New Lead',
-        source: 'Bulk Push from History',
-        notes: `📞 [${new Date().toLocaleDateString()}] ${call.outcomeLabel || call.outcome} — ${call.duration ? call.duration + ' min' : 'N/A'} — ${call.notes || 'No notes'}`
-      }));
+      const stageOrder = [
+        'New Lead','Researching','Ready for Outreach','Outreach Started',
+        'Engaged','Qualified','Demo Scheduled','Demo Complete',
+        'Trial Started','Customer','Lost'
+      ];
+      const currentLeads = useDataStore.getState().leads;
 
-      await useDataStore.getState().bulkCreateLeadsFromDialer(leadsToCreate);
+      // Process each pending log: update existing lead or create new one
+      for (const call of pendingLogs) {
+        const callNote = `📞 [${new Date().toLocaleDateString()}] ${call.outcomeLabel || call.outcome} — ${call.duration ? call.duration + ' min' : 'N/A'} — ${call.notes || 'No notes'}`;
+        const phoneClean = (call.phone || '').replace(/\s+/g, '');
+        const nameLower = (call.contactName || '').toLowerCase().trim();
+        const companyLower = (call.company || '').toLowerCase().trim();
 
+        // Smart match: phone > contact name > company name
+        const existingLead = currentLeads.find(l => {
+          if (phoneClean && l.phone && l.phone.replace(/\s+/g, '') === phoneClean) return true;
+          if (nameLower && l.contact_name && l.contact_name.toLowerCase().trim() === nameLower) return true;
+          if (companyLower && l.company_name && l.company_name.toLowerCase().trim() === companyLower) return true;
+          return false;
+        });
+
+        if (existingLead) {
+          // Append call note to existing lead
+          const newStage = call.outcome === 'connected' ? 'Engaged' : null;
+          const currentStageIdx = stageOrder.indexOf(existingLead.stage || 'New Lead');
+          const newStageIdx = stageOrder.indexOf(newStage || 'New Lead');
+          const stageUpdate = newStage && newStageIdx > currentStageIdx ? newStage : null;
+          await useDataStore.getState().appendLeadNotes(existingLead.id, callNote, stageUpdate);
+        } else {
+          // No existing lead — create a new CRM lead
+          const uniqueCompany = call.company
+            || (call.contactName ? `${call.contactName} (Individual)` : null)
+            || `Contact-${call.id}`;
+          await useDataStore.getState().bulkCreateLeadsFromDialer([{
+            company_name: uniqueCompany,
+            contact_name: call.contactName || '',
+            phone: call.phone || '',
+            stage: call.outcome === 'connected' ? 'Engaged' : 'New Lead',
+            source: 'Bulk Push from History',
+            notes: callNote,
+          }]);
+        }
+      }
+
+      // Mark all pending logs as pushed in tasks
       const updates = pendingLogs.map(call => {
         const task = tasks.find(t => t.id === call.id);
         if (task) {
@@ -573,11 +606,10 @@ export default function CallLogs() {
         }
         return Promise.resolve();
       });
-
       await Promise.all(updates);
       
       if (selectedCall && pendingLogs.some(p => p.id === selectedCall.id)) {
-         setSelectedCall({ ...selectedCall, pushedToLead: true });
+        setSelectedCall({ ...selectedCall, pushedToLead: true });
       }
     } catch(e) {
       alert("Error pushing pending leads: " + e.message);
@@ -590,15 +622,43 @@ export default function CallLogs() {
     if (!call || call.pushedToLead) return;
     setSaving(true);
     try {
-      const leadsToCreate = [{
-        company_name: call.company || 'Unknown Company',
-        contact_name: call.contactName || '',
-        phone: call.phone || '',
-        stage: call.outcome === 'connected' ? 'Engaged' : 'New Lead',
-        source: 'Manual Push from History',
-        notes: `📞 [${new Date().toLocaleDateString()}] ${call.outcomeLabel || call.outcome} — ${call.duration ? call.duration + ' min' : 'N/A'} — ${call.notes || 'No notes'}`
-      }];
-      await useDataStore.getState().bulkCreateLeadsFromDialer(leadsToCreate);
+      const callNote = `📞 [${new Date().toLocaleDateString()}] ${call.outcomeLabel || call.outcome} — ${call.duration ? call.duration + ' min' : 'N/A'} — ${call.notes || 'No notes'}`;
+      const phoneClean = (call.phone || '').replace(/\s+/g, '');
+      const nameLower = (call.contactName || '').toLowerCase().trim();
+      const companyLower = (call.company || '').toLowerCase().trim();
+      const currentLeads = useDataStore.getState().leads;
+
+      // Smart match: phone > contact name > company name
+      const existingLead = currentLeads.find(l => {
+        if (phoneClean && l.phone && l.phone.replace(/\s+/g, '') === phoneClean) return true;
+        if (nameLower && l.contact_name && l.contact_name.toLowerCase().trim() === nameLower) return true;
+        if (companyLower && l.company_name && l.company_name.toLowerCase().trim() === companyLower) return true;
+        return false;
+      });
+
+      if (existingLead) {
+        const stageOrder = [
+          'New Lead','Researching','Ready for Outreach','Outreach Started',
+          'Engaged','Qualified','Demo Scheduled','Demo Complete',
+          'Trial Started','Customer','Lost'
+        ];
+        const newStage = call.outcome === 'connected' ? 'Engaged' : null;
+        const currentStageIdx = stageOrder.indexOf(existingLead.stage || 'New Lead');
+        const newStageIdx = stageOrder.indexOf(newStage || 'New Lead');
+        const stageUpdate = newStage && newStageIdx > currentStageIdx ? newStage : null;
+        await useDataStore.getState().appendLeadNotes(existingLead.id, callNote, stageUpdate);
+      } else {
+        const uniqueCompany = call.company
+          || (call.contactName ? `${call.contactName} (Individual)` : 'Unknown Company');
+        await useDataStore.getState().bulkCreateLeadsFromDialer([{
+          company_name: uniqueCompany,
+          contact_name: call.contactName || '',
+          phone: call.phone || '',
+          stage: call.outcome === 'connected' ? 'Engaged' : 'New Lead',
+          source: 'Manual Push from History',
+          notes: callNote,
+        }]);
+      }
 
       const task = tasks.find(t => t.id === call.id);
       if (task) {
