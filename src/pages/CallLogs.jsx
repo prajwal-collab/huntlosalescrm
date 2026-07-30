@@ -567,17 +567,21 @@ export default function CallLogs() {
         'Engaged','Qualified','Demo Scheduled','Demo Complete',
         'Trial Started','Customer','Lost'
       ];
-      const currentLeads = useDataStore.getState().leads;
 
-      // Process each pending log: update existing lead or create new one
+      // Process each pending log: update existing lead or create new one.
+      // Re-read leads from the store inside the loop so that leads created for
+      // earlier iterations are visible to later ones (prevents duplicates).
       for (const call of pendingLogs) {
         const callNote = `📞 [${new Date().toLocaleDateString()}] ${call.outcomeLabel || call.outcome} — ${call.duration ? call.duration + ' min' : 'N/A'} — ${call.notes || 'No notes'}`;
         const phoneClean = (call.phone || '').replace(/\s+/g, '');
         const nameLower = (call.contactName || '').toLowerCase().trim();
         const companyLower = (call.company || '').toLowerCase().trim();
 
+        // Always read the latest leads so newly-created leads are visible
+        const latestLeads = useDataStore.getState().leads;
+
         // Smart match: phone > contact name > company name
-        const existingLead = currentLeads.find(l => {
+        const existingLead = latestLeads.find(l => {
           if (phoneClean && l.phone && l.phone.replace(/\s+/g, '') === phoneClean) return true;
           if (nameLower && l.contact_name && l.contact_name.toLowerCase().trim() === nameLower) return true;
           if (companyLower && l.company_name && l.company_name.toLowerCase().trim() === companyLower) return true;
@@ -607,9 +611,11 @@ export default function CallLogs() {
         }
       }
 
-      // Mark all pending logs as pushed in tasks
+      // Mark all pending logs as pushed in tasks.
+      // Use getState().tasks (not the closure) to get the latest task records.
+      const latestTasks = useDataStore.getState().tasks;
       const updates = pendingLogs.map(call => {
-        const task = tasks.find(t => t.id === call.id);
+        const task = latestTasks.find(t => t.id === call.id);
         if (task) {
           let data = {};
           try { data = JSON.parse(task.notes || '{}'); } catch(e) {}
@@ -672,12 +678,13 @@ export default function CallLogs() {
         }]);
       }
 
-      const task = tasks.find(t => t.id === call.id);
-      if (task) {
+      // Use getState().tasks (not the stale closure) to get the latest task record
+      const latestTask = useDataStore.getState().tasks.find(t => t.id === call.id);
+      if (latestTask) {
         let data = {};
-        try { data = JSON.parse(task.notes || '{}'); } catch(e) {}
+        try { data = JSON.parse(latestTask.notes || '{}'); } catch(e) {}
         const newNotes = JSON.stringify({ ...data, pushedToLead: true });
-        await useDataStore.getState().updateTask(task.id, { notes: newNotes });
+        await useDataStore.getState().updateTask(latestTask.id, { notes: newNotes });
       }
       setSelectedCall({ ...call, pushedToLead: true });
     } catch(e) {
