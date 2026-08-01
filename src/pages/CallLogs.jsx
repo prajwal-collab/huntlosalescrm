@@ -11,6 +11,7 @@ import {
 import { format, isValid } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import useDataStore from '../store/useDataStore';
+import useAuthStore from '../store/useAuthStore';
 import CsvImporterModal from '../components/CsvImporterModal';
 import './CallLogs.css';
 
@@ -32,6 +33,11 @@ function safeFormatDate(dateStr) {
 
 export default function CallLogs() {
   const { tasks, leads, contacts, createTask, appendLeadNotes } = useDataStore();
+  const { user, team } = useAuthStore();
+
+  // Role detection — admin sees all SDR data; SDRs see only their own
+  const userProfile = team?.find(m => m.id === user?.id);
+  const isAdmin = user?.email === 'prajwal@earlyjobs.in' || userProfile?.role === 'Admin';
   const [sdrBannerDismissed, setSdrBannerDismissed] = useState(false);
   const [activeTab, setActiveTab] = useState('history'); // 'history', 'dialer', 'bulk'
   
@@ -63,15 +69,25 @@ export default function CallLogs() {
   const [saving, setSaving] = useState(false);
 
   // Extract and parse cold call logs from tasks (for History view)
+  // SDRs see only their own logs; Admins see all team logs
   const callLogs = useMemo(() => {
     return tasks
-      .filter(t => t.type === 'cold_call' || (t.type === 'call' && t.notes && t.notes.includes('_type":"cold_call_log"')) || (t.type === 'calling_list_item' && t.status === 'completed'))
+      .filter(t => {
+        const isCallType = t.type === 'cold_call' || (t.type === 'call' && t.notes && t.notes.includes('_type":"cold_call_log"')) || (t.type === 'calling_list_item' && t.status === 'completed');
+        if (!isCallType) return false;
+        // Non-admins only see their own call logs
+        if (!isAdmin && t.owner_id && user?.id && t.owner_id !== user.id) return false;
+        return true;
+      })
       .map(t => {
         let callData = {};
         try { callData = JSON.parse(t.notes); } catch (e) {}
+        const ownerProfile = team?.find(m => m.id === t.owner_id);
         return {
           id: t.id,
           title: t.title,
+          owner_id: t.owner_id,
+          ownerName: ownerProfile?.full_name || ownerProfile?.name || ownerProfile?.email || 'Unknown',
           createdAt: t.created_at || callData.timestamp,
           contactName: callData.contactName || t.title || '',
           company: callData.company || callData.company_name || '',
@@ -85,7 +101,7 @@ export default function CallLogs() {
         };
       })
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }, [tasks]);
+  }, [tasks, isAdmin, user?.id, team]);
 
   const filteredLogs = useMemo(() => {
     return callLogs.filter(call => {
@@ -127,7 +143,7 @@ export default function CallLogs() {
 
   // Power Dialer Derived State
   // Sort: pending first (preserving import order), then completed/skipped at the bottom.
-  // This ensures activeCallIdx always points to a contact that hasn't been dialed yet.
+  // SDRs only see their own dialing list; admins see all imported lists.
   const callingList = useMemo(() => {
     const cleanStr = (str) => {
       if (!str || typeof str !== 'string') return str || '';
@@ -135,7 +151,12 @@ export default function CallLogs() {
       return str;
     };
     const mapped = tasks
-      .filter(t => t.type === 'calling_list_item')
+      .filter(t => {
+        if (t.type !== 'calling_list_item') return false;
+        // Non-admins only see their own list items
+        if (!isAdmin && t.owner_id && user?.id && t.owner_id !== user.id) return false;
+        return true;
+      })
       .sort((a, b) => new Date(a.created_at) - new Date(b.created_at)) // oldest first = import order
       .map(t => {
         let data = {};
@@ -143,6 +164,7 @@ export default function CallLogs() {
         return {
           id: t.id,
           status: t.status,
+          owner_id: t.owner_id,
           contact_name: cleanStr(t.title),
           company_name: cleanStr(data.company_name),
           phone: cleanStr(data.phone),
@@ -156,7 +178,7 @@ export default function CallLogs() {
     // Pending contacts first, then completed, then skipped
     const statusOrder = { pending: 0, completed: 1, skipped: 2 };
     return mapped.sort((a, b) => (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1));
-  }, [tasks]);
+  }, [tasks, isAdmin, user?.id]);
 
   // Separate list used by the dialer to navigate — only pending contacts.
   // The sidebar still shows the full callingList for visibility.
@@ -438,8 +460,11 @@ export default function CallLogs() {
         };
         await useDataStore.getState().bulkCreateLeadsFromDialer([leadData]);
       }
+
+      // 3. Force-refresh leads table so the Leads page reflects new entries immediately
+      useDataStore.getState()._refreshTable('leads');
       
-      // 3. Clear the form and move to next pending contact
+      // 4. Clear the form and move to next pending contact
       setActiveCallForm({ outcome: '', duration: '', notes: '' });
       advanceToNextPending(activeCallIdx);
     } catch(e) {
@@ -768,6 +793,8 @@ export default function CallLogs() {
       if (leadsToCreate.length > 0) {
         await useDataStore.getState().bulkCreateLeadsFromDialer(leadsToCreate);
       }
+      // Force-refresh leads so the Leads page reflects bulk-pushed entries immediately
+      useDataStore.getState()._refreshTable('leads');
       setBulkSelected([]);
       setActiveTab('history');
     } catch(e) {
@@ -846,6 +873,7 @@ export default function CallLogs() {
             <thead>
               <tr>
                 <th>Date & Time</th>
+                {isAdmin && <th>SDR</th>}
                 <th>Contact</th>
                 <th>Company</th>
                 <th>Outcome</th>
@@ -885,6 +913,13 @@ export default function CallLogs() {
                           <span className="cl-date">{safeFormatDate(call.createdAt)}</span>
                         </div>
                       </td>
+                      {isAdmin && (
+                        <td>
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>
+                            {call.ownerName || '—'}
+                          </div>
+                        </td>
+                      )}
                       <td>
                         <div className="cl-cell-contact">
                           <span className="cl-name">{call.contactName || '—'}</span>
@@ -1297,6 +1332,19 @@ export default function CallLogs() {
         </div>
       </header>
 
+      {/* ── Role scope badge ─────────────────────────────────────────────────── */}
+      {!isAdmin && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '6px 16px', background: 'rgba(59,130,246,0.08)',
+          borderBottom: '1px solid rgba(59,130,246,0.12)',
+          fontSize: 12, color: 'var(--accent-blue)', fontWeight: 500
+        }}>
+          <span>🔒</span>
+          <span>Viewing your own calls only. Admins have full team visibility.</span>
+        </div>
+      )}
+
       {/* ── SDR Guidance Banner ─────────────────────────────────────────────── */}
       {!sdrBannerDismissed && (
         <div className="sdr-guidance-banner">
@@ -1335,9 +1383,9 @@ export default function CallLogs() {
                 <div>
                   <div className="cl-pending-alert-title">
                     <span className="cl-pending-count-badge">{callLogs.filter(c => !c.pushedToLead).length}</span>
-                    &nbsp;call log{callLogs.filter(c => !c.pushedToLead).length !== 1 ? 's' : ''} not pushed to CRM yet
+                    &nbsp;call log{callLogs.filter(c => !c.pushedToLead).length !== 1 ? 's' : ''} not yet pushed to CRM
                   </div>
-                  <div className="cl-pending-alert-sub">All SDRs: please push your pending call logs <strong>before</strong> adding new leads or closing today's session.</div>
+                  <div className="cl-pending-alert-sub">{isAdmin ? 'Team-wide: some call logs are not yet pushed to Leads.' : 'Please push your pending call logs before closing today's session.'}</div>
                 </div>
               </div>
               <button

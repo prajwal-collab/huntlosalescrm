@@ -98,6 +98,24 @@ const useDataStore = create((set, get) => ({
     }
   },
 
+  // Lightweight single-table refresh — call after any write that should
+  // immediately be reflected in the UI (e.g., after bulk dialer lead push).
+  _refreshTable: async (tableName) => {
+    try {
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.warn(`[DataStore] _refreshTable('${tableName}') error:`, error.message);
+        return;
+      }
+      set({ [tableName]: data });
+    } catch (err) {
+      console.warn(`[DataStore] _refreshTable('${tableName}') threw:`, err.message);
+    }
+  },
+
   fetchData: async () => {
     set({ loading: true, error: null });
     try {
@@ -388,7 +406,12 @@ const useDataStore = create((set, get) => ({
       // upsert hits a duplicate (which is now handled gracefully anyway).
       await bulkUpdateTasks(tasksToUpdate);
       if (leadsToCreate.length > 0) {
-        await bulkCreateLeadsFromDialer(leadsToCreate);
+        try {
+          await bulkCreateLeadsFromDialer(leadsToCreate);
+        } catch (upsertErr) {
+          console.error('[DataStore] Auto-push lead upsert failed:', upsertErr.message);
+          // Don't re-throw — tasks are already marked pushed; leads can be created manually.
+        }
       }
       console.log(`[DataStore] Auto-pushed ${leadsToCreate.length} missed call log(s) to leads.`);
 
@@ -651,6 +674,22 @@ const useDataStore = create((set, get) => ({
     if (inserted.length > 0) {
       console.log(`[Dialer] Created ${inserted.length} new lead(s).`);
     }
+
+    // Force-refresh the leads table so the Leads page reflects new/updated entries
+    // immediately without waiting for Realtime events (which can be delayed).
+    try {
+      const { data: freshLeads, error: refreshErr } = await supabase
+        .from('leads')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!refreshErr && freshLeads) {
+        set({ leads: freshLeads });
+        console.log(`[Dialer] Leads refreshed — ${freshLeads.length} total in store.`);
+      }
+    } catch (refreshErr) {
+      console.warn('[Dialer] Post-insert leads refresh failed (non-fatal):', refreshErr);
+    }
+
     return [...inserted, ...mergedLeads];
   },
 

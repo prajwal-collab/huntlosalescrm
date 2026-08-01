@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BarChart3, Building2, Users, CheckSquare,
   Calendar, Zap, FileText, Settings, Bell, ChevronLeft,
   ChevronRight, LogOut, Sun, Moon, TrendingUp,
-  ChevronDown, Target, BookOpen, Calculator, Video, Link, Phone
+  ChevronDown, Target, BookOpen, Calculator, Video, Link, Phone, BarChart2
 } from 'lucide-react';
 import useUIStore from '../../store/useUIStore';
 import useAuthStore from '../../store/useAuthStore';
@@ -82,12 +82,16 @@ function NavGroup({ group, sidebarCollapsed }) {
 
 export default function Sidebar() {
   const { sidebarCollapsed, toggleSidebar, theme, toggleTheme } = useUIStore();
-  const { user, signOut } = useAuthStore();
+  const { user, signOut, team } = useAuthStore();
   const navigate = useNavigate();
 
   const name = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
   const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
   const avatarColor = user?.user_metadata?.avatar_color || '#3b82f6';
+
+  // Admin detection — consistent with CallLogs + AdminDashboard
+  const userProfile = team?.find(m => m.id === user?.id);
+  const isAdmin = user?.email === 'prajwal@earlyjobs.in' || userProfile?.role === 'Admin';
 
   const handleSignOut = async () => {
     await signOut();
@@ -112,6 +116,27 @@ export default function Sidebar() {
         {NAV_GROUPS.map((group) => (
           <NavGroup key={group.title} group={group} sidebarCollapsed={sidebarCollapsed} />
         ))}
+        {/* Admin-only section */}
+        {isAdmin && (
+          <div className="sidebar-group">
+            {!sidebarCollapsed && (
+              <div className="group-header">
+                <span className="group-title">Admin</span>
+              </div>
+            )}
+            <div className={sidebarCollapsed ? '' : 'group-items'}>
+              <NavLink
+                to="/admin-dashboard"
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                title="Admin Analytics"
+              >
+                <BarChart2 size={16} />
+                {!sidebarCollapsed && <span>Admin Analytics</span>}
+                {!sidebarCollapsed && <span style={{ fontSize: 8, color: '#8b5cf6', marginLeft: 'auto' }}>●</span>}
+              </NavLink>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Bottom */}

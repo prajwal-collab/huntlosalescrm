@@ -33,6 +33,7 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Team from './pages/Team';
 import CallLogs from './pages/CallLogs';
+import AdminDashboard from './pages/AdminDashboard';
 
 import Calculator from './pages/Calculator';
 import ProposalViewer from './pages/ProposalViewer';
@@ -103,6 +104,7 @@ export default function App() {
             <Route element={<Layout><Settings /></Layout>} path="/settings" />
             <Route element={<Layout><Team /></Layout>} path="/team" />
             <Route element={<Layout><CallLogs /></Layout>} path="/call-logs" />
+            <Route element={<Layout><AdminDashboard /></Layout>} path="/admin-dashboard" />
             <Route element={<Layout><Webinars /></Layout>} path="/webinars" />
             <Route element={<Layout><WebinarDetail /></Layout>} path="/webinars/:id" />
             <Route element={<Layout><UTMGenerator /></Layout>} path="/utm" />
