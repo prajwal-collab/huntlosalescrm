@@ -1,18 +1,17 @@
 // ============================================
 // HUNTLO SALES OS — HOME OS PAGE
 // ============================================
-import { useState, useMemo } from 'react';
-import { Sparkles, AlertCircle, Calendar, FileText, Clock, TrendingUp, ArrowRight, Zap, Activity, Users, BarChart3, CheckCircle2, Presentation, Send, Trophy } from 'lucide-react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { Sparkles, AlertCircle, Calendar, FileText, Clock, TrendingUp, ArrowRight, Zap, Activity, Users, BarChart3, CheckCircle2, Presentation, Send, Trophy, Phone, Target, Flame, Coffee, Star, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format, isToday } from 'date-fns';
 import usePipelineStore from '../store/usePipelineStore';
 import useDataStore from '../store/useDataStore';
 import useAuthStore from '../store/useAuthStore';
 import { queryGemini } from '../lib/gemini';
 import { useDialog } from '../context/DialogContext';
-import { computeSignalScore } from '../utils/leadScoring';
+import { computeSignalScore, getPriority, computeCompleteness, isLeadStale } from '../utils/leadScoring';
 import './HomeOS.css';
-import { useEffect } from 'react';
 
 // ── INR Formatter ─────────────────────────────────────────
 function fmtINR(val) {
@@ -48,9 +47,73 @@ export default function HomeOS() {
   const [now] = useState(() => Date.now());
 
   useEffect(() => {
-    // Automatically migrate local proposals to Supabase if any exist
     migrateLocalProposals().catch(console.error);
   }, [migrateLocalProposals]);
+
+  // ── Streak Tracker ─────────────────────────────────────────────────────
+  const streak = useMemo(() => {
+    const key = 'huntlo_call_streak';
+    const raw = localStorage.getItem(key);
+    if (!raw) return 0;
+    try {
+      const { count, lastDate } = JSON.parse(raw);
+      const lastD = new Date(lastDate);
+      const today = new Date();
+      const diffDays = Math.floor((today - lastD) / 86400000);
+      if (diffDays === 0) return count;      // same day
+      if (diffDays === 1) return count;      // yesterday — still active
+      return 0;                              // streak broken
+    } catch { return 0; }
+  }, []);
+
+  // ── Daily call goal ────────────────────────────────────────────────────
+  const [callGoal, setCallGoal] = useState(() => {
+    return parseInt(localStorage.getItem('huntlo_daily_call_goal') || '30', 10);
+  });
+  const [editingGoal, setEditingGoal] = useState(false);
+
+  const callsLoggedToday = useMemo(() => {
+    const today = new Date().toDateString();
+    return tasks.filter(t =>
+      (t.type === 'cold_call' || t.type === 'calling_list_item') &&
+      t.status === 'completed' &&
+      new Date(t.created_at || t.updated_at).toDateString() === today
+    ).length;
+  }, [tasks]);
+
+  const pendingCallLogs = useMemo(() => {
+    return tasks.filter(t => {
+      if (t.type !== 'cold_call' && t.type !== 'calling_list_item') return false;
+      try {
+        const data = JSON.parse(t.notes || '{}');
+        return !data.pushedToLead;
+      } catch { return false; }
+    }).length;
+  }, [tasks]);
+
+  // ── Top 5 leads to call today (hottest by score, not yet contacted today) ──
+  const { user } = useAuthStore();
+  const topLeadsToCall = useMemo(() => {
+    const today = new Date().toDateString();
+    return leads
+      .filter(l => {
+        if (l.stage === 'Lost' || l.stage === 'Customer') return false;
+        // Not already contacted today
+        const lastMod = l.updated_at || l.created_at;
+        const wasUpdatedToday = lastMod && new Date(lastMod).toDateString() === today;
+        return !wasUpdatedToday;
+      })
+      .map(l => ({ ...l, _score: computeSignalScore(l) }))
+      .sort((a, b) => b._score - a._score)
+      .slice(0, 5);
+  }, [leads]);
+
+  // ── Stale leads ──────────────────────────────────────────────────────────
+  const staleLeads = useMemo(() => leads.filter(l => isLeadStale(l, 14) && l.stage !== 'Lost' && l.stage !== 'Customer').length, [leads]);
+
+  // ── Incomplete leads ────────────────────────────────────────────────────
+  const incompleteLeads = useMemo(() => leads.filter(l => computeCompleteness(l) < 50).length, [leads]);
+
   
   const pendingTasks = tasks.filter(t => t.status !== 'completed');
   const overdueTasks = tasks.filter(t => t.status !== 'completed' && new Date(t.due).getTime() < now);
@@ -224,6 +287,128 @@ export default function HomeOS() {
 
   return (
     <div className="home-os">
+
+      {/* ── Morning Briefing ──────────────────────────────────── */}
+      <section className="home-briefing">
+        <div className="home-briefing-left">
+          <div className="home-briefing-greeting">
+            <span className="home-briefing-emoji">☀️</span>
+            <div>
+              <div className="home-briefing-title">Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {user?.user_metadata?.full_name?.split(' ')[0] || 'there'}!</div>
+              <div className="home-briefing-date">{format(new Date(), 'EEEE, MMMM d')}</div>
+            </div>
+          </div>
+
+          {/* Call Goal Progress */}
+          <div className="home-call-goal">
+            <div className="home-goal-top">
+              <span className="home-goal-label">📞 Call Goal</span>
+              {editingGoal ? (
+                <input
+                  className="home-goal-input"
+                  type="number"
+                  defaultValue={callGoal}
+                  autoFocus
+                  onBlur={e => {
+                    const v = parseInt(e.target.value, 10);
+                    if (v > 0) { setCallGoal(v); localStorage.setItem('huntlo_daily_call_goal', v); }
+                    setEditingGoal(false);
+                  }}
+                  onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
+                  style={{ width: 48, fontSize: 12, padding: '2px 6px', borderRadius: 6, border: '1px solid var(--border-subtle)' }}
+                />
+              ) : (
+                <span className="home-goal-target" onClick={() => setEditingGoal(true)} title="Click to change goal">{callGoal} calls</span>
+              )}
+            </div>
+            <div className="home-goal-bar">
+              <div className="home-goal-fill" style={{ width: `${Math.min((callsLoggedToday / callGoal) * 100, 100)}%` }} />
+            </div>
+            <div className="home-goal-bottom">
+              <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{callsLoggedToday}</span>
+              <span style={{ color: 'var(--text-tertiary)' }}> of {callGoal} calls logged today</span>
+              {pendingCallLogs > 0 && (
+                <span className="home-pending-badge" onClick={() => navigate('/call-logs')}>⚠ {pendingCallLogs} unpushed</span>
+              )}
+            </div>
+          </div>
+
+          {/* Streak */}
+          {streak > 0 && (
+            <div className="home-streak">
+              <span className="home-streak-fire">🔥</span>
+              <span><strong>{streak}-day streak!</strong> Keep logging calls daily.</span>
+            </div>
+          )}
+        </div>
+
+        {/* Top 5 Leads to Call */}
+        <div className="home-briefing-right">
+          <div className="home-top-calls-header">
+            <Flame size={14} style={{ color: '#dc2626' }} />
+            <span>Top Leads to Call Today</span>
+            <button className="home-see-all" onClick={() => navigate('/leads')}>See all →</button>
+          </div>
+          <div className="home-top-calls-list">
+            {topLeadsToCall.length === 0 ? (
+              <div className="home-top-calls-empty">🎉 All leads contacted today! Great work.</div>
+            ) : (
+              topLeadsToCall.map((lead, i) => {
+                const scoreColor = lead._score >= 70 ? '#dc2626' : lead._score >= 35 ? '#d97706' : '#94a3b8';
+                return (
+                  <div key={lead.id} className="home-call-row" onClick={() => navigate('/leads')}>
+                    <span className="home-call-rank">#{i + 1}</span>
+                    <div className="home-call-avatar" style={{ background: scoreColor + '20', color: scoreColor }}>
+                      {(lead.company_name || '?').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="home-call-info">
+                      <span className="home-call-company">{lead.company_name || 'Unknown'}</span>
+                      <span className="home-call-contact">{lead.contact_name || lead.stage}</span>
+                    </div>
+                    <div className="home-call-score" style={{ background: scoreColor + '15', color: scoreColor }}>
+                      {lead._score}
+                    </div>
+                    {lead.phone && (
+                      <a href={`tel:${lead.phone}`} className="home-call-phone-btn" onClick={e => e.stopPropagation()} title={lead.phone}>
+                        <Phone size={12} />
+                      </a>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Quick Stats strip */}
+      <div className="home-quick-strip">
+        <div className="home-qs-item" onClick={() => navigate('/tasks')}>
+          <span className="home-qs-val">{tasksDueToday.length}</span>
+          <span className="home-qs-label">Tasks Due Today</span>
+        </div>
+        <div className="home-qs-item" onClick={() => navigate('/meetings')}>
+          <span className="home-qs-val">{todayMeetings.length}</span>
+          <span className="home-qs-label">Meetings Today</span>
+        </div>
+        <div className="home-qs-item" onClick={() => navigate('/leads')}>
+          <span className="home-qs-val" style={{ color: '#dc2626' }}>{overdueTasks.length}</span>
+          <span className="home-qs-label">Overdue Tasks</span>
+        </div>
+        <div className="home-qs-item" onClick={() => navigate('/leads')}>
+          <span className="home-qs-val" style={{ color: '#d97706' }}>{staleLeads}</span>
+          <span className="home-qs-label">Stale Leads</span>
+        </div>
+        <div className="home-qs-item" onClick={() => navigate('/leads')}>
+          <span className="home-qs-val" style={{ color: '#6366f1' }}>{incompleteLeads}</span>
+          <span className="home-qs-label">Incomplete Leads</span>
+        </div>
+        <div className="home-qs-item" onClick={() => navigate('/leads')}>
+          <span className="home-qs-val" style={{ color: '#dc2626' }}>{hotLeads.length}</span>
+          <span className="home-qs-label">🔥 Hot Leads</span>
+        </div>
+      </div>
+
       {/* AI Command Input */}
       <section className="home-ai-section">
         <div className="home-ai-header">

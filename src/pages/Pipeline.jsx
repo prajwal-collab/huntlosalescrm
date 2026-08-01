@@ -74,8 +74,14 @@ function DealCard({ deal, onClick }) {
         </div>
       )}
 
-      <div className="deal-card-footer">
+      <div className="deal-card-footer" style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
         <span className="deal-time">{deal.lastActivity ? formatDistanceToNow(new Date(deal.lastActivity), { addSuffix: true }) : 'New'}</span>
+        {deal.lastActivity && (Date.now() - new Date(deal.lastActivity)) > 14 * 86400000 && deal.stage !== 'Closed Won' && deal.stage !== 'Closed Lost' && (
+          <span style={{ fontSize: 10, color: 'var(--danger)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 2 }} title="Stale deal (>14 days no activity)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Stale
+          </span>
+        )}
       </div>
     </div>
   );
@@ -150,16 +156,28 @@ function KanbanColumn({ stage, deals, onDealClick, onDrop, user, team }) {
 
 export default function Pipeline() {
   const { drawerOpen, selectedDealId, selectDeal, closeDrawer, moveDeal, setSearch, search, filter, setFilter, getFilteredDeals } = usePipelineStore();
-  const { companies, deals, createDeal } = useDataStore();
+  const { companies, deals, createDeal, updateDeal } = useDataStore();
   const { user, team } = useAuthStore();
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({ title: '', company_id: '', arr: '', urgency: 'medium' });
 
   const filtered = getFilteredDeals();
 
-  const handleDrop = (e, stage) => {
+  const handleDrop = async (e, stage) => {
     const dealId = e.dataTransfer.getData('dealId');
-    if (dealId) moveDeal(dealId, stage);
+    if (dealId) {
+      if (stage === 'Closed Lost') {
+        const reason = window.prompt("Why was this deal lost? (e.g. Pricing, Competitor, No Need)");
+        if (reason) {
+          await updateDeal(dealId, { 
+            stage: 'Closed Lost',
+            lost_reason: reason
+          });
+        }
+      } else {
+        moveDeal(dealId, stage);
+      }
+    }
   };
 
   const handleAdd = async (e) => {

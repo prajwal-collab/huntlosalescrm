@@ -10,6 +10,7 @@ import useDataStore from '../../store/useDataStore';
 import useAuthStore from '../../store/useAuthStore';
 import { useKeyboard } from '../../hooks/useKeyboard';
 import NewDealDrawer from '../pipeline/NewDealDrawer';
+import { useNavigate } from 'react-router-dom';
 import NotificationManager from './NotificationManager';
 import WorkflowGuideModal from './WorkflowGuideModal';
 import './Layout.css';
@@ -18,6 +19,7 @@ export default function Layout({ children }) {
   const { commandCenterOpen, toggleCommandCenter, closeCommandCenter, openNewLead } = useUIStore();
   const { fetchData } = useDataStore();
   const { fetchTeam } = useAuthStore();
+  const navigate = useNavigate();
   const [newDealOpen, setNewDealOpen] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
 
@@ -50,6 +52,12 @@ export default function Layout({ children }) {
     'cmd+k': () => toggleCommandCenter(),
     'escape': () => closeCommandCenter(),
     'c': () => openNewLead(),
+    'n': () => openNewLead(),
+    'shift+l': () => navigate('/leads'),
+    'shift+p': () => navigate('/pipeline'),
+    'shift+t': () => navigate('/tasks'),
+    'shift+m': () => navigate('/meetings'),
+    'shift+d': () => navigate('/admin-dashboard'),
     '/': (e) => {
       // Focus the first search input on the page if available
       const searchInput = document.querySelector('input[placeholder*="Search"]');

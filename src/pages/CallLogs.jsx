@@ -461,6 +461,35 @@ export default function CallLogs() {
         await useDataStore.getState().bulkCreateLeadsFromDialer([leadData]);
       }
 
+      // ── Auto Follow-up Task ──────────────────────────────────────────
+      if (savedForm.outcome === 'connected') {
+        const due = new Date();
+        due.setDate(due.getDate() + 2);
+        await useDataStore.getState().createTask({
+          title: `Follow-up: ${curr.contact_name || curr.company_name || 'Dialer Contact'}`,
+          type: 'follow-up',
+          priority: 'medium',
+          due: due.toISOString(),
+          status: 'pending'
+        });
+      }
+
+      // ── Update Streak ──────────────────────────────────────────────────
+      const todayStr = new Date().toDateString();
+      const rawStreak = localStorage.getItem('huntlo_call_streak');
+      let streakData = { count: 0, lastDate: null };
+      if (rawStreak) { try { streakData = JSON.parse(rawStreak); } catch(e) {} }
+      if (streakData.lastDate !== todayStr) {
+        const lastD = streakData.lastDate ? new Date(streakData.lastDate) : new Date(0);
+        const todayD = new Date(todayStr);
+        const diff = Math.floor((todayD - lastD) / 86400000);
+        if (diff === 1) streakData.count += 1;
+        else if (diff > 1) streakData.count = 1;
+        if (!streakData.count) streakData.count = 1;
+        streakData.lastDate = todayStr;
+        localStorage.setItem('huntlo_call_streak', JSON.stringify(streakData));
+      }
+
       // 3. Force-refresh leads table so the Leads page reflects new entries immediately
       useDataStore.getState()._refreshTable('leads');
       
@@ -563,6 +592,33 @@ export default function CallLogs() {
           due: callForm.followUpDue,
           status: 'pending',
         });
+      } else if (callForm.outcome === 'connected') {
+        // Auto follow-up if none explicitly created
+        const due = new Date();
+        due.setDate(due.getDate() + 2);
+        await createTask({
+          title: `Follow-up: ${callForm.company || callForm.contactName || 'Cold Call'}`,
+          type: 'follow-up',
+          priority: 'medium',
+          due: due.toISOString(),
+          status: 'pending',
+        });
+      }
+
+      // ── Update Streak ──────────────────────────────────────────────────
+      const todayStr = new Date().toDateString();
+      const rawStreak = localStorage.getItem('huntlo_call_streak');
+      let streakData = { count: 0, lastDate: null };
+      if (rawStreak) { try { streakData = JSON.parse(rawStreak); } catch(e) {} }
+      if (streakData.lastDate !== todayStr) {
+        const lastD = streakData.lastDate ? new Date(streakData.lastDate) : new Date(0);
+        const todayD = new Date(todayStr);
+        const diff = Math.floor((todayD - lastD) / 86400000);
+        if (diff === 1) streakData.count += 1;
+        else if (diff > 1) streakData.count = 1;
+        if (!streakData.count) streakData.count = 1;
+        streakData.lastDate = todayStr;
+        localStorage.setItem('huntlo_call_streak', JSON.stringify(streakData));
       }
 
       setShowCallLogger(false);

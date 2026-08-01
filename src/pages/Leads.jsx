@@ -20,7 +20,7 @@ import EnrollSequenceModal from '../components/sequences/EnrollSequenceModal';
 import CsvImporterModal from '../components/CsvImporterModal';
 import BulkEditModal from '../components/BulkEditModal';
 import { useDialog } from '../context/DialogContext';
-import { computeSignalScore, getPriority } from '../utils/leadScoring';
+import { computeSignalScore, getPriority, computeCompleteness, getCompletenessColor, isLeadStale } from '../utils/leadScoring';
 import './Leads.css';
 
 // ── Stage colours ───────────────────────────────────────────
@@ -56,6 +56,8 @@ const VIEWS = [
   { id: 'demo',        label: '📅 Demo Scheduled',   dot: '#7c3aed',  filter: l => l.stage === 'Demo Scheduled' },
   { id: 'trial',       label: '🧪 Trial Users',       dot: '#0891b2',  filter: l => l.stage === 'Trial Started' },
   { id: 'lost',        label: '❌ Lost',              dot: '#dc2626',  filter: l => l.stage === 'Lost' },
+  { id: 'stale',       label: '🕸️ Stale (>14d)',      dot: '#94a3b8',  filter: l => isLeadStale(l, 14) && l.stage !== 'Customer' && l.stage !== 'Lost' },
+  { id: 'incomplete',  label: '⚠️ Incomplete',         dot: '#d97706',  filter: l => computeCompleteness(l) < 50 },
   { id: 'highMRR',     label: '💰 High MRR Potential',dot: '#16a34a', filter: l => (l.estimated_mrr || 0) >= 500 },
 ];
 
@@ -69,6 +71,8 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user, 
   const initial = (lead.company_name || '?').charAt(0).toUpperCase();
   const isOverdue = lead.next_action_due && new Date(lead.next_action_due) < new Date();
   const scoreColor = score >= 70 ? '#dc2626' : score >= 35 ? '#d97706' : '#94a3b8';
+  const completeness = computeCompleteness(lead);
+  const completenessColor = getCompletenessColor(completeness);
   const isOwner = user?.id === lead.owner_id;
 
   const [isEditingNote, setIsEditingNote] = useState(false);
@@ -158,12 +162,32 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user, 
             outline: 'none'
           }}
           value={lead.stage || 'New Lead'}
-          onChange={(e) => updateLead(lead.id, { stage: e.target.value })}
+          onChange={(e) => {
+            const newStage = e.target.value;
+            let updateObj = { stage: newStage };
+            if (newStage === 'Lost') {
+              const reason = window.prompt("Why was this lead lost? (e.g. Pricing, Competitor, No Need)");
+              if (reason) {
+                updateObj.lost_reason = reason;
+                updateObj.notes = lead.notes ? `${lead.notes}\n[Lost Reason]: ${reason}` : `[Lost Reason]: ${reason}`;
+              }
+            }
+            updateLead(lead.id, updateObj);
+          }}
         >
           {Object.keys(STAGE_COLORS).map(st => (
             <option key={st} value={st} style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>{st}</option>
           ))}
         </select>
+      </div>
+
+      {/* Completeness */}
+      <div className="lc">
+        <div className="signal-score-wrap" style={{ width: 40 }} title={`Completeness: ${completeness}%`}>
+          <div className="signal-score-bar" style={{ height: 4, borderRadius: 2 }}>
+            <div className="signal-score-fill" style={{ width: `${completeness}%`, background: completenessColor }} />
+          </div>
+        </div>
       </div>
 
       {/* Signal Score */}
