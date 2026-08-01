@@ -703,17 +703,19 @@ export default function CallLogs() {
       // Mark all pending logs as pushed in tasks.
       // Use getState().tasks (not the closure) to get the latest task records.
       const latestTasks = useDataStore.getState().tasks;
-      const updates = pendingLogs.map(call => {
+      const tasksToUpdate = [];
+      pendingLogs.forEach(call => {
         const task = latestTasks.find(t => t.id === call.id);
         if (task) {
           let data = {};
           try { data = JSON.parse(task.notes || '{}'); } catch(e) {}
           const newNotes = JSON.stringify({ ...data, pushedToLead: true });
-          return useDataStore.getState().updateTask(task.id, { notes: newNotes });
+          tasksToUpdate.push({ ...task, notes: newNotes });
         }
-        return Promise.resolve();
       });
-      await Promise.all(updates);
+      if (tasksToUpdate.length > 0) {
+        await useDataStore.getState().bulkUpdateTasks(tasksToUpdate);
+      }
       
       if (selectedCall && pendingLogs.some(p => p.id === selectedCall.id)) {
         setSelectedCall({ ...selectedCall, pushedToLead: true });
@@ -1487,7 +1489,7 @@ export default function CallLogs() {
                 <h2>Log a Call</h2>
                 <button className="btn-icon" onClick={() => setShowCallLogger(false)}><X size={18} /></button>
               </div>
-              <form onSubmit={(e) => handleLogColdCall(e, true)} className="form-layout" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <form onSubmit={(e) => handleLogColdCall(e, true)} className="form-layout" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0 }}>
                 <div className="panel-content">
                   {error && <div className="alert-error" style={{ marginBottom: 16 }}>{error}</div>}
 
