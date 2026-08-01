@@ -191,8 +191,14 @@ export default function CallLogs() {
     const current = callingList[activeCallIdx];
     // Only pre-fill the form if the contact is still pending (not already logged)
     if (current && current.status === 'pending') {
-      setActiveCallForm({ outcome: current.outcome || '', duration: current.duration || '', notes: current.notes || '' });
-      setDialerDone(false);
+      setActiveCallForm(prev => {
+        const next = { outcome: current.outcome || '', duration: current.duration || '', notes: current.notes || '' };
+        if (prev.outcome === next.outcome && prev.duration === next.duration && prev.notes === next.notes) {
+          return prev;
+        }
+        return next;
+      });
+      setDialerDone(prev => prev ? false : prev);
     }
   }, [activeCallIdx, callingList]);
 
@@ -791,7 +797,7 @@ export default function CallLogs() {
     setSaving(true);
     try {
       const outcomeObj = CALL_OUTCOMES.find(o => o.value === bulkOutcome);
-      const updates = [];
+      const tasksToUpdate = [];
       for (const id of bulkSelected) {
         const task = tasks.find(t => t.id === id);
         if (!task) continue;
@@ -802,9 +808,9 @@ export default function CallLogs() {
           outcome: bulkOutcome,
           outcomeLabel: outcomeObj?.label || ''
         });
-        updates.push(useDataStore.getState().updateTask(id, { notes: newNotes }));
+        tasksToUpdate.push({ ...task, notes: newNotes });
       }
-      await Promise.all(updates);
+      await useDataStore.getState().bulkUpdateTasks(tasksToUpdate);
       setBulkSelected([]);
       setBulkOutcome('');
     } catch(e) {
@@ -819,7 +825,7 @@ export default function CallLogs() {
     setSaving(true);
     try {
       const leadsToCreate = [];
-      const updates = [];
+      const tasksToUpdate = [];
       for (const id of bulkSelected) {
         const curr = callingList.find(c => c.id === id);
         if (!curr || !curr.outcome) continue; // Only log if outcome is set
@@ -830,7 +836,7 @@ export default function CallLogs() {
         try { data = JSON.parse(task?.notes || '{}'); } catch(e) {}
         const newNotes = JSON.stringify({ ...data, pushedToLead: true });
 
-        updates.push(useDataStore.getState().updateTask(id, { status: 'completed', notes: newNotes }));
+        tasksToUpdate.push({ ...task, status: 'completed', notes: newNotes });
 
         // Use unique company key per contact to prevent upsert collisions
         const uniqueCompany = curr.company_name
@@ -847,7 +853,7 @@ export default function CallLogs() {
         });
       }
       
-      await Promise.all(updates);
+      await useDataStore.getState().bulkUpdateTasks(tasksToUpdate);
       if (leadsToCreate.length > 0) {
         await useDataStore.getState().bulkCreateLeadsFromDialer(leadsToCreate);
       }
