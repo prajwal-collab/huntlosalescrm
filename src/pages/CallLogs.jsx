@@ -511,7 +511,7 @@ export default function CallLogs() {
     advanceToNextPending(activeCallIdx);
   };
 
-  const handleLogColdCall = async (e) => {
+  const handleLogColdCall = async (e, closeAfter = true) => {
     e.preventDefault();
     setCallSaving(true);
     setError(null);
@@ -621,7 +621,9 @@ export default function CallLogs() {
         localStorage.setItem('huntlo_call_streak', JSON.stringify(streakData));
       }
 
-      setShowCallLogger(false);
+      if (closeAfter) {
+        setShowCallLogger(false);
+      }
       setCallForm({
         contactName: '', company: '', phone: '', outcome: 'connected',
         duration: '', notes: '', createFollowUp: false, followUpDue: '',
@@ -1479,29 +1481,29 @@ export default function CallLogs() {
                 <h2>Log a Call</h2>
                 <button className="btn-icon" onClick={() => setShowCallLogger(false)}><X size={18} /></button>
               </div>
-              <div className="panel-content">
-                {error && <div className="alert-error" style={{ marginBottom: 16 }}>{error}</div>}
+              <form onSubmit={(e) => handleLogColdCall(e, true)} className="form-layout" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                <div className="panel-content">
+                  {error && <div className="alert-error" style={{ marginBottom: 16 }}>{error}</div>}
 
-                {/* Existing lead found — show as info notice (call notes will be appended) */}
-                {callDuplicateWarnings.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-                    {callDuplicateWarnings.map((w, i) => (
-                      <div key={i} style={{
-                        display: 'flex', alignItems: 'flex-start', gap: 8,
-                        background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.25)',
-                        borderRadius: 8, padding: '9px 12px', fontSize: 12, color: '#15803d'
-                      }}>
-                        <span style={{ flexShrink: 0, marginTop: 1, fontSize: 14 }}>✅</span>
-                        <div>
-                          <strong>Existing lead found — call will be appended</strong>
-                          <div style={{ marginTop: 2, color: '#166534', fontSize: 11 }}>{w.detail} · Notes will be added to the existing lead record.</div>
+                  {/* Existing lead found — show as info notice (call notes will be appended) */}
+                  {callDuplicateWarnings.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+                      {callDuplicateWarnings.map((w, i) => (
+                        <div key={i} style={{
+                          display: 'flex', alignItems: 'flex-start', gap: 8,
+                          background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.25)',
+                          borderRadius: 8, padding: '9px 12px', fontSize: 12, color: '#15803d'
+                        }}>
+                          <span style={{ flexShrink: 0, marginTop: 1, fontSize: 14 }}>✅</span>
+                          <div>
+                            <strong>Existing lead found — call will be appended</strong>
+                            <div style={{ marginTop: 2, color: '#166534', fontSize: 11 }}>{w.detail} · Notes will be added to the existing lead record.</div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
 
-                <form onSubmit={handleLogColdCall} className="form-layout">
                   <div className="cl-form-group" style={{ position: 'relative' }}>
                     <label>Contact Name *</label>
                     <input 
@@ -1612,18 +1614,35 @@ export default function CallLogs() {
                       <input type="datetime-local" className="input-base" style={{ marginTop: 12 }} value={callForm.followUpDue} onChange={e => setCallForm({ ...callForm, followUpDue: e.target.value })} />
                     )}
                   </div>
-                </form>
-              </div>
-              <div className="panel-footer">
-                <button className="btn btn-ghost" onClick={() => setShowCallLogger(false)}>Cancel</button>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleLogColdCall}
-                  disabled={callSaving}
-                >
-                  {callSaving ? 'Saving...' : callDuplicateWarnings.length > 0 ? 'Append to Existing Lead' : 'Save Call Log'}
-                </button>
-              </div>
+                </div>
+                <div className="panel-footer">
+                  <button type="button" className="btn btn-ghost" onClick={() => setShowCallLogger(false)}>Cancel</button>
+                  <button
+                    type="submit"
+                    className="btn btn-secondary"
+                    onClick={(e) => {
+                      if (!callForm.contactName) return; // let HTML5 validation handle empty contactName if possible, or just return to prevent double firing
+                      // Actually since we change onClick to handle the 'Log & Next' behavior:
+                      e.preventDefault();
+                      if (!e.currentTarget.form.checkValidity()) {
+                        e.currentTarget.form.reportValidity();
+                        return;
+                      }
+                      handleLogColdCall(e, false);
+                    }}
+                    disabled={callSaving}
+                  >
+                    {callSaving ? 'Saving...' : 'Log & Next'}
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={callSaving}
+                  >
+                    {callSaving ? 'Saving...' : callDuplicateWarnings.length > 0 ? 'Append to Existing Lead' : 'Save Call Log'}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </>
         )}
