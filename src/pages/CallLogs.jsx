@@ -1376,6 +1376,62 @@ export default function CallLogs() {
               <button className="btn btn-primary" onClick={() => setShowCallLogger(true)}>
                 <Phone size={14} /> Log Cold Call
               </button>
+              <button 
+                className="btn btn-primary" 
+                style={{ background: '#ef4444', color: 'white', border: 'none' }}
+                disabled={saving}
+                onClick={async () => {
+                  if (!window.confirm("This will forcefully push ALL uncalled contacts and any un-pushed logs to the Leads CRM. Continue?")) return;
+                  setSaving(true);
+                  try {
+                    const latestTasks = useDataStore.getState().tasks;
+                    const toPush = latestTasks.filter(t => t.type === 'calling_list_item' || t.type === 'cold_call');
+                    
+                    const leadsToCreate = [];
+                    const tasksToUpdate = [];
+                    
+                    for (const t of toPush) {
+                       let data = {};
+                       try { data = JSON.parse(t.notes || '{}'); } catch(e) {}
+                       
+                       if (data.pushedToLead) continue; // already pushed
+                       
+                       const company = data.company_name || t.title || '';
+                       const uniqueCompany = company || `Contact-${t.id}`;
+                       leadsToCreate.push({
+                         company_name: uniqueCompany,
+                         contact_name: t.title || '',
+                         phone: data.phone || '',
+                         email: data.email || null,
+                         stage: data.outcome === 'connected' ? 'Engaged' : 'New Lead',
+                         source: 'Force Push',
+                         notes: data.notes ? `[Call Note]: ${data.notes}` : 'Force pushed'
+                       });
+                       
+                       tasksToUpdate.push({
+                         ...t,
+                         status: 'completed',
+                         notes: JSON.stringify({ ...data, pushedToLead: true })
+                       });
+                    }
+                    
+                    if (leadsToCreate.length > 0) {
+                      await useDataStore.getState().bulkCreateLeadsFromDialer(leadsToCreate);
+                    }
+                    if (tasksToUpdate.length > 0) {
+                      await useDataStore.getState().bulkUpdateTasks(tasksToUpdate);
+                    }
+                    useDataStore.getState()._refreshTable('leads');
+                    alert(`Emergency push successful! Pushed ${leadsToCreate.length} contacts to CRM.`);
+                  } catch(e) {
+                    alert("Error during force push: " + e.message);
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+              >
+                {saving ? 'Pushing...' : '🚨 EMERGENCY PUSH ALL TO LEADS'}
+              </button>
             </div>
           </div>
         </div>
