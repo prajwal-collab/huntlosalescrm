@@ -1385,7 +1385,7 @@ export default function CallLogs() {
                     <span className="cl-pending-count-badge">{callLogs.filter(c => !c.pushedToLead).length}</span>
                     &nbsp;call log{callLogs.filter(c => !c.pushedToLead).length !== 1 ? 's' : ''} not yet pushed to CRM
                   </div>
-                  <div className="cl-pending-alert-sub">{isAdmin ? 'Team-wide: some call logs are not yet pushed to Leads.' : 'Please push your pending call logs before closing today's session.'}</div>
+                  <div className="cl-pending-alert-sub">{isAdmin ? 'Team-wide: some call logs are not yet pushed to Leads.' : "Please push your pending call logs before closing today's session."}</div>
                 </div>
               </div>
               <button
