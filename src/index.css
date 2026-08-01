@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700;800;900&display=swap');
+
 /* ============================================
    HUNTLO SALES OS — GLOBAL DESIGN SYSTEM v3.0
    World-Class Enterprise CRM
@@ -10,7 +12,6 @@
   padding: 0;
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700;800;900&display=swap');
 
 :root {
   /* === REFINED NEUTRAL PALETTE === */
