@@ -126,22 +126,22 @@ const useDataStore = create((set, get) => ({
       await get().ensureProfile();
 
       const results = await Promise.allSettled([
-        supabase.from('companies').select('*').order('created_at', { ascending: false }),
-        supabase.from('contacts').select('*').order('created_at', { ascending: false }),
-        supabase.from('deals').select('*').order('created_at', { ascending: false }),
-        supabase.from('tasks').select('*').order('due', { ascending: true }),
-        supabase.from('meetings').select('*').order('date', { ascending: true }),
-        supabase.from('documents').select('*').order('created_at', { ascending: false }),
-        supabase.from('sequences').select('*').order('created_at', { ascending: false }),
-        supabase.from('leads').select('*').order('created_at', { ascending: false }),
-        supabase.from('profiles').select('*'),
-        supabase.from('proposals').select('*').order('created_at', { ascending: false }),
-        supabase.from('webinars').select('*').order('date_time', { ascending: true }),
-        supabase.from('webinar_funnel_stages').select('*').order('due_date', { ascending: true }),
-        supabase.from('webinar_registrants').select('*').order('created_at', { ascending: false }),
-        supabase.from('webinar_content_assets').select('*').order('created_at', { ascending: false }),
-        supabase.from('webinar_follow_ups').select('*').order('day_offset', { ascending: true }),
-        supabase.from('webinar_sops').select('*').order('created_at', { ascending: false }),
+        supabase.from('companies').select('*').limit(50000).order('created_at', { ascending: false }),
+        supabase.from('contacts').select('*').limit(50000).order('created_at', { ascending: false }),
+        supabase.from('deals').select('*').limit(50000).order('created_at', { ascending: false }),
+        supabase.from('tasks').select('*').limit(50000).order('due', { ascending: true }),
+        supabase.from('meetings').select('*').limit(50000).order('date', { ascending: true }),
+        supabase.from('documents').select('*').limit(50000).order('created_at', { ascending: false }),
+        supabase.from('sequences').select('*').limit(50000).order('created_at', { ascending: false }),
+        supabase.from('leads').select('*').limit(50000).order('created_at', { ascending: false }),
+        supabase.from('profiles').select('*').limit(50000),
+        supabase.from('proposals').select('*').limit(50000).order('created_at', { ascending: false }),
+        supabase.from('webinars').select('*').limit(50000).order('date_time', { ascending: true }),
+        supabase.from('webinar_funnel_stages').select('*').limit(50000).order('due_date', { ascending: true }),
+        supabase.from('webinar_registrants').select('*').limit(50000).order('created_at', { ascending: false }),
+        supabase.from('webinar_content_assets').select('*').limit(50000).order('created_at', { ascending: false }),
+        supabase.from('webinar_follow_ups').select('*').limit(50000).order('day_offset', { ascending: true }),
+        supabase.from('webinar_sops').select('*').limit(50000).order('created_at', { ascending: false }),
       ]);
 
       const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes, leadsRes, teamRes, proposalsRes, webinarsRes, funnelStagesRes, registrantsRes, assetsRes, followUpsRes, sopsRes] = results;
@@ -331,6 +331,7 @@ const useDataStore = create((set, get) => ({
       const { data, error } = await supabase
         .from(table)
         .select('*')
+        .limit(50000)
         .order(orderCol, { ascending });
       if (!error && data) {
         set({ [table]: data });
