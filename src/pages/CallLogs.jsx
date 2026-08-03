@@ -437,6 +437,17 @@ export default function CallLogs() {
       });
       
       await useDataStore.getState().bulkCreateLeadsFromDialer(leadsToCreate);
+      
+      const allTasks = useDataStore.getState().tasks;
+      const tasksToUpdate = pending.map(curr => {
+        const originalTask = allTasks.find(t => t.id === curr.id);
+        return {
+          ...originalTask,
+          status: 'completed'
+        };
+      });
+      await useDataStore.getState().bulkUpdateTasks(tasksToUpdate);
+      
       alert(`Successfully pushed ${leadsToCreate.length} pending contacts to CRM Leads!`);
     } catch (e) {
       console.error(e);

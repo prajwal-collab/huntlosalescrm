@@ -269,7 +269,7 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user, 
       </div>
 
       {/* Convert to Deal Quick Action */}
-      <div className="lc" style={{ width: 90, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+      <div className="lead-row-actions" onClick={e => e.stopPropagation()}>
         <button
           title="Convert this lead to a Deal"
           style={{
