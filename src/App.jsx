@@ -34,6 +34,7 @@ import Settings from './pages/Settings';
 import Team from './pages/Team';
 import CallLogs from './pages/CallLogs';
 import AdminDashboard from './pages/AdminDashboard';
+import FieldOps from './pages/FieldOps';
 
 import Calculator from './pages/Calculator';
 import ProposalViewer from './pages/ProposalViewer';
@@ -98,6 +99,7 @@ export default function App() {
             <Route element={<Layout><Tasks /></Layout>} path="/tasks" />
             <Route element={<Layout><Meetings /></Layout>} path="/meetings" />
             <Route element={<Layout><Sequences /></Layout>} path="/sequences" />
+            <Route element={<Layout><FieldOps /></Layout>} path="/field-ops" />
             <Route element={<Layout><Documents /></Layout>} path="/documents" />
             <Route element={<Layout><Reports /></Layout>} path="/reports" />
             <Route element={<Layout><Calculator /></Layout>} path="/calculator" />

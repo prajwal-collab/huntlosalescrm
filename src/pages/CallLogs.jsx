@@ -387,6 +387,7 @@ export default function CallLogs() {
       outcomeLabel: outcomeObj?.label || '',
       duration: form.duration,
       notes: form.notes,
+      timestamp: new Date().toISOString(),
       ...(isPushed ? { pushedToLead: true } : {})
     });
     await useDataStore.getState().updateTask(curr.id, { status, notes: newNotes });

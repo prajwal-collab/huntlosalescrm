@@ -923,6 +923,59 @@ const useDataStore = create((set, get) => ({
     set(state => ({ tasks: state.tasks.filter(t => t.id !== id) }));
   },
 
+  logFieldCheckIn: async (leadId, location, photoUrl) => {
+    const { user } = useAuthStore.getState();
+    const orgId = await get()._getOrgId();
+    
+    const notesData = {
+      _type: 'field_visit',
+      check_in_lat: location.lat,
+      check_in_lng: location.lng,
+      check_in_time: new Date().toISOString(),
+      photo_url: photoUrl,
+      lead_id: leadId
+    };
+
+    const newTask = {
+      title: 'Field Visit',
+      type: 'field_visit',
+      status: 'in_progress',
+      due: new Date().toISOString(),
+      owner_id: user?.id,
+      notes: JSON.stringify(notesData),
+      ...(orgId ? { organization_id: orgId } : {})
+    };
+
+    const { data, error } = await supabase.from('tasks').insert(newTask).select().single();
+    if (error) {
+      console.error('Field Check-in failed:', error.message);
+      throw error;
+    }
+    set(state => ({ tasks: [data, ...state.tasks] }));
+    return data;
+  },
+
+  logFieldCheckOut: async (taskId, meetingNotes) => {
+    const storeState = get();
+    const task = storeState.tasks.find(t => t.id === taskId);
+    if (!task) throw new Error('Task not found');
+    
+    let parsedNotes = {};
+    try { parsedNotes = JSON.parse(task.notes || '{}'); } catch(e) {}
+    
+    parsedNotes.check_out_time = new Date().toISOString();
+    if (meetingNotes) parsedNotes.meeting_notes = meetingNotes;
+    
+    const { data, error } = await supabase.from('tasks').update({
+      status: 'completed',
+      notes: JSON.stringify(parsedNotes)
+    }).eq('id', taskId).select().single();
+    
+    if (error) throw error;
+    set(state => ({ tasks: state.tasks.map(t => t.id === taskId ? data : t) }));
+    return data;
+  },
+
   bulkCreateTasks: async (tasksList) => {
     const { user } = useAuthStore.getState();
     await get().ensureProfile();

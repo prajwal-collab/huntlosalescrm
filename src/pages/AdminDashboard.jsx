@@ -79,7 +79,7 @@ export default function AdminDashboard() {
       .map(t => {
         let data = {};
         try { data = JSON.parse(t.notes || '{}'); } catch (_) {}
-        const createdAt = safeDate(t.created_at || data.timestamp);
+        const createdAt = safeDate(data.timestamp || t.created_at);
         return {
           id: t.id,
           owner_id: t.owner_id,
