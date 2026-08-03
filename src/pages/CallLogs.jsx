@@ -413,8 +413,46 @@ export default function CallLogs() {
     setDialerDone(true);
   };
 
+  const handlePushAllPendingToLeads = async () => {
+    const pending = callingList.filter(c => c.status === 'pending');
+    if (!pending.length) { alert('No pending contacts to push.'); return; }
+    
+    if (!window.confirm(`Are you sure you want to push ${pending.length} pending contacts to your Leads pipeline?`)) return;
+    
+    setSaving(true);
+    try {
+      const leadsToCreate = pending.map(curr => {
+        const uniqueCompany = curr.company_name
+          || (curr.contact_name ? `${curr.contact_name} (Individual)` : null)
+          || `Dialer-${curr.id}`;
+        return {
+          company_name: uniqueCompany,
+          contact_name: curr.contact_name || '',
+          phone: curr.phone || '',
+          email: curr.email || null,
+          stage: 'New Lead',
+          source: 'Power Dialer',
+          notes: 'Pushed from Power Dialer calling list.',
+        };
+      });
+      
+      await useDataStore.getState().bulkCreateLeadsFromDialer(leadsToCreate);
+      alert(`Successfully pushed ${leadsToCreate.length} pending contacts to CRM Leads!`);
+    } catch (e) {
+      console.error(e);
+      alert('Error pushing leads.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleLogAndNext = async () => {
     if (!activeCallForm.outcome) { alert('Please select a call outcome first.'); return; }
+    
+    if (activeCallForm.outcome === 'connected' && (!activeCallForm.duration || !activeCallForm.notes)) {
+      alert('Please enter a duration and notes when the call is connected.');
+      return;
+    }
     
     setSaving(true);
     try {
@@ -1140,9 +1178,19 @@ export default function CallLogs() {
       ) : (
         <div className="cl-dialer-layout">
           <div className="cl-dialer-sidebar">
-            <div className="cl-sidebar-header">
-              <span>Up Next</span>
-              <span className="cl-badge">{callingList.length}</span>
+            <div className="cl-sidebar-header" style={{ flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                <span>Up Next</span>
+                <span className="cl-badge">{callingList.length}</span>
+              </div>
+              <button 
+                className="btn btn-ghost" 
+                style={{ width: '100%', fontSize: '11px', padding: '4px' }}
+                onClick={handlePushAllPendingToLeads}
+                disabled={saving}
+              >
+                Push Pending to Leads
+              </button>
             </div>
             <div className="cl-sidebar-list">
               {callingList.map((c, idx) => (
