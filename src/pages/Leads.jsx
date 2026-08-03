@@ -298,7 +298,7 @@ function DraggableLeadCard({ lead, onClick, team, user }) {
   // Determine if current user can edit/drag this lead
   const isOwner = user?.id === lead.owner_id;
   const isAdmin = user?.email === 'prajwal@earlyjobs.in'; // from useAuthStore mock logic
-  const canEdit = isOwner || isAdmin || !lead.owner_id;
+  const canEdit = true; // allow everyone to edit in the workspace
 
   return (
     <div
