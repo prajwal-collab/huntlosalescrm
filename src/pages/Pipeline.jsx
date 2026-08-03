@@ -99,7 +99,7 @@ function DraggableDealCard({ deal, onClick, user, team }) {
 
   const isOwner = user?.id === deal.owner_id;
   const isAdmin = user?.email === 'prajwal@earlyjobs.in';
-  const canEdit = true; // allow everyone to edit deals in the workspace
+  const canEdit = isOwner || isAdmin || !deal.owner_id;
 
   return (
     <div

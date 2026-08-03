@@ -228,13 +228,14 @@ const useAuthStore = create(
         }
 
         try {
-          const [profilesRes, invitesRes] = await Promise.all([
-            supabase.from('profiles').select('*'),
-            supabase.from('invitations').select('*')
-          ]);
+          const profilesRes = await supabase.from('profiles').select('*');
+          const invitesRes = await supabase.from('invitations').select('*').catch(() => ({ data: [], error: null })); // best effort
 
           if (profilesRes.error) throw profilesRes.error;
-          if (invitesRes.error) throw invitesRes.error;
+          // Ignore invitesRes error if table is missing, just log it
+          if (invitesRes?.error) {
+             console.warn('[AuthStore] Invitations fetch warning:', invitesRes.error.message);
+          }
 
           let team = [
             ...(profilesRes.data || []).map(m => ({ 
@@ -245,7 +246,7 @@ const useAuthStore = create(
                 initials: (m.full_name || m.email || '?').substring(0, 2).toUpperCase(),
                 color: '#3b82f6' 
             })),
-            ...(invitesRes.data || []).map(i => ({ 
+            ...(invitesRes?.data || []).map(i => ({ 
                 ...i, 
                 type: 'invite', 
                 name: i.email.split('@')[0], 

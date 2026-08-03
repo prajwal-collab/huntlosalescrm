@@ -75,7 +75,8 @@ export default function CallLogs() {
       .filter(t => {
         const isCallType = t.type === 'cold_call' || (t.type === 'call' && t.notes && t.notes.includes('_type":"cold_call_log"')) || (t.type === 'calling_list_item' && t.status === 'completed');
         if (!isCallType) return false;
-        // Non-admins only see their own call logs - REMOVED
+        // Non-admins only see their own call logs
+        if (!isAdmin && t.owner_id && user?.id && t.owner_id !== user.id) return false;
         return true;
       })
       .map(t => {
@@ -152,7 +153,8 @@ export default function CallLogs() {
     const mapped = tasks
       .filter(t => {
         if (t.type !== 'calling_list_item') return false;
-        // Non-admins only see their own list items - REMOVED
+        // Non-admins only see their own list items
+        if (!isAdmin && t.owner_id && user?.id && t.owner_id !== user.id) return false;
         return true;
       })
       .sort((a, b) => new Date(a.created_at) - new Date(b.created_at)) // oldest first = import order

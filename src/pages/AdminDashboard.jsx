@@ -52,8 +52,21 @@ export default function AdminDashboard() {
   const [timeframe, setTimeframe] = useState('today');
   const [activeTab, setActiveTab] = useState('overview');
 
-  // ── Role guard removed ───────────────────────────────────────────────────────────
-  // Allow all team members to view workspace analytics as requested
+  // ── Role guard ───────────────────────────────────────────────────────────
+  const userProfile = team?.find(m => m.id === user?.id);
+  const isAdmin = user?.email === 'prajwal@earlyjobs.in' || userProfile?.role === 'Admin';
+
+  if (!isAdmin) {
+    return (
+      <div className="adm-access-denied">
+        <div className="adm-denied-icon">🔒</div>
+        <div className="adm-denied-title">Admin Access Required</div>
+        <div className="adm-denied-desc">
+          This dashboard is restricted to Admin users only. Contact your workspace admin if you need access.
+        </div>
+      </div>
+    );
+  }
 
   // ── Parse all call tasks ─────────────────────────────────────────────────
   const allCallTasks = useMemo(() => {
