@@ -2,7 +2,7 @@
 // HUNTLO SALES OS — PIPELINE PAGE (INR)
 // ============================================
 import { useState } from 'react';
-import { Search, Filter, Plus, GripVertical, X, IndianRupee } from 'lucide-react';
+import { Search, Filter, Plus, GripVertical, X, IndianRupee, Trash2, Edit2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import usePipelineStore from '../store/usePipelineStore';
 import useDataStore from '../store/useDataStore';
@@ -22,7 +22,7 @@ function fmtINR(amount) {
 
 const URGENCY_COLOR = { urgent: 'var(--danger)', high: 'var(--warning)', medium: 'var(--accent-blue)', low: 'var(--text-tertiary)' };
 
-function DealCard({ deal, onClick }) {
+function DealCard({ deal, onClick, onDelete }) {
   const getInitials = (name) => name ? name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : '?';
 
   return (
@@ -53,7 +53,18 @@ function DealCard({ deal, onClick }) {
             })()}
           </div>
         </div>
-        <div className="deal-urgency-dot" style={{ background: URGENCY_COLOR[deal.urgency] }} title={`Urgency: ${deal.urgency}`} />
+        
+        <div className="deal-actions-wrapper">
+          <div className="deal-urgency-dot" style={{ background: URGENCY_COLOR[deal.urgency] }} title={`Urgency: ${deal.urgency}`} />
+          <div className="deal-actions-hover">
+            <button className="deal-action-btn edit" onClick={(e) => { e.stopPropagation(); onClick(deal.id); }} title="Edit Deal">
+              <Edit2 size={12} />
+            </button>
+            <button className="deal-action-btn delete" onClick={(e) => { e.stopPropagation(); onDelete(deal.id); }} title="Delete Deal">
+              <Trash2 size={12} />
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="deal-card-mid">
@@ -87,7 +98,7 @@ function DealCard({ deal, onClick }) {
   );
 }
 
-function DraggableDealCard({ deal, onClick, user, team }) {
+function DraggableDealCard({ deal, onClick, onDelete, user, team }) {
   const [isDragging, setIsDragging] = useState(false);
 
   // Use owner from deal (populated by store) or fallback to team search
@@ -117,14 +128,14 @@ function DraggableDealCard({ deal, onClick, user, team }) {
       className={isDragging ? 'dragging-card' : ''}
       style={{ cursor: canEdit ? 'grab' : 'pointer' }}
     >
-      <DealCard deal={dealWithOwner} onClick={onClick} />
+      <DealCard deal={dealWithOwner} onClick={onClick} onDelete={onDelete} />
     </div>
   );
 }
 
 const PIPELINE_STAGES = ['Discovery', 'Qualification', 'Trial', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'];
 
-function KanbanColumn({ stage, deals, onDealClick, onDrop, user, team }) {
+function KanbanColumn({ stage, deals, onDealClick, onDeleteClick, onDrop, user, team }) {
   const [dragOver, setDragOver] = useState(false);
   const total = deals.reduce((s, d) => s + (d.arr || 0), 0);
 
@@ -144,7 +155,7 @@ function KanbanColumn({ stage, deals, onDealClick, onDrop, user, team }) {
       </div>
       <div className="kanban-cards">
         {deals.map(deal => (
-          <DraggableDealCard key={deal.id} deal={deal} onClick={onDealClick} user={user} team={team} />
+          <DraggableDealCard key={deal.id} deal={deal} onClick={onDealClick} onDelete={onDeleteClick} user={user} team={team} />
         ))}
         {deals.length === 0 && (
           <div className="kanban-empty">Drop deals here</div>
@@ -156,12 +167,22 @@ function KanbanColumn({ stage, deals, onDealClick, onDrop, user, team }) {
 
 export default function Pipeline() {
   const { drawerOpen, selectedDealId, selectDeal, closeDrawer, moveDeal, setSearch, search, filter, setFilter, getFilteredDeals } = usePipelineStore();
-  const { companies, deals, createDeal, updateDeal } = useDataStore();
+  const { companies, deals, createDeal, updateDeal, deleteDeal } = useDataStore();
   const { user, team } = useAuthStore();
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({ title: '', company_id: '', arr: '', urgency: 'medium' });
 
   const filtered = getFilteredDeals();
+
+  const handleDeleteDeal = async (dealId) => {
+    if (window.confirm("Are you sure you want to delete this deal? This action cannot be undone.")) {
+      try {
+        await deleteDeal(dealId);
+      } catch (err) {
+        console.error("Failed to delete deal:", err);
+      }
+    }
+  };
 
   const handleDrop = async (e, stage) => {
     const dealId = e.dataTransfer.getData('dealId');
@@ -226,6 +247,7 @@ export default function Pipeline() {
             stage={stage}
             deals={filtered.filter(d => d.stage === stage)}
             onDealClick={selectDeal}
+            onDeleteClick={handleDeleteDeal}
             onDrop={handleDrop}
             user={user}
             team={team}
