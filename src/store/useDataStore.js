@@ -105,6 +105,7 @@ const useDataStore = create((set, get) => ({
       const { data, error } = await supabase
         .from(tableName)
         .select('*')
+        .limit(50000)
         .order('created_at', { ascending: false });
       if (error) {
         console.warn(`[DataStore] _refreshTable('${tableName}') error:`, error.message);

@@ -87,6 +87,21 @@ Be specific and actionable. Max 3 bullet points.`;
   return queryGemini(prompt);
 }
 
+// Generate executive summary for Admin Dashboard
+export async function generateExecutiveSummary(metricsJSON) {
+  const prompt = `You are an elite Sales Operations AI analyzing a CRM's pipeline. 
+Analyze the following sales team data and provide a concise, hard-hitting executive summary for the Founder. 
+Format it in 2-3 short paragraphs highlighting: 
+1) Overall revenue health.
+2) Any major bottlenecks or drops in win rate.
+3) Actionable advice for the sales team.
+Keep it strictly under 150 words. Do NOT use any introductory greetings. 
+
+Data:
+${metricsJSON}`;
+  return queryGemini(prompt);
+}
+
 // Generate sequence step content
 export async function generateSequenceStep(stepType, companyName, contactName, persona) {
   const prompt = `Write a ${stepType} outreach message for:
