@@ -27,6 +27,7 @@ const PAGE_TITLES = {
   '/calculator': 'Calculator',
   '/utm': 'LinkTrack',
   '/field-ops': 'FieldOps',
+  '/invoice-generator': 'Invoice Generator',
 };
 
 export default function TopBar({ onNewDeal }) {

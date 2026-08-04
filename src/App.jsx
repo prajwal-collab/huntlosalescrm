@@ -35,6 +35,7 @@ import Team from './pages/Team';
 import CallLogs from './pages/CallLogs';
 import AdminDashboard from './pages/AdminDashboard';
 import FieldOps from './pages/FieldOps';
+import InvoiceGenerator from './pages/InvoiceGenerator';
 
 import Calculator from './pages/Calculator';
 import ProposalViewer from './pages/ProposalViewer';
@@ -103,6 +104,7 @@ export default function App() {
             <Route element={<Layout><Documents /></Layout>} path="/documents" />
             <Route element={<Layout><Reports /></Layout>} path="/reports" />
             <Route element={<Layout><Calculator /></Layout>} path="/calculator" />
+            <Route element={<Layout><InvoiceGenerator /></Layout>} path="/invoice-generator" />
             <Route element={<Layout><Settings /></Layout>} path="/settings" />
             <Route element={<Layout><Team /></Layout>} path="/team" />
             <Route element={<Layout><CallLogs /></Layout>} path="/call-logs" />
