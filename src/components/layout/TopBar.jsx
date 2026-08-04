@@ -26,6 +26,7 @@ const PAGE_TITLES = {
   '/webinars': 'Webinars',
   '/calculator': 'Calculator',
   '/utm': 'LinkTrack',
+  '/field-ops': 'FieldOps',
 };
 
 export default function TopBar({ onNewDeal }) {

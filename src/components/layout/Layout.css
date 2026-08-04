@@ -29,3 +29,9 @@
   gap: var(--space-5);
   animation: fade-in 0.2s ease;
 }
+
+@media (max-width: 768px) {
+  .page-content {
+    padding-bottom: calc(70px + env(safe-area-inset-bottom));
+  }
+}

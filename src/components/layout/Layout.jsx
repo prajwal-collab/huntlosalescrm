@@ -13,6 +13,7 @@ import NewDealDrawer from '../pipeline/NewDealDrawer';
 import { useNavigate } from 'react-router-dom';
 import NotificationManager from './NotificationManager';
 import WorkflowGuideModal from './WorkflowGuideModal';
+import MobileBottomNav from './MobileBottomNav';
 import './Layout.css';
 
 export default function Layout({ children }) {
@@ -90,6 +91,7 @@ export default function Layout({ children }) {
           onSkip={handleCloseGuide} 
         />
       )}
+      <MobileBottomNav />
     </div>
   );
 }
