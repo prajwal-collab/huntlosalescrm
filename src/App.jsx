@@ -93,6 +93,7 @@ export default function App() {
           {/* Protected Routes */}
           <Route element={<AuthGuard />}>
             <Route element={<Layout><HomeOS /></Layout>} path="/" />
+            <Route element={<Layout><AdminDashboard /></Layout>} path="/admin-dashboard" />
             <Route element={<Layout><Leads /></Layout>} path="/leads" />
             <Route element={<Layout><Pipeline /></Layout>} path="/pipeline" />
             <Route element={<Layout><Companies /></Layout>} path="/companies" />
@@ -108,7 +109,6 @@ export default function App() {
             <Route element={<Layout><Settings /></Layout>} path="/settings" />
             <Route element={<Layout><Team /></Layout>} path="/team" />
             <Route element={<Layout><CallLogs /></Layout>} path="/call-logs" />
-            <Route element={<Layout><AdminDashboard /></Layout>} path="/admin-dashboard" />
             <Route element={<Layout><Webinars /></Layout>} path="/webinars" />
             <Route element={<Layout><WebinarDetail /></Layout>} path="/webinars/:id" />
             <Route element={<Layout><UTMGenerator /></Layout>} path="/utm" />
