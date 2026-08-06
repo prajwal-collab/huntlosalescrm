@@ -243,4 +243,143 @@ export async function sendSequenceEmail({ toEmail, subject, body, fromName = 'Hu
   }
 }
 
+}
+
+// Send assignment notification email
+export async function sendAssignmentEmail({ toEmail, toName, assignerName, itemType, itemTitle, itemId }) {
+  const session = useAuthStore.getState().session;
+  let token = session?.provider_token;
+  
+  if (!token) {
+    try {
+      const { supabase } = await import('./supabase');
+      const { user } = useAuthStore.getState();
+      if (user) {
+        const { data: creds } = await supabase
+          .from('user_google_credentials')
+          .select('access_token')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (creds) token = creds.access_token;
+      }
+    } catch (err) {
+      console.warn('Failed to query user_google_credentials for assignment:', err);
+    }
+  }
+
+  const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+  const itemUrl = itemType === 'Deal' ? `${appUrl}/pipeline` : itemType === 'Lead' ? `${appUrl}/leads` : `${appUrl}/tasks`;
+  const subject = `You've been assigned a new ${itemType}: ${itemTitle}`;
+
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+    .wrapper { max-width: 560px; margin: 40px auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03); }
+    .header { background: #ffffff; padding: 32px 40px 24px; border-bottom: 1px solid #f1f5f9; }
+    .logo { font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.03em; }
+    .logo span { color: #2563eb; }
+    .body { padding: 36px 40px; }
+    h1 { font-size: 22px; font-weight: 700; color: #0f172a; margin: 0 0 16px; letter-spacing: -0.01em; }
+    p { font-size: 14px; color: #475569; line-height: 1.65; margin: 0 0 24px; }
+    .btn { display: inline-block; background: #2563eb; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-size: 14px; font-weight: 600; text-align: center; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2); }
+    .meta { margin-top: 32px; padding-top: 24px; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8; line-height: 1.5; }
+    .badge { display: inline-block; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <div class="logo">Huntlo<span> OS</span></div>
+    </div>
+    <div class="body">
+      <div class="badge">New Assignment</div>
+      <h1>Hello ${toName},</h1>
+      <p>
+        <strong style="color: #0f172a">${assignerName}</strong> has just assigned a new 
+        <strong style="color: #0f172a">${itemType}</strong> to you in Huntlo Sales OS.
+      </p>
+      <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 24px;">
+        <div style="font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">${itemType} Name</div>
+        <div style="font-size: 15px; color: #0f172a; font-weight: 600;">${itemTitle}</div>
+      </div>
+      <p>Click below to jump right into the CRM and view it:</p>
+      <div style="margin: 30px 0;">
+        <a href="${itemUrl}" class="btn">View in CRM →</a>
+      </div>
+      <div class="meta">
+        This notification was sent automatically because you were assigned to a record.<br/>
+        © ${new Date().getFullYear()} Huntlo Sales OS
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  if (token) {
+    try {
+      const mime = [
+        `To: ${toEmail}`,
+        `Subject: ${subject}`,
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=utf-8',
+        '',
+        htmlBody
+      ].join('\r\n');
+      
+      const raw = btoa(unescape(encodeURIComponent(mime)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+        
+      const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ raw })
+      });
+      
+      if (res.ok) {
+        return { success: true };
+      }
+    } catch (err) {
+      console.warn('Gmail API assignment email send failed, trying Resend...', err);
+    }
+  }
+
+  if (!isConfigured) {
+    console.warn(\`[Resend] Demo Mode: Would send assignment email to \${toEmail}. Subject: \${subject}\`);
+    return { success: true, demo: true };
+  }
+
+  try {
+    const endpoint = '/api/resend/emails';
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': \`Bearer \${RESEND_API_KEY}\`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Huntlo Notifications <onboarding@resend.dev>',
+        to: [toEmail],
+        subject,
+        html: htmlBody,
+      }),
+    });
+
+    if (!res.ok) throw new Error('Failed to send assignment email');
+    return { success: true };
+  } catch (err) {
+    console.error('[Resend Assignment Error]:', err);
+    return { success: false, error: err.message };
+  }
+}
+
 export { isConfigured as isResendConfigured };

@@ -5,6 +5,29 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import useAuthStore from './useAuthStore';
 import useUIStore from './useUIStore';
+import { sendAssignmentEmail } from '../lib/resend';
+
+// Helper for assignment emails
+const handleAssignmentNotification = (type, title, oldOwnerId, newOwnerId, itemId, getStore) => {
+  if (!newOwnerId || oldOwnerId === newOwnerId) return;
+
+  const { teamMembers } = getStore();
+  const newOwner = teamMembers.find(t => t.id === newOwnerId);
+  if (!newOwner || !newOwner.email) return;
+
+  const { user } = useAuthStore.getState();
+  const assignerProfile = teamMembers.find(t => t.id === user?.id);
+  const assignerName = assignerProfile?.full_name || assignerProfile?.name || user?.email?.split('@')[0] || 'A team member';
+
+  sendAssignmentEmail({
+    toEmail: newOwner.email,
+    toName: newOwner.full_name || newOwner.name || newOwner.email.split('@')[0],
+    assignerName,
+    itemType: type,
+    itemTitle: title,
+    itemId
+  }).catch(e => console.warn('Failed to send assignment notification:', e));
+};
 
 const useDataStore = create((set, get) => ({
   companies: [],
@@ -517,9 +540,15 @@ const useDataStore = create((set, get) => ({
   },
 
   updateLead: async (id, updates) => {
+    const oldLead = get().leads.find(l => l.id === id);
     const { data, error } = await supabase.from('leads').update(updates).eq('id', id).select().single();
     if (error) throw error;
     set(state => ({ leads: state.leads.map(l => l.id === id ? data : l) }));
+    
+    if (updates.owner_id !== undefined && oldLead) {
+      handleAssignmentNotification('Lead', oldLead.company_name || oldLead.contact_name || 'Unknown Lead', oldLead.owner_id, updates.owner_id, id, get);
+    }
+    
     return data;
   },
 
@@ -874,9 +903,15 @@ const useDataStore = create((set, get) => ({
   },
 
   updateDeal: async (id, updates) => {
+    const oldDeal = get().deals.find(d => d.id === id);
     const { data, error } = await supabase.from('deals').update(updates).eq('id', id).select().single();
     if (error) throw error;
     set(state => ({ deals: state.deals.map(d => d.id === id ? data : d) }));
+
+    if (updates.owner_id !== undefined && oldDeal) {
+      handleAssignmentNotification('Deal', oldDeal.title || oldDeal.company || 'Unknown Deal', oldDeal.owner_id, updates.owner_id, id, get);
+    }
+
     return data;
   },
 
@@ -914,9 +949,15 @@ const useDataStore = create((set, get) => ({
   },
 
   updateTask: async (id, updates) => {
+    const oldTask = get().tasks.find(t => t.id === id);
     const { data, error } = await supabase.from('tasks').update(updates).eq('id', id).select().single();
     if (error) throw error;
     set(state => ({ tasks: state.tasks.map(t => t.id === id ? data : t) }));
+
+    if (updates.owner_id !== undefined && oldTask) {
+      handleAssignmentNotification('Task', oldTask.title || 'Unknown Task', oldTask.owner_id, updates.owner_id, id, get);
+    }
+
     return data;
   },
 
