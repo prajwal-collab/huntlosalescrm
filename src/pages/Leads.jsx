@@ -697,13 +697,13 @@ export default function Leads() {
               <span>Company / Contact</span>
               <span>Owner</span>
               <span>Stage</span>
-              <span>Signal Score</span>
+              <span>Completeness</span>
+              <span>Score</span>
               <span>Priority</span>
-              <span>Active Signals</span>
+              <span>Signals</span>
               <span>Next Action</span>
               <span>Est. MRR</span>
               <span>Notes / Remarks</span>
-              <span>Action</span>
             </div>
 
             {/* Rows */}
