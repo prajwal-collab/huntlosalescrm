@@ -171,25 +171,47 @@ const useDataStore = create((set, get) => ({
       const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes, leadsRes, teamRes, proposalsRes, webinarsRes, funnelStagesRes, registrantsRes, assetsRes, followUpsRes, sopsRes] = results;
 
       // Helper to safely extract data from allSettled results
-      const extract = (res) => (res.status === 'fulfilled' && !res.value.error) ? res.value.data : [];
+      const extract = (res, name) => {
+        if (res.status === 'fulfilled' && !res.value.error) {
+          return res.value.data;
+        }
+        const errMsg = res.status === 'rejected' ? res.reason : res.value.error;
+        console.error(`[DataStore] Error fetching ${name}:`, errMsg);
+        
+        // Show a UI notification so the user sees the error
+        try {
+          useUIStore.getState().addNotification({
+            id: `fetch-err-${name}-${Date.now()}`,
+            type: 'system',
+            title: `Error loading ${name}`,
+            message: String(errMsg?.message || errMsg),
+            unread: true,
+            time: new Date().toISOString()
+          });
+        } catch (e) {
+          // ignore
+        }
+        
+        return [];
+      };
 
       set({
-        companies: extract(companiesRes),
-        contacts: extract(contactsRes),
-        deals: extract(dealsRes),
-        tasks: extract(tasksRes),
-        meetings: extract(meetingsRes),
-        documents: extract(docsRes),
-        sequences: extract(seqRes),
-        leads: extract(leadsRes),
-        teamMembers: extract(teamRes),
-        proposals: extract(proposalsRes),
-        webinars: extract(webinarsRes),
-        webinar_funnel_stages: extract(funnelStagesRes),
-        webinar_registrants: extract(registrantsRes),
-        webinar_content_assets: extract(assetsRes),
-        webinar_follow_ups: extract(followUpsRes),
-        webinar_sops: extract(sopsRes),
+        companies: extract(companiesRes, 'companies'),
+        contacts: extract(contactsRes, 'contacts'),
+        deals: extract(dealsRes, 'deals'),
+        tasks: extract(tasksRes, 'tasks'),
+        meetings: extract(meetingsRes, 'meetings'),
+        documents: extract(docsRes, 'documents'),
+        sequences: extract(seqRes, 'sequences'),
+        leads: extract(leadsRes, 'leads'),
+        teamMembers: extract(teamRes, 'teamMembers'),
+        proposals: extract(proposalsRes, 'proposals'),
+        webinars: extract(webinarsRes, 'webinars'),
+        webinar_funnel_stages: extract(funnelStagesRes, 'webinar_funnel_stages'),
+        webinar_registrants: extract(registrantsRes, 'webinar_registrants'),
+        webinar_content_assets: extract(assetsRes, 'webinar_content_assets'),
+        webinar_follow_ups: extract(followUpsRes, 'webinar_follow_ups'),
+        webinar_sops: extract(sopsRes, 'webinar_sops'),
         loading: false,
         error: null
       });
