@@ -19,13 +19,15 @@ import { formatDistanceToNow } from 'date-fns';
 
 // ── Role config ────────────────────────────────────────────────
 const ROLE_CONFIG = {
-  Admin:  { label: 'Admin',  color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)',  icon: Crown },
-  Member: { label: 'SDR',    color: '#3b82f6', bg: 'rgba(59,130,246,0.1)',  icon: Users },
-  Viewer: { label: 'Viewer', color: '#64748b', bg: 'rgba(100,116,139,0.1)', icon: Eye   },
+  Admin:   { label: 'Admin',   color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)',  icon: Crown },
+  Manager: { label: 'Manager', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  icon: Users },
+  AE:      { label: 'AE',      color: '#10b981', bg: 'rgba(16,185,129,0.1)',  icon: Briefcase },
+  SDR:     { label: 'SDR',     color: '#3b82f6', bg: 'rgba(59,130,246,0.1)',  icon: User },
+  Viewer:  { label: 'Viewer',  color: '#64748b', bg: 'rgba(100,116,139,0.1)', icon: Eye   },
 };
 
 function RoleBadge({ role }) {
-  const cfg = ROLE_CONFIG[role] || ROLE_CONFIG.Member;
+  const cfg = ROLE_CONFIG[role] || ROLE_CONFIG.SDR;
   const Icon = cfg.icon;
   return (
     <span style={{
@@ -128,13 +130,15 @@ function MemberRow({ member, isCurrentUser, onRoleChange, onRemove, onResend, de
               border: '1px solid var(--bg-border)', background: 'var(--bg-surface)',
               color: 'var(--text-secondary)', cursor: 'pointer',
             }}
-            value={member.role || 'Member'}
+            value={member.role === 'Member' ? 'SDR' : (member.role || 'SDR')}
             onChange={e => handleRole(e.target.value)}
             disabled={roleChanging}
             title="Change role"
           >
             <option value="Admin">Admin</option>
-            <option value="Member">Member (SDR)</option>
+            <option value="Manager">Manager</option>
+            <option value="AE">Account Exec (AE)</option>
+            <option value="SDR">Sales Dev Rep (SDR)</option>
             <option value="Viewer">Viewer</option>
           </select>
         )}

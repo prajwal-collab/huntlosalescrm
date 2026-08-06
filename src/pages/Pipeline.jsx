@@ -109,8 +109,12 @@ function DraggableDealCard({ deal, onClick, onDelete, user, team }) {
   const dealWithOwner = { ...deal, owner: ownerObj };
 
   const isOwner = user?.id === deal.owner_id;
-  const isAdmin = user?.email === 'prajwal@earlyjobs.in';
-  const canEdit = isOwner || isAdmin || !deal.owner_id;
+  const currentUserProfile = team?.find(t => t.id === user?.id);
+  const role = currentUserProfile?.role || 'SDR';
+  const isAdminOrManager = role === 'Admin' || role === 'Manager' || user?.email === 'prajwal@earlyjobs.in';
+  
+  // AEs can edit their own deals. Admins/Managers can edit any. SDRs generally don't own deals.
+  const canEdit = isOwner || isAdminOrManager || !deal.owner_id;
 
   return (
     <div

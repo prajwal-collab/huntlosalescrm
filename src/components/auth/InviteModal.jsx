@@ -347,7 +347,9 @@ export default function InviteModal({ isOpen, onClose }) {
                 <label className="im-label">Role</label>
                 <select className="invite-role-select" value={inviteRole} onChange={e => setInviteRole(e.target.value)}>
                   <option value="Admin">Admin — Full access, can manage team</option>
-                  <option value="Member">Member (SDR) — Can create and edit data</option>
+                  <option value="Manager">Manager — View/Edit all data, no settings</option>
+                  <option value="AE">Account Exec (AE) — Close deals</option>
+                  <option value="SDR">Sales Dev Rep (SDR) — Prospecting</option>
                   <option value="Viewer">Viewer — Read-only access</option>
                 </select>
               </div>
@@ -389,7 +391,9 @@ export default function InviteModal({ isOpen, onClose }) {
                   <label className="im-label">Role</label>
                   <select className="invite-role-select" value={createRole} onChange={e => setCreateRole(e.target.value)}>
                     <option value="Admin">Admin</option>
-                    <option value="Member">Member (SDR)</option>
+                    <option value="Manager">Manager</option>
+                    <option value="AE">Account Exec (AE)</option>
+                    <option value="SDR">Sales Dev Rep (SDR)</option>
                     <option value="Viewer">Viewer</option>
                   </select>
                 </div>

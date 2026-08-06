@@ -61,7 +61,7 @@ export default function AdminDashboard() {
 
   // ── Role guard ───────────────────────────────────────────────────────────
   const userProfile = team?.find(m => m.id === user?.id);
-  const isAdmin = user?.email === 'prajwal@earlyjobs.in' || userProfile?.role === 'Admin';
+  const isAdmin = user?.email === 'prajwal@earlyjobs.in' || userProfile?.role === 'Admin' || userProfile?.role === 'Manager';
 
   if (!isAdmin) {
     return (

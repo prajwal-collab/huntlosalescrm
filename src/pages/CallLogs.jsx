@@ -37,7 +37,7 @@ export default function CallLogs() {
 
   // Role detection — admin sees all SDR data; SDRs see only their own
   const userProfile = team?.find(m => m.id === user?.id);
-  const isAdmin = user?.email === 'prajwal@earlyjobs.in' || userProfile?.role === 'Admin';
+  const isAdmin = user?.email === 'prajwal@earlyjobs.in' || userProfile?.role === 'Admin' || userProfile?.role === 'Manager';
   const [sdrBannerDismissed, setSdrBannerDismissed] = useState(false);
   const [activeTab, setActiveTab] = useState('history'); // 'history', 'dialer', 'bulk'
   

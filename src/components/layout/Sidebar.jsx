@@ -94,6 +94,7 @@ export default function Sidebar() {
   // Admin detection — consistent with CallLogs + AdminDashboard
   const userProfile = team?.find(m => m.id === user?.id);
   const isAdmin = user?.email === 'prajwal@earlyjobs.in' || userProfile?.role === 'Admin';
+  const isManager = userProfile?.role === 'Manager';
 
   const handleSignOut = async () => {
     await signOut();
@@ -118,8 +119,8 @@ export default function Sidebar() {
         {NAV_GROUPS.map((group) => (
           <NavGroup key={group.title} group={group} sidebarCollapsed={sidebarCollapsed} />
         ))}
-        {/* Admin-only section */}
-        {isAdmin && (
+        {/* Admin/Manager section */}
+        {(isAdmin || isManager) && (
           <div className="sidebar-group">
             {!sidebarCollapsed && (
               <div className="group-header">
@@ -151,10 +152,12 @@ export default function Sidebar() {
           <BookOpen size={16} />
           {!sidebarCollapsed && <span>User Guide</span>}
         </button>
-        <button className="nav-item" onClick={() => navigate('/settings')}>
-          <Settings size={16} />
-          {!sidebarCollapsed && <span>Settings</span>}
-        </button>
+        {isAdmin && (
+          <button className="nav-item" onClick={() => navigate('/settings')}>
+            <Settings size={16} />
+            {!sidebarCollapsed && <span>Settings</span>}
+          </button>
+        )}
 
         <div className="sidebar-user" onClick={() => navigate('/settings?tab=profile')}>
           <div className="avatar avatar-sm" style={{ background: avatarColor, width: 24, height: 24, fontSize: 10, borderRadius: 6 }}>
