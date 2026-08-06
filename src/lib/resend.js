@@ -243,8 +243,6 @@ export async function sendSequenceEmail({ toEmail, subject, body, fromName = 'Hu
   }
 }
 
-}
-
 // Send assignment notification email
 export async function sendAssignmentEmail({ toEmail, toName, assignerName, itemType, itemTitle, itemId }) {
   const session = useAuthStore.getState().session;
