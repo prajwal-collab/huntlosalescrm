@@ -352,7 +352,7 @@ export async function sendAssignmentEmail({ toEmail, toName, assignerName, itemT
   }
 
   if (!isConfigured) {
-    console.warn(\`[Resend] Demo Mode: Would send assignment email to \${toEmail}. Subject: \${subject}\`);
+    console.warn(`[Resend] Demo Mode: Would send assignment email to ${toEmail}. Subject: ${subject}`);
     return { success: true, demo: true };
   }
 
@@ -361,7 +361,7 @@ export async function sendAssignmentEmail({ toEmail, toName, assignerName, itemT
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        'Authorization': \`Bearer \${RESEND_API_KEY}\`,
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
