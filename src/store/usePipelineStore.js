@@ -76,9 +76,9 @@ const usePipelineStore = create((set, get) => ({
         filteredDeals = filteredDeals.filter(d => (d.engagement_score || 0) >= 75);
       } else if (filter === 'stale') {
         filteredDeals = filteredDeals.filter(d => {
-          const lastAct = d.last_activity || d.created_at || Date.now();
+          const lastAct = d.last_activity || d.updated_at || d.created_at || Date.now();
           const days = (Date.now() - new Date(lastAct)) / 86400000;
-          return days > 5;
+          return days > 14; // Stale = no activity in 14+ days (matches Leads definition)
         });
       } else if (filter === 'urgent') {
         filteredDeals = filteredDeals.filter(d => d.urgency === 'urgent' || d.urgency === 'high');

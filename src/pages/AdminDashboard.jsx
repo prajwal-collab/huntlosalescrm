@@ -2,18 +2,19 @@
 // HUNTLO SALES OS — FOUNDER / SALES LEADER DASHBOARD
 // Executive-level revenue analytics, pipeline health & AI insights
 // ============================================
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, CartesianGrid
 } from 'recharts';
 import {
   TrendingUp, Clock, Target, ArrowUpRight, BarChart2,
-  DollarSign, Briefcase, Star, Sparkles
+  DollarSign, Briefcase, Star, Sparkles, Users, Phone,
+  UserPlus, Activity, CheckCircle, Calendar
 } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import useAuthStore from '../store/useAuthStore';
-import { format, isValid, subDays, startOfDay, startOfWeek, startOfMonth } from 'date-fns';
+import { format, isValid, subDays, startOfDay, startOfWeek, startOfMonth, formatDistanceToNow } from 'date-fns';
 import { generateExecutiveSummary } from '../lib/gemini';
 import './AdminDashboard.css';
 
@@ -47,13 +48,16 @@ function fmtINR(amount) {
 }
 
 export default function AdminDashboard() {
-  const { deals, tasks, leads } = useDataStore();
-  const { user, team } = useAuthStore();
+  const { deals, tasks, leads, meetings } = useDataStore();
+  const { user, team, fetchTeam } = useAuthStore();
   const [timeframe, setTimeframe] = useState('month');
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedSdr, setSelectedSdr] = useState(null); // for drill-down
 
   const [aiSummary, setAiSummary] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+
+  useEffect(() => { fetchTeam(); }, [fetchTeam]);
 
   // ── Role guard ───────────────────────────────────────────────────────────
   const userProfile = team?.find(m => m.id === user?.id);
@@ -140,21 +144,60 @@ export default function AdminDashboard() {
     return { pipelineMRR, wonMRR, winRate, avgDealSize, pipelineDealsCount: pipelineDeals.length, wonCount };
   }, [filteredDeals, allDeals, timeframe]);
 
-  // ── SDR Performance (Revenue & Pipeline focus) ─────────────────────────
+  // ── SDR Performance (enriched with leads, meetings, tasks, calls) ─────────
   const sdrStats = useMemo(() => {
     return activeTeam.map(member => {
       const memberDeals = filteredDeals.filter(d => d.owner_id === member.id);
       const memberCalls = filteredCalls.filter(c => c.owner_id === member.id);
-      
+
+      // Leads added in timeframe
+      const memberLeads = leads.filter(l =>
+        l.owner_id === member.id && matchesTimeframe(safeDate(l.created_at), timeframe)
+      );
+
+      // Meetings set in timeframe
+      const memberMeetings = (meetings || []).filter(m =>
+        m.owner_id === member.id && matchesTimeframe(safeDate(m.created_at || m.date), timeframe)
+      );
+      const demosScheduled = memberMeetings.filter(m => m.type === 'Demo' || m.type === 'demo').length;
+      const demosAttended = memberMeetings.filter(m =>
+        (m.type === 'Demo' || m.type === 'demo') && (m.attended || m.status === 'completed')
+      ).length;
+
+      // Tasks completed in timeframe
+      const memberTasksDone = tasks.filter(t =>
+        (t.owner_id === member.id || t.assigned_to === member.id) &&
+        t.status === 'completed' &&
+        t.type !== 'cold_call' && t.type !== 'calling_list_item' &&
+        matchesTimeframe(safeDate(t.updated_at || t.created_at), timeframe)
+      );
+
       const dealsCreated = memberDeals.length;
       const pipelineGenerated = memberDeals.reduce((sum, d) => sum + d.amount, 0);
-      
-      const memberWonDeals = allDeals.filter(d => d.owner_id === member.id && d.stage === 'Closed Won' && matchesTimeframe(d.lastActivity || d.createdAt, timeframe));
+
+      const memberWonDeals = allDeals.filter(d =>
+        d.owner_id === member.id && d.stage === 'Closed Won' &&
+        matchesTimeframe(d.lastActivity || d.createdAt, timeframe)
+      );
       const revenueClosed = memberWonDeals.reduce((sum, d) => sum + d.amount, 0);
-      
+
       const totalCalls = memberCalls.length;
       const connectedCalls = memberCalls.filter(c => c.outcome === 'connected').length;
+      const voicemailCalls = memberCalls.filter(c => c.outcome === 'voicemail').length;
+      const noAnswerCalls = memberCalls.filter(c => c.outcome === 'no_answer' || c.outcome === 'busy').length;
       const connectRate = totalCalls > 0 ? Math.round((connectedCalls / totalCalls) * 100) : 0;
+
+      // Recent call logs (last 20)
+      const recentCalls = memberCalls
+        .filter(c => c.createdAt)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 20);
+
+      // Recent leads (last 10)
+      const recentLeads = memberLeads
+        .filter(l => l.created_at)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 10);
 
       return {
         ...member,
@@ -162,10 +205,20 @@ export default function AdminDashboard() {
         pipelineGenerated,
         revenueClosed,
         totalCalls,
-        connectRate
+        connectedCalls,
+        voicemailCalls,
+        noAnswerCalls,
+        connectRate,
+        leadsAdded: memberLeads.length,
+        meetingsSet: memberMeetings.length,
+        demosScheduled,
+        demosAttended,
+        tasksDone: memberTasksDone.length,
+        recentCalls,
+        recentLeads,
       };
     }).sort((a, b) => b.revenueClosed - a.revenueClosed || b.pipelineGenerated - a.pipelineGenerated);
-  }, [activeTeam, filteredDeals, filteredCalls, allDeals, timeframe]);
+  }, [activeTeam, filteredDeals, filteredCalls, allDeals, leads, meetings, tasks, timeframe]);
 
   // ── Pipeline Health / Funnel ─────────────────────────────────────────
   const funnelStages = useMemo(() => {
@@ -236,9 +289,10 @@ export default function AdminDashboard() {
 
         <div className="adm-tabs">
           {[
-            { id: 'overview',    label: '📊 Overview' },
-            { id: 'leaderboard', label: '🏆 Team Performance' },
-            { id: 'ai-insights', label: '🧠 Founder Insights' },
+            { id: 'overview',     label: '📊 Overview' },
+            { id: 'sdr-activity', label: '👤 SDR Activity' },
+            { id: 'leaderboard',  label: '🏆 Team Performance' },
+            { id: 'ai-insights',  label: '🧠 Founder Insights' },
           ].map(t => (
             <button
               key={t.id}
@@ -333,6 +387,173 @@ export default function AdminDashboard() {
           </>
         )}
 
+        {/* ── SDR Activity tab ── */}
+        {activeTab === 'sdr-activity' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+            {/* Summary strip */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+              {[
+                { label: 'Leads Added', value: sdrStats.reduce((s, m) => s + m.leadsAdded, 0), color: '#3b82f6', icon: '👤' },
+                { label: 'Call Logs', value: sdrStats.reduce((s, m) => s + m.totalCalls, 0), color: '#ef4444', icon: '📞' },
+                { label: 'Connected', value: sdrStats.reduce((s, m) => s + m.connectedCalls, 0), color: '#16a34a', icon: '✅' },
+                { label: 'Demos Set', value: sdrStats.reduce((s, m) => s + m.demosScheduled, 0), color: '#8b5cf6', icon: '📅' },
+                { label: 'Demos Attended', value: sdrStats.reduce((s, m) => s + m.demosAttended, 0), color: '#10b981', icon: '🎥' },
+                { label: 'Tasks Done', value: sdrStats.reduce((s, m) => s + m.tasksDone, 0), color: '#f59e0b', icon: '✔️' },
+              ].map(m => (
+                <div key={m.label} className="adm-metric-card" style={{ '--card-accent': m.color, '--icon-bg': m.color + '18', padding: '16px 20px' }}>
+                  <div style={{ fontSize: 22, marginBottom: 4 }}>{m.icon}</div>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: m.color, lineHeight: 1 }}>{m.value}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Per-SDR cards grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 20 }}>
+              {sdrStats.length === 0 && (
+                <div className="adm-empty" style={{ gridColumn: '1/-1', padding: 40 }}>No team members found. Invite users in Settings to see activity here.</div>
+              )}
+              {sdrStats.map(sdr => {
+                const name = sdr.full_name || sdr.name || sdr.email || 'Unknown';
+                const initials = getInitials(name);
+                const isExpanded = selectedSdr === sdr.id;
+                const connectPct = sdr.totalCalls > 0 ? Math.round((sdr.connectedCalls / sdr.totalCalls) * 100) : 0;
+
+                return (
+                  <div key={sdr.id} className="adm-chart-card" style={{ padding: 0, overflow: 'hidden', border: isExpanded ? '1px solid var(--accent-blue)' : '1px solid var(--border-subtle)' }}>
+
+                    {/* Card header */}
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', cursor: 'pointer', background: isExpanded ? 'rgba(59,130,246,0.06)' : 'transparent' }}
+                      onClick={() => setSelectedSdr(isExpanded ? null : sdr.id)}
+                    >
+                      <div className="adm-lb-avatar" style={{ width: 44, height: 44, fontSize: 15, flexShrink: 0, background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)' }}>{initials}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{sdr.role || 'SDR'} {sdr.team ? `· ${sdr.team}` : ''}</div>
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{isExpanded ? '▲ collapse' : '▼ details'}</div>
+                    </div>
+
+                    {/* Stat pills */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, borderTop: '1px solid var(--border-subtle)', borderBottom: '1px solid var(--border-subtle)' }}>
+                      {[
+                        { label: 'Leads Added', value: sdr.leadsAdded, color: '#3b82f6' },
+                        { label: 'Calls Logged', value: sdr.totalCalls, color: '#ef4444' },
+                        { label: 'Connected', value: sdr.connectedCalls, color: '#16a34a' },
+                        { label: 'Demos Set', value: sdr.demosScheduled, color: '#8b5cf6' },
+                        { label: 'Demos Att.', value: sdr.demosAttended, color: '#10b981' },
+                        { label: 'Tasks Done', value: sdr.tasksDone, color: '#f59e0b' },
+                      ].map((stat, i) => (
+                        <div key={i} style={{
+                          padding: '12px 16px',
+                          borderRight: (i + 1) % 3 !== 0 ? '1px solid var(--border-subtle)' : 'none',
+                          borderBottom: i < 3 ? '1px solid var(--border-subtle)' : 'none',
+                          textAlign: 'center'
+                        }}>
+                          <div style={{ fontSize: 22, fontWeight: 800, color: stat.color }}>{stat.value}</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{stat.label}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Call connect rate bar */}
+                    <div style={{ padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: isExpanded ? '1px solid var(--border-subtle)' : 'none' }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600, minWidth: 90 }}>Connect Rate</span>
+                      <div style={{ flex: 1, height: 6, borderRadius: 99, background: 'var(--bg-elevated)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${connectPct}%`, background: connectPct >= 30 ? '#16a34a' : connectPct >= 15 ? '#f59e0b' : '#ef4444', borderRadius: 99, transition: 'width 0.5s ease' }} />
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: connectPct >= 30 ? '#16a34a' : connectPct >= 15 ? '#f59e0b' : '#ef4444', minWidth: 36, textAlign: 'right' }}>{connectPct}%</span>
+                      {sdr.voicemailCalls > 0 && <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>📩 {sdr.voicemailCalls} VM</span>}
+                      {sdr.noAnswerCalls > 0 && <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>📵 {sdr.noAnswerCalls} NA</span>}
+                    </div>
+
+                    {/* Expanded: Recent Call Logs + Recent Leads */}
+                    {isExpanded && (
+                      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                        {/* Recent Call Logs */}
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            📞 Recent Call Logs
+                          </div>
+                          {sdr.recentCalls.length === 0 ? (
+                            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: '8px 0' }}>No call logs in this timeframe.</div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              {sdr.recentCalls.slice(0, 8).map((call, i) => {
+                                let parsed = {};
+                                try { parsed = JSON.parse(call.notes || '{}'); } catch (_) {}
+                                const outcome = call.outcome || parsed.outcome || 'unknown';
+                                const company = parsed.company || call.company || call.title || 'Unknown';
+                                const outcomeMeta = {
+                                  connected:  { color: '#16a34a', emoji: '✅' },
+                                  voicemail:  { color: '#f59e0b', emoji: '📩' },
+                                  no_answer:  { color: '#64748b', emoji: '📵' },
+                                  busy:       { color: '#ef4444', emoji: '🔴' },
+                                  callback:   { color: '#3b82f6', emoji: '🔄' },
+                                  wrong_number:{ color: '#94a3b8', emoji: '❌' },
+                                }[outcome] || { color: '#94a3b8', emoji: '❓' };
+
+                                return (
+                                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px', borderRadius: 8, background: 'var(--bg-elevated)', fontSize: 12 }}>
+                                    <span style={{ fontSize: 14 }}>{outcomeMeta.emoji}</span>
+                                    <span style={{ flex: 1, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{company}</span>
+                                    <span style={{ color: outcomeMeta.color, fontWeight: 600, fontSize: 10, textTransform: 'uppercase' }}>{outcome.replace('_', ' ')}</span>
+                                    {call.createdAt && (
+                                      <span style={{ color: 'var(--text-tertiary)', fontSize: 10, flexShrink: 0 }}>
+                                        {formatDistanceToNow(call.createdAt, { addSuffix: true })}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                              {sdr.recentCalls.length > 8 && (
+                                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center', paddingTop: 4 }}>+{sdr.recentCalls.length - 8} more calls</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Recent Leads Added */}
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            👤 Recent Leads Added
+                          </div>
+                          {sdr.recentLeads.length === 0 ? (
+                            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: '8px 0' }}>No leads added in this timeframe.</div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              {sdr.recentLeads.map((lead, i) => (
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px', borderRadius: 8, background: 'var(--bg-elevated)', fontSize: 12 }}>
+                                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#3b82f620', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 10, flexShrink: 0 }}>
+                                    {(lead.company_name || '?').charAt(0).toUpperCase()}
+                                  </div>
+                                  <span style={{ flex: 1, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {lead.company_name || 'Unknown'}
+                                  </span>
+                                  <span className="badge badge-gray" style={{ fontSize: 9, padding: '2px 6px' }}>{lead.stage || 'New Lead'}</span>
+                                  {lead.created_at && (
+                                    <span style={{ color: 'var(--text-tertiary)', fontSize: 10, flexShrink: 0 }}>
+                                      {formatDistanceToNow(new Date(lead.created_at), { addSuffix: true })}
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* ── Leaderboard tab ── */}
         {activeTab === 'leaderboard' && (
           <div className="adm-table-card">
@@ -348,13 +569,15 @@ export default function AdminDashboard() {
                     <th>Revenue Closed</th>
                     <th>Pipeline Generated</th>
                     <th>Deals Created</th>
-                    <th>Calls Dialed</th>
-                    <th>Call Connect Rate</th>
+                    <th title="Leads added in timeframe">Leads Added</th>
+                    <th title="Completed cold call / calling_list_item tasks">Calls Dialed</th>
+                    <th title="Demos scheduled in timeframe">Demos Set</th>
+                    <th>Connect Rate</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sdrStats.length === 0 ? (
-                    <tr><td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-tertiary)' }}>No data found for this timeframe.</td></tr>
+                    <tr><td colSpan="8" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-tertiary)' }}>No data found for this timeframe.</td></tr>
                   ) : (
                     sdrStats.map(u => (
                       <tr key={u.id}>
@@ -370,7 +593,9 @@ export default function AdminDashboard() {
                         <td className="adm-num-cell" style={{ color: '#16a34a', fontWeight: 600 }}>{fmtINR(u.revenueClosed)}</td>
                         <td className="adm-num-cell" style={{ color: '#3b82f6', fontWeight: 600 }}>{fmtINR(u.pipelineGenerated)}</td>
                         <td className="adm-num-cell">{u.dealsCreated}</td>
-                        <td className="adm-num-cell">{u.totalCalls}</td>
+                        <td className="adm-num-cell" style={{ color: '#3b82f6', fontWeight: 700 }}>{u.leadsAdded}</td>
+                        <td className="adm-num-cell" style={{ color: '#ef4444', fontWeight: 700 }}>{u.totalCalls}</td>
+                        <td className="adm-num-cell" style={{ color: '#8b5cf6', fontWeight: 700 }}>{u.demosScheduled}</td>
                         <td>
                           <div className="adm-conv-bar">
                             <div className="adm-conv-track">

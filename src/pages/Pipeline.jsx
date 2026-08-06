@@ -2,7 +2,7 @@
 // HUNTLO SALES OS — PIPELINE PAGE (INR)
 // ============================================
 import { useState } from 'react';
-import { Search, Filter, Plus, GripVertical, X, IndianRupee, Trash2, Edit2 } from 'lucide-react';
+import { Search, Plus, GripVertical, X, IndianRupee, Trash2, Edit2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import usePipelineStore from '../store/usePipelineStore';
 import useDataStore from '../store/useDataStore';
@@ -234,8 +234,10 @@ export default function Pipeline() {
             </button>
           ))}
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <button className="btn btn-ghost btn-sm"><Filter size={13} /> Filter</button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 500 }}>
+            {filtered.length} deal{filtered.length !== 1 ? 's' : ''}
+          </span>
           <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}><Plus size={13} /> Add Deal</button>
         </div>
       </div>

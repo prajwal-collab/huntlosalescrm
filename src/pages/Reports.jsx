@@ -6,6 +6,26 @@ import useAuthStore from '../store/useAuthStore';
 import { format, subMonths, isSameMonth, subWeeks, isSameWeek } from 'date-fns';
 import './Reports.css';
 
+// ── Timeframe helper ──────────────────────────────────────────
+function getDateRange(timeframe) {
+  const now = new Date();
+  const year = now.getFullYear();
+  switch (timeframe) {
+    case 'Q1': return { start: new Date(year, 0, 1), end: new Date(year, 2, 31, 23, 59, 59) };
+    case 'Q2': return { start: new Date(year, 3, 1), end: new Date(year, 5, 30, 23, 59, 59) };
+    case 'Q3': return { start: new Date(year, 6, 1), end: new Date(year, 8, 30, 23, 59, 59) };
+    case 'Q4': return { start: new Date(year, 9, 1), end: new Date(year, 11, 31, 23, 59, 59) };
+    case 'YTD': return { start: new Date(year, 0, 1), end: now };
+    default: return { start: null, end: null }; // All Time — no filter
+  }
+}
+
+function inRange(dateStr, range) {
+  if (!range.start) return true; // All Time
+  const d = new Date(dateStr || Date.now());
+  return d >= range.start && d <= range.end;
+}
+
 const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#64748b'];
 
 // ── INR formatter ─────────────────────────────────────────
@@ -133,123 +153,153 @@ export default function Reports() {
 
   // Derived Data
   const leaderboard = useMemo(() => {
+    const range = getDateRange(timeframe);
     return team.map(member => {
-      const addedAccounts = companies.filter(c => c.owner_id === member.id).length;
-      const addedContacts = contacts.filter(c => c.owner_id === member.id).length;
-      const setMeetings = meetings.filter(m => m.owner_id === member.id).length;
+      // Normalize name — profiles use full_name, team may use name or email
+      const displayName = member.full_name || member.name || member.email || 'Unknown';
 
-      // 6 SDR Activity Metrics
-      const memberLeads = leads.filter(l => l.owner_id === member.id);
-      const memberTasks = tasks.filter(t => t.owner_id === member.id || t.assigned_to === member.id);
-      const memberMeetings = meetings.filter(m => m.owner_id === member.id);
+      const memberLeads = leads.filter(l => l.owner_id === member.id && inRange(l.created_at, range));
+      const memberTasks = tasks.filter(t => (t.owner_id === member.id || t.assigned_to === member.id) && inRange(t.created_at, range));
+      const memberMeetings = meetings.filter(m => m.owner_id === member.id && inRange(m.date, range));
 
       const trialSignups = memberLeads.filter(l => l.trial_confirmed || l.stage === 'Trial Started').length;
       const enrichmentDone = memberLeads.filter(l => l.enrichment_done).length;
-      const outreachSent = memberLeads.filter(l => l.outreach_sent || (l.email_status && l.email_status !== 'Not Sent') || l.stage === 'Outreach Started').length;
+      const outreachSent = memberLeads.filter(l =>
+        l.outreach_sent || (l.email_status && l.email_status !== 'Not Sent') || l.stage === 'Outreach Started'
+      ).length;
       const demosScheduled = memberMeetings.filter(m => m.type === 'Demo' || m.type === 'demo').length;
-      const demosAttended = memberMeetings.filter(m => (m.type === 'Demo' || m.type === 'demo') && (m.attended || m.status === 'completed')).length;
-      const coldCallsMade = memberTasks.filter(t => (t.type === 'call' || t.type === 'cold_call') && t.status === 'completed').length;
+      const demosAttended = memberMeetings.filter(m =>
+        (m.type === 'Demo' || m.type === 'demo') && (m.attended || m.status === 'completed')
+      ).length;
+      const coldCallsMade = memberTasks.filter(t =>
+        (t.type === 'call' || t.type === 'cold_call' || t.type === 'calling_list_item') && t.status === 'completed'
+      ).length;
 
       let wonRevenue = 0;
-      deals.forEach(d => {
-        if (d.owner_id === member.id && d.stage === 'Closed Won') {
-          wonRevenue += Number(d.arr) || 0;
-        }
+      deals.filter(d => inRange(d.created_at, range)).forEach(d => {
+        if (d.owner_id === member.id && d.stage === 'Closed Won') wonRevenue += Number(d.arr) || 0;
       });
-      return { ...member, addedAccounts, addedContacts, setMeetings, wonRevenue,
-        trialSignups, enrichmentDone, outreachSent, demosScheduled, demosAttended, coldCallsMade };
+
+      return {
+        ...member,
+        name: displayName,
+        wonRevenue,
+        trialSignups, enrichmentDone, outreachSent, demosScheduled, demosAttended, coldCallsMade
+      };
     }).sort((a, b) => b.wonRevenue - a.wonRevenue);
-  }, [team, companies, contacts, meetings, deals, leads, tasks]);
+  }, [team, companies, contacts, meetings, deals, leads, tasks, timeframe]);
 
   const metrics = useMemo(() => {
+    const range = getDateRange(timeframe);
+    const filteredDeals = deals.filter(d => inRange(d.created_at, range));
     let totalRevenue = 0;
     let pipelineValue = 0;
-    deals.forEach(d => {
+    filteredDeals.forEach(d => {
       const val = Number(d.arr) || 0;
       if (d.stage === 'Closed Won') totalRevenue += val;
       else if (d.stage !== 'Closed Lost') pipelineValue += val;
     });
-    const lostDeals = deals.filter(d => d.stage === 'Closed Lost').length;
-    const wonDeals = deals.filter(d => d.stage === 'Closed Won').length;
+    const lostDeals = filteredDeals.filter(d => d.stage === 'Closed Lost').length;
+    const wonDeals = filteredDeals.filter(d => d.stage === 'Closed Won').length;
     const totalClosed = wonDeals + lostDeals;
     const winRate = totalClosed > 0 ? Math.round((wonDeals / totalClosed) * 100) : 0;
     const tasksCompleted30d = tasks.filter(t => {
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 30);
-      return t.status === 'completed' && new Date(t.due || t.created_at) >= cutoff;
+      if (t.status !== 'completed') return false;
+      return inRange(t.due || t.created_at, range);
     }).length;
     return {
       revenue: fmtINR(totalRevenue),
       pipeline: fmtINR(pipelineValue),
       winRate: `${winRate}%`,
-      tasksCompleted30d
+      tasksCompleted30d,
+      wonDeals,
+      totalDeals: filteredDeals.length,
     };
-  }, [deals, meetings, tasks]);
+  }, [deals, tasks, timeframe]);
 
   const revenueData = useMemo(() => {
+    const range = getDateRange(timeframe);
+    // Build month buckets: always 5 months ending at range.end (or now)
+    const endDate = range.end || new Date();
     const data = [];
     for (let i = 4; i >= 0; i--) {
-      const d = subMonths(new Date(), i);
+      const d = subMonths(endDate, i);
       let won = 0; let pipeline = 0;
       deals.forEach(deal => {
         const dealDate = new Date(deal.created_at || new Date());
-        if (isSameMonth(dealDate, d)) {
+        if (isSameMonth(dealDate, d) && inRange(deal.created_at, range)) {
           const val = (Number(deal.arr) || 0) / 1000;
           if (deal.stage === 'Closed Won') won += val;
           else if (deal.stage !== 'Closed Lost') pipeline += val;
         }
       });
-      data.push({ month: format(d, 'MMM'), won: Math.round(won), pipeline: Math.round(pipeline) });
+      data.push({ month: format(d, 'MMM yy'), won: Math.round(won), pipeline: Math.round(pipeline) });
     }
     return data;
-  }, [deals]);
+  }, [deals, timeframe]);
 
   const activityData = useMemo(() => {
+    const range = getDateRange(timeframe);
     const data = [];
     for (let i = 3; i >= 0; i--) {
-      const d = subWeeks(new Date(), i);
-      let demos = 0; let emails = 0;
-      meetings.forEach(m => { if (isSameWeek(new Date(m.date), d) && m.type === 'Demo') demos++; });
-      tasks.forEach(t => { if (isSameWeek(new Date(t.due || t.created_at), d) && t.type === 'email') emails++; });
-      data.push({ week: `W${4 - i}`, demos, emails });
-    }
-    return data;
-  }, [meetings, tasks]);
-
-  const funnelData = useMemo(() => {
-    const stages = { 'Discovery': 0, 'Qualification': 0, 'Trial': 0, 'Proposal': 0, 'Negotiation': 0, 'Closed Won': 0 };
-    deals.forEach(d => { if (stages[d.stage] !== undefined) stages[d.stage]++; });
-    return Object.keys(stages).map(k => ({ name: k, value: stages[k] })).filter(s => s.value > 0);
-  }, [deals]);
-
-  const sourceData = useMemo(() => {
-    const sources = { 'Outbound': 0, 'Inbound': 0, 'Referral': 0, 'Partner': 0 };
-    leads.forEach(l => {
-      const source = l.campaign_type || l.outreach_channel || 'Outbound';
-      if (sources[source] !== undefined) {
-        sources[source]++;
-      } else {
-        sources[source] = 1;
-      }
-    });
-    return Object.keys(sources).map(k => ({ name: k, value: sources[k] })).filter(s => s.value > 0);
-  }, [leads]);
-
-  const taskCompletion = useMemo(() => {
-    const data = [];
-    for (let i = 4; i >= 0; i--) {
-      const d = subWeeks(new Date(), i);
-      let completed = 0; let total = 0;
-      tasks.forEach(t => { 
-        if (isSameWeek(new Date(t.due || t.created_at), d)) {
-          total++;
-          if (t.status === 'completed') completed++;
+      const d = subWeeks(range.end || new Date(), i);
+      let demos = 0; let emails = 0; let calls = 0;
+      meetings.forEach(m => {
+        if (isSameWeek(new Date(m.date), d) && inRange(m.date, range) && (m.type === 'Demo' || m.type === 'demo')) demos++;
+      });
+      tasks.forEach(t => {
+        const taskDate = t.due || t.created_at;
+        if (isSameWeek(new Date(taskDate), d) && inRange(taskDate, range)) {
+          if (t.type === 'email') emails++;
+          if (t.type === 'cold_call' || t.type === 'call') calls++;
         }
       });
+      data.push({ week: `W${4 - i}`, demos, emails, calls });
+    }
+    return data;
+  }, [meetings, tasks, timeframe]);
+
+  const funnelData = useMemo(() => {
+    const range = getDateRange(timeframe);
+    const stages = { 'Discovery': 0, 'Qualification': 0, 'Trial': 0, 'Proposal': 0, 'Negotiation': 0, 'Closed Won': 0 };
+    deals.filter(d => inRange(d.created_at, range)).forEach(d => {
+      if (stages[d.stage] !== undefined) stages[d.stage]++;
+    });
+    return Object.keys(stages).map(k => ({ name: k, value: stages[k] })).filter(s => s.value > 0);
+  }, [deals, timeframe]);
+
+  const sourceData = useMemo(() => {
+    const range = getDateRange(timeframe);
+    const sources = {};
+    leads.filter(l => inRange(l.created_at, range)).forEach(l => {
+      const source = l.source || l.campaign_type || l.outreach_channel || 'Outbound';
+      sources[source] = (sources[source] || 0) + 1;
+    });
+    return Object.entries(sources)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+  }, [leads, timeframe]);
+
+  const taskCompletion = useMemo(() => {
+    const range = getDateRange(timeframe);
+    const data = [];
+    for (let i = 4; i >= 0; i--) {
+      const d = subWeeks(range.end || new Date(), i);
+      let completed = 0; let total = 0;
+      tasks
+        .filter(t => t.type !== 'calling_list_item')
+        .forEach(t => {
+          const taskDate = t.due || t.created_at;
+          if (isSameWeek(new Date(taskDate), d) && inRange(taskDate, range)) {
+            total++;
+            if (t.status === 'completed') completed++;
+          }
+        });
       data.push({ week: `W${5 - i}`, completed, missed: total - completed });
     }
     return data;
-  }, [tasks]);
+  }, [tasks, timeframe]);
 
   return (
     <div className="reports-page">
@@ -258,27 +308,27 @@ export default function Reports() {
           <h1 className="page-big-title">Reports</h1>
           <p className="page-big-sub">Operational analytics and team performance</p>
         </div>
-        <div style={{ display: 'flex', gap: 16 }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
           <div className="filter-chips">
             {['Overview', 'Team Activity'].map(tab => (
-              <button 
-                key={tab} 
-                className={`filter-chip ${activeTab === tab.toLowerCase().replace(' ', '-') ? 'active' : ''}`} 
+              <button
+                key={tab}
+                className={`filter-chip ${activeTab === tab.toLowerCase().replace(' ', '-') ? 'active' : ''}`}
                 onClick={() => setActiveTab(tab.toLowerCase().replace(' ', '-'))}
               >
                 {tab}
               </button>
             ))}
           </div>
+          <div className="filter-chips">
+            {['Q1', 'Q2', 'Q3', 'Q4', 'YTD', 'All Time'].map(f => (
+              <button key={f} className={`filter-chip ${timeframe === f ? 'active' : ''}`} onClick={() => setTimeframe(f)}>
+                {f}
+              </button>
+            ))}
+          </div>
           {activeTab === 'overview' && (
-            <div style={{ display: 'flex', gap: 12 }}>
-              <div className="filter-chips">
-                {['Q1', 'Q2', 'YTD', 'All Time'].map(f => (
-                  <button key={f} className={`filter-chip ${timeframe === f ? 'active' : ''}`} onClick={() => setTimeframe(f)}>
-                    {f}
-                  </button>
-                ))}
-              </div>
+            <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn btn-ghost btn-sm" onClick={() => { setExportingType('pipeline'); exportPipelineCSV(); setTimeout(() => setExportingType(null), 1200); }}>
                 <Download size={13} /> {exportingType === 'pipeline' ? '✓ Exported' : 'Export Pipeline'}
               </button>
@@ -289,6 +339,7 @@ export default function Reports() {
           )}
         </div>
       </div>
+
 
       {activeTab === 'overview' ? (
         <>
@@ -338,6 +389,7 @@ export default function Reports() {
                       <Tooltip contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: '8px' }} />
                       <Line type="monotone" dataKey="demos" name="Demos" stroke="var(--accent-purple)" strokeWidth={2} dot={{ r: 4 }} />
                       <Line type="monotone" dataKey="emails" name="Emails" stroke="var(--text-secondary)" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="calls" name="Cold Calls" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} strokeDasharray="4 2" />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>

@@ -326,9 +326,16 @@ export default function HomeOS() {
             </div>
             <div className="home-goal-bottom">
               <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{callsLoggedToday}</span>
-              <span style={{ color: 'var(--text-tertiary)' }}> of {callGoal} calls logged today</span>
+              <span style={{ color: 'var(--text-tertiary)' }}>of {callGoal} calls logged today</span>
               {pendingCallLogs > 0 && (
-                <span className="home-pending-badge" onClick={() => navigate('/call-logs')}>⚠ {pendingCallLogs} unpushed</span>
+                <button
+                  className="home-pending-badge"
+                  onClick={() => navigate('/call-logs')}
+                  style={{ cursor: 'pointer', border: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                  title={`${pendingCallLogs} call logs have not been pushed to Leads yet`}
+                >
+                  ⚠ {pendingCallLogs} unpushed → Push Now
+                </button>
               )}
             </div>
           </div>

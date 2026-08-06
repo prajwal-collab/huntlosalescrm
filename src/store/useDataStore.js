@@ -98,24 +98,6 @@ const useDataStore = create((set, get) => ({
     }
   },
 
-  // Lightweight single-table refresh — call after any write that should
-  // immediately be reflected in the UI (e.g., after bulk dialer lead push).
-  _refreshTable: async (tableName) => {
-    try {
-      const { data, error } = await supabase
-        .from(tableName)
-        .select('*')
-        .limit(50000)
-        .order('created_at', { ascending: false });
-      if (error) {
-        console.warn(`[DataStore] _refreshTable('${tableName}') error:`, error.message);
-        return;
-      }
-      set({ [tableName]: data });
-    } catch (err) {
-      console.warn(`[DataStore] _refreshTable('${tableName}') threw:`, err.message);
-    }
-  },
 
   fetchData: async () => {
     set({ loading: true, error: null });
@@ -357,8 +339,13 @@ const useDataStore = create((set, get) => ({
     try {
       const { tasks, bulkCreateLeadsFromDialer, bulkUpdateTasks } = get();
 
+      // Handle BOTH calling_list_item (power dialer) AND cold_call (manual call logger)
+      // so that ALL 935+ un-pushed call logs get reflected in the Leads CRM.
       const missedTasks = tasks.filter(t => {
-        if (t.type !== 'calling_list_item' || t.status !== 'completed') return false;
+        const isCallType = t.type === 'calling_list_item' || t.type === 'cold_call';
+        if (!isCallType) return false;
+        // calling_list_item must be completed; cold_call logs are always completed by design
+        if (t.type === 'calling_list_item' && t.status !== 'completed') return false;
         
         let data = {};
         try { data = JSON.parse(t.notes || '{}'); } catch(e) {}
@@ -370,6 +357,7 @@ const useDataStore = create((set, get) => ({
       });
 
       if (missedTasks.length === 0) return;
+      console.log(`[DataStore] Found ${missedTasks.length} un-pushed call log(s) — auto-pushing to leads...`);
 
       const leadsToCreate = [];
       const tasksToUpdate = [];
@@ -378,21 +366,26 @@ const useDataStore = create((set, get) => ({
         let data = {};
         try { data = JSON.parse(t.notes || '{}'); } catch(e) {}
         
+        // cold_call logs store contact/company differently than calling_list_item
+        const contactName = data.contactName || t.title || '';
+        const companyName = data.company || data.company_name || '';
+
         // Use a unique company_name per contact to avoid upsert collisions.
         // Contacts without a company_name fall back to "[Name] (Individual)" or
         // a unique ID-based key so they never merge into a shared "Unknown Company".
-        const uniqueCompany = data.company_name
-          || (t.title ? `${t.title} (Individual)` : null)
+        const uniqueCompany = companyName
+          || (contactName ? `${contactName} (Individual)` : null)
           || `AutoPush-${t.id}`;
 
+        const callDate = t.created_at ? new Date(t.created_at).toLocaleDateString() : new Date().toLocaleDateString();
         leadsToCreate.push({
           company_name: uniqueCompany,
-          contact_name: t.title && t.title !== data.company_name ? t.title : '',
+          contact_name: contactName && contactName !== companyName ? contactName : '',
           phone: data.phone || '',
           ...(data.email ? { email: data.email } : {}),
           stage: data.outcome === 'connected' ? 'Engaged' : 'New Lead',
-          source: 'Auto-Push Missed Call',
-          notes: `📞 [${new Date().toLocaleDateString()}] ${data.outcomeLabel || data.outcome} — ${data.duration ? data.duration + ' min' : 'N/A'} — ${data.notes || 'No notes'}`
+          source: t.type === 'cold_call' ? 'Cold Call Log' : 'Auto-Push Missed Call',
+          notes: `📞 [${callDate}] ${data.outcomeLabel || data.outcome} — ${data.duration ? data.duration + ' min' : 'N/A'} — ${data.notes || 'No notes'}`
         });
 
         // Always mark as pushed — even if the lead upsert merges into an existing
@@ -415,7 +408,7 @@ const useDataStore = create((set, get) => ({
           // Don't re-throw — tasks are already marked pushed; leads can be created manually.
         }
       }
-      console.log(`[DataStore] Auto-pushed ${leadsToCreate.length} missed call log(s) to leads.`);
+      console.log(`[DataStore] Auto-pushed ${leadsToCreate.length} call log(s) to leads (dialer + cold call).`);
 
     } catch (err) {
       console.error('[DataStore] Failed to auto-push missed calls:', err);

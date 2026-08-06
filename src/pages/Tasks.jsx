@@ -77,6 +77,7 @@ export default function Tasks() {
   const emailCount = tasks.filter(t => t.type === 'email' && t.status !== 'completed').length;
   const linkedinCount = tasks.filter(t => t.type === 'linkedin' && t.status !== 'completed').length;
   const overdueCount = tasks.filter(t => t.status !== 'completed' && safeIsPast(t.due)).length;
+  const callLogCount = tasks.filter(t => (t.type === 'cold_call' || t.type === 'calling_list_item') && t.status === 'completed').length;
 
   const filteredTasks = useMemo(() => {
     let result = tasks;
@@ -184,6 +185,9 @@ export default function Tasks() {
         </div>
         <div className={`apollo-tab ${filter === 'completed' ? 'active' : ''}`} onClick={() => setFilter('completed')}>
           Completed
+        </div>
+        <div className={`apollo-tab ${filter === 'cold_call_log' ? 'active' : ''}`} onClick={() => setFilter('cold_call_log')}>
+          📞 Call Logs <span className="apollo-tab-count" style={{ background: callLogCount > 0 ? '#ef4444' : undefined, color: callLogCount > 0 ? '#fff' : undefined }}>{callLogCount}</span>
         </div>
       </div>
 

@@ -314,17 +314,45 @@ export default function Meetings() {
   const { showSuccess } = useDialog();
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [meetingFilter, setMeetingFilter] = useState('upcoming'); // 'today' | 'upcoming' | 'all' | 'past' | 'demo'
   const [formData, setFormData] = useState({ title: '', deal_id: '', type: 'Discovery', date: '', duration: 30, platform: 'Google Meet', meeting_link: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  // Filter meetings based on active tab
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfToday = new Date(startOfToday.getTime() + 86400000 - 1);
+  const in7Days = new Date(now.getTime() + 7 * 86400000);
+
+  const filteredMeetings = meetings
+    .filter(m => {
+      const d = new Date(m.date);
+      if (meetingFilter === 'today') return d >= startOfToday && d <= endOfToday;
+      if (meetingFilter === 'upcoming') return d >= now && d <= in7Days;
+      if (meetingFilter === 'past') return d < now || m.status === 'completed' || m.status === 'cancelled';
+      if (meetingFilter === 'demo') return m.type === 'Demo' || m.type === 'demo';
+      return true; // 'all'
+    })
+    .sort((a, b) => {
+      if (meetingFilter === 'past') return new Date(b.date) - new Date(a.date); // newest first for past
+      return new Date(a.date) - new Date(b.date); // soonest first for upcoming
+    });
+
+  const todayCount = meetings.filter(m => { const d = new Date(m.date); return d >= startOfToday && d <= endOfToday; }).length;
+  const upcomingCount = meetings.filter(m => { const d = new Date(m.date); return d >= now && d <= in7Days; }).length;
+  const pastCount = meetings.filter(m => { const d = new Date(m.date); return d < now || m.status === 'completed' || m.status === 'cancelled'; }).length;
+  const demoCount = meetings.filter(m => m.type === 'Demo' || m.type === 'demo').length;
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8; // showing 8 cards per page in the sidebar
+  const itemsPerPage = 8;
 
-  const sortedMeetings = [...meetings].sort((a, b) => new Date(b.date) - new Date(a.date));
-  const totalPages = Math.ceil(sortedMeetings.length / itemsPerPage) || 1;
-  const paginatedMeetings = sortedMeetings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  // Reset to page 1 when filter changes
+  const handleFilterChange = (f) => { setMeetingFilter(f); setCurrentPage(1); };
+
+  const totalPages = Math.ceil(filteredMeetings.length / itemsPerPage) || 1;
+  const paginatedMeetings = filteredMeetings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -365,17 +393,37 @@ export default function Meetings() {
         <button className="btn btn-primary btn-sm" onClick={() => { setIsAdding(true); setSelected(null); }}><Plus size={13} /> Schedule Meeting</button>
       </div>
 
+      {/* Filter Tabs */}
+      <div className="apollo-tabs-bar" style={{ padding: '0 0 0 0', marginBottom: 16 }}>
+        <div className={`apollo-tab ${meetingFilter === 'upcoming' ? 'active' : ''}`} onClick={() => handleFilterChange('upcoming')}>
+          🗓️ Upcoming <span className="apollo-tab-count">{upcomingCount}</span>
+        </div>
+        <div className={`apollo-tab ${meetingFilter === 'today' ? 'active' : ''}`} onClick={() => handleFilterChange('today')}>
+          Today <span className="apollo-tab-count" style={{ background: todayCount > 0 ? 'var(--accent-blue)' : undefined, color: todayCount > 0 ? '#fff' : undefined }}>{todayCount}</span>
+        </div>
+        <div className={`apollo-tab ${meetingFilter === 'demo' ? 'active' : ''}`} onClick={() => handleFilterChange('demo')}>
+          🎥 Demos <span className="apollo-tab-count">{demoCount}</span>
+        </div>
+        <div className={`apollo-tab ${meetingFilter === 'past' ? 'active' : ''}`} onClick={() => handleFilterChange('past')}>
+          Past <span className="apollo-tab-count">{pastCount}</span>
+        </div>
+        <div className={`apollo-tab ${meetingFilter === 'all' ? 'active' : ''}`} onClick={() => handleFilterChange('all')}>
+          All <span className="apollo-tab-count">{meetings.length}</span>
+        </div>
+      </div>
+
       <div className="meetings-layout">
         <div className="meetings-list" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
             {paginatedMeetings.map(m => (
-              <MeetingCard key={m.id} meeting={m} selected={selected?.id === m.id} onSelect={(meeting) => { setSelected(meeting); setIsAdding(false); }} ownerName={teamMembers?.find(tm => tm.id === m.owner_id)?.name || 'Unknown User'} />
+              <MeetingCard key={m.id} meeting={m} selected={selected?.id === m.id} onSelect={(meeting) => { setSelected(meeting); setIsAdding(false); }}
+                ownerName={teamMembers?.find(tm => tm.id === m.owner_id)?.full_name || teamMembers?.find(tm => tm.id === m.owner_id)?.name || 'Unknown'} />
             ))}
-            {meetings.length === 0 && (
+            {filteredMeetings.length === 0 && (
                <div className="empty-state" style={{ marginTop: 40 }}>
                  <Video size={32} />
-                 <h3>No meetings yet</h3>
-                 <p>Schedule your first meeting.</p>
+                 <h3>{meetingFilter === 'upcoming' ? 'No upcoming meetings in next 7 days' : meetingFilter === 'today' ? 'No meetings today' : 'No meetings found'}</h3>
+                 <p>{meetingFilter === 'upcoming' || meetingFilter === 'today' ? 'Schedule a meeting to see it here.' : 'Try a different filter.'}</p>
                </div>
             )}
           </div>
