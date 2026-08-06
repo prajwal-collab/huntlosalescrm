@@ -6,7 +6,8 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Plus, Activity, BarChart3, Users, ChevronRight,
   ShieldCheck, Eye, UserX, RefreshCw, Send, Clock,
-  CheckCircle, AlertTriangle, XCircle, Search, Crown
+  CheckCircle, AlertTriangle, XCircle, Search, Crown,
+  Briefcase, User
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../store/useAuthStore';
