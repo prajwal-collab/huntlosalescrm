@@ -611,7 +611,7 @@ export default function DealDrawer({ dealId, onClose }) {
                 </select>
                 <select className="input-base" style={{ flex: 1, minWidth: 120 }} value={headerForm.owner_id} onChange={e => setHeaderForm({ ...headerForm, owner_id: e.target.value })}>
                   <option value="">Unassigned</option>
-                  {(teamMembers || []).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  {(teamMembers || []).map(t => <option key={t.id} value={t.id}>{t.full_name || t.name || 'Unknown'}</option>)}
                 </select>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
