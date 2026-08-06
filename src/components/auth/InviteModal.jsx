@@ -126,6 +126,14 @@ export default function InviteModal({ isOpen, onClose }) {
     setResult(null);
 
     try {
+      // 1. Fetch current user's organization_id to link the new user correctly
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', user.id)
+        .single();
+      const orgId = profile?.organization_id;
+
       // Use a separate isolated client so we don't sign out the admin
       const tempClient = createClient(
         import.meta.env.VITE_SUPABASE_URL,
@@ -137,7 +145,10 @@ export default function InviteModal({ isOpen, onClose }) {
         email: createEmail.trim(),
         password: createPassword,
         options: {
-          data: { full_name: createName.trim() || createEmail.split('@')[0] },
+          data: { 
+            full_name: createName.trim() || createEmail.split('@')[0],
+            organization_id: orgId
+          },
         },
       });
 
