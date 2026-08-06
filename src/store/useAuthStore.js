@@ -344,8 +344,14 @@ const useAuthStore = create(
           const { data: profileData, error: profileErr } = await supabase.from('profiles').delete().eq('id', memberId).select();
           if (profileErr) throw profileErr;
 
-          const { data: inviteData, error: inviteErr } = await supabase.from('invitations').delete().eq('id', memberId).select();
-          if (inviteErr) throw inviteErr;
+          let inviteData = [];
+          try {
+            const { data, error: inviteErr } = await supabase.from('invitations').delete().eq('id', memberId).select();
+            if (inviteErr) console.warn('[AuthStore] Invitations delete error:', inviteErr.message);
+            else if (data) inviteData = data;
+          } catch (e) {
+            console.warn('[AuthStore] Invitations delete exception:', e.message);
+          }
 
           const affectedProfiles = profileData ? profileData.length : 0;
           const affectedInvites = inviteData ? inviteData.length : 0;
@@ -365,8 +371,14 @@ const useAuthStore = create(
           const { data: profileData, error: profileErr } = await supabase.from('profiles').update({ role }).eq('id', memberId).select();
           if (profileErr) throw profileErr;
 
-          const { data: inviteData, error: inviteErr } = await supabase.from('invitations').update({ role }).eq('id', memberId).select();
-          if (inviteErr) throw inviteErr;
+          let inviteData = [];
+          try {
+            const { data, error: inviteErr } = await supabase.from('invitations').update({ role }).eq('id', memberId).select();
+            if (inviteErr) console.warn('[AuthStore] Invitations update error:', inviteErr.message);
+            else if (data) inviteData = data;
+          } catch (e) {
+            console.warn('[AuthStore] Invitations update exception:', e.message);
+          }
 
           const affectedProfiles = profileData ? profileData.length : 0;
           const affectedInvites = inviteData ? inviteData.length : 0;
