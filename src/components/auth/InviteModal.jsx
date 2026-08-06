@@ -64,8 +64,6 @@ export default function InviteModal({ isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null); // { mode, items: [], errors: [] }
 
-  if (!isOpen) return null;
-
   // ── Handle Invite ──────────────────────────────────────────
   const handleInvite = async (e) => {
     e.preventDefault();
@@ -189,6 +187,8 @@ export default function InviteModal({ isOpen, onClose }) {
     setActiveTab('invite');
     onClose();
   }, [onClose]);
+
+  if (!isOpen) return null;
 
   // ── Result Screen ─────────────────────────────────────────
   if (result) {
