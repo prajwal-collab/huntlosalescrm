@@ -1036,6 +1036,11 @@ export default function DealDrawer({ dealId, onClose }) {
           )}
 
         </div>
+        
+        {/* Drawer Footer */}
+        <div className="drawer-footer" style={{ marginTop: 'auto', borderTop: '1px solid var(--bg-border)', padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', background: 'var(--bg-surface)', flexShrink: 0, zIndex: 10 }}>
+          <button className="btn btn-primary btn-sm" onClick={onClose}>Done / Close</button>
+        </div>
       </div>
     </div>
   );

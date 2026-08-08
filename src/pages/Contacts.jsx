@@ -396,6 +396,10 @@ function ContactDetail({ contact, onClose }) {
         </div>
       )}
       </div>
+      
+      <div className="cd-form-footer" style={{ marginTop: 'auto', borderTop: '1px solid var(--bg-border)', padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', background: 'var(--bg-surface)', flexShrink: 0 }}>
+        <button className="btn btn-primary btn-sm" onClick={onClose}>Done / Close</button>
+      </div>
     </div>
   );
 }
