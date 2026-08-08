@@ -424,7 +424,7 @@ export default function NewLeadForm({ onClose }) {
             <div className="form-section-title" style={{ marginTop: 4 }}>Revenue Signal</div>
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Est. MRR ($/mo)</label>
+                <label className="form-label">Est. MRR (₹/mo)</label>
                 <input type="number" className="form-input" placeholder="e.g. 500"
                   value={form.estimated_mrr}
                   onChange={e => set('estimated_mrr', e.target.value)} />
@@ -437,6 +437,20 @@ export default function NewLeadForm({ onClose }) {
                   {STAGES.map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
+            </div>
+
+            {/* Notes */}
+            <div className="form-section-title" style={{ marginTop: 4 }}>Notes</div>
+            <div className="form-group">
+              <label className="form-label">Initial Notes</label>
+              <textarea
+                className="form-input"
+                placeholder="Any context, research notes, or talking points…"
+                rows={3}
+                style={{ resize: 'vertical', minHeight: 72, fontFamily: 'inherit', fontSize: 13 }}
+                value={form.notes}
+                onChange={e => set('notes', e.target.value)}
+              />
             </div>
           </div>
 

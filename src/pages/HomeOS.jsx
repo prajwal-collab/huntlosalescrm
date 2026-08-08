@@ -38,7 +38,7 @@ function PriorityCard({ icon: Icon, label, count, urgency, color, onClick }) {
 
 export default function HomeOS() {
   const { deals, tasks, meetings, leads, documents, contacts, proposals, migrateLocalProposals } = useDataStore();
-  const { team } = useAuthStore();
+  const { user, team, updateProfileMeta } = useAuthStore();
   const { showAlert } = useDialog();
   const navigate = useNavigate();
   const [aiQuery, setAiQuery] = useState('');
@@ -52,25 +52,33 @@ export default function HomeOS() {
 
   // ── Streak Tracker ─────────────────────────────────────────────────────
   const streak = useMemo(() => {
-    const key = 'huntlo_call_streak';
-    const raw = localStorage.getItem(key);
+    const raw = user?.user_metadata?.huntlo_call_streak || localStorage.getItem('huntlo_call_streak');
     if (!raw) return 0;
     try {
-      const { count, lastDate } = JSON.parse(raw);
-      const lastD = new Date(lastDate);
+      const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      const lastD = new Date(data.lastDate);
       const today = new Date();
       const diffDays = Math.floor((today - lastD) / 86400000);
-      if (diffDays === 0) return count;      // same day
-      if (diffDays === 1) return count;      // yesterday — still active
-      return 0;                              // streak broken
+      if (diffDays === 0) return data.count;      // same day
+      if (diffDays === 1) return data.count;      // yesterday — still active
+      return 0;                                   // streak broken
     } catch { return 0; }
-  }, []);
+  }, [user]);
 
   // ── Daily call goal ────────────────────────────────────────────────────
   const [callGoal, setCallGoal] = useState(() => {
-    return parseInt(localStorage.getItem('huntlo_daily_call_goal') || '30', 10);
+    return parseInt(user?.user_metadata?.huntlo_daily_call_goal || localStorage.getItem('huntlo_daily_call_goal') || '30', 10);
   });
   const [editingGoal, setEditingGoal] = useState(false);
+
+  const saveCallGoal = async (newGoal) => {
+    setCallGoal(newGoal);
+    setEditingGoal(false);
+    localStorage.setItem('huntlo_daily_call_goal', newGoal);
+    if (updateProfileMeta) {
+      await updateProfileMeta({ huntlo_daily_call_goal: newGoal });
+    }
+  };
 
   const callsLoggedToday = useMemo(() => {
     const today = new Date().toDateString();
@@ -92,7 +100,6 @@ export default function HomeOS() {
   }, [tasks]);
 
   // ── Top 5 leads to call today (hottest by score, not yet contacted today) ──
-  const { user } = useAuthStore();
   const topLeadsToCall = useMemo(() => {
     const today = new Date().toDateString();
     return leads
@@ -311,8 +318,8 @@ export default function HomeOS() {
                   autoFocus
                   onBlur={e => {
                     const v = parseInt(e.target.value, 10);
-                    if (v > 0) { setCallGoal(v); localStorage.setItem('huntlo_daily_call_goal', v); }
-                    setEditingGoal(false);
+                    if (v > 0) { saveCallGoal(v); }
+                    else setEditingGoal(false);
                   }}
                   onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
                   style={{ width: 48, fontSize: 12, padding: '2px 6px', borderRadius: 6, border: '1px solid var(--border-subtle)' }}

@@ -219,6 +219,19 @@ const useAuthStore = create(
         }
       },
 
+      // Update generic metadata in Supabase auth user_metadata
+      updateProfileMeta: async (metadata) => {
+        try {
+          const { data, error } = await supabase.auth.updateUser({ data: metadata });
+          if (error) throw error;
+          set({ user: data.user });
+          return { success: true };
+        } catch (err) {
+          console.error('[AuthStore] updateProfileMeta error:', err);
+          return { success: false, error: err.message };
+        }
+      },
+
       fetchTeam: async () => {
         const state = get();
         const u = state.user;

@@ -305,6 +305,9 @@ Best,
           onChange={e => setSummaryForm(f => ({ ...f, ai_summary: e.target.value }))}
         />
       </div>
+      <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--bg-border)', display: 'flex', justifyContent: 'flex-end' }}>
+        <button className="btn btn-ghost" onClick={onClose}>Done / Close</button>
+      </div>
     </div>
   );
 }
@@ -315,6 +318,7 @@ export default function Meetings() {
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [meetingFilter, setMeetingFilter] = useState('upcoming'); // 'today' | 'upcoming' | 'all' | 'past' | 'demo'
+  const [search, setSearch] = useState('');
   const [formData, setFormData] = useState({ title: '', deal_id: '', type: 'Discovery', date: '', duration: 30, platform: 'Google Meet', meeting_link: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -327,6 +331,10 @@ export default function Meetings() {
 
   const filteredMeetings = meetings
     .filter(m => {
+      const q = search.toLowerCase();
+      if (q && !(m.title?.toLowerCase().includes(q) || m.type?.toLowerCase().includes(q) || m.platform?.toLowerCase().includes(q))) {
+        return false;
+      }
       const d = new Date(m.date);
       if (meetingFilter === 'today') return d >= startOfToday && d <= endOfToday;
       if (meetingFilter === 'upcoming') return d >= now && d <= in7Days;
@@ -393,22 +401,35 @@ export default function Meetings() {
         <button className="btn btn-primary btn-sm" onClick={() => { setIsAdding(true); setSelected(null); }}><Plus size={13} /> Schedule Meeting</button>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="apollo-tabs-bar" style={{ padding: '0 0 0 0', marginBottom: 16 }}>
-        <div className={`apollo-tab ${meetingFilter === 'upcoming' ? 'active' : ''}`} onClick={() => handleFilterChange('upcoming')}>
-          🗓️ Upcoming <span className="apollo-tab-count">{upcomingCount}</span>
+      {/* Filter Tabs + Search */}
+      <div className="apollo-tabs-bar" style={{ padding: '0 0 0 0', marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex' }}>
+          <div className={`apollo-tab ${meetingFilter === 'upcoming' ? 'active' : ''}`} onClick={() => handleFilterChange('upcoming')}>
+            🗓️ Upcoming <span className="apollo-tab-count">{upcomingCount}</span>
+          </div>
+          <div className={`apollo-tab ${meetingFilter === 'today' ? 'active' : ''}`} onClick={() => handleFilterChange('today')}>
+            Today <span className="apollo-tab-count" style={{ background: todayCount > 0 ? 'var(--accent-blue)' : undefined, color: todayCount > 0 ? '#fff' : undefined }}>{todayCount}</span>
+          </div>
+          <div className={`apollo-tab ${meetingFilter === 'demo' ? 'active' : ''}`} onClick={() => handleFilterChange('demo')}>
+            🎥 Demos <span className="apollo-tab-count">{demoCount}</span>
+          </div>
+          <div className={`apollo-tab ${meetingFilter === 'past' ? 'active' : ''}`} onClick={() => handleFilterChange('past')}>
+            Past <span className="apollo-tab-count">{pastCount}</span>
+          </div>
+          <div className={`apollo-tab ${meetingFilter === 'all' ? 'active' : ''}`} onClick={() => handleFilterChange('all')}>
+            All <span className="apollo-tab-count">{meetings.length}</span>
+          </div>
         </div>
-        <div className={`apollo-tab ${meetingFilter === 'today' ? 'active' : ''}`} onClick={() => handleFilterChange('today')}>
-          Today <span className="apollo-tab-count" style={{ background: todayCount > 0 ? 'var(--accent-blue)' : undefined, color: todayCount > 0 ? '#fff' : undefined }}>{todayCount}</span>
-        </div>
-        <div className={`apollo-tab ${meetingFilter === 'demo' ? 'active' : ''}`} onClick={() => handleFilterChange('demo')}>
-          🎥 Demos <span className="apollo-tab-count">{demoCount}</span>
-        </div>
-        <div className={`apollo-tab ${meetingFilter === 'past' ? 'active' : ''}`} onClick={() => handleFilterChange('past')}>
-          Past <span className="apollo-tab-count">{pastCount}</span>
-        </div>
-        <div className={`apollo-tab ${meetingFilter === 'all' ? 'active' : ''}`} onClick={() => handleFilterChange('all')}>
-          All <span className="apollo-tab-count">{meetings.length}</span>
+
+        <div className="cg-search" style={{ margin: '8px 0', padding: '4px 10px', height: '32px', minWidth: '240px', background: 'var(--bg-base)', border: '1px solid var(--bg-border)', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Search size={14} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+          <input
+            placeholder="Search meetings…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', color: 'var(--text-primary)', flex: 1 }}
+          />
+          {search && <X size={14} style={{ cursor: 'pointer', color: 'var(--text-tertiary)', flexShrink: 0 }} onClick={() => setSearch('')} />}
         </div>
       </div>
 
@@ -518,9 +539,12 @@ export default function Meetings() {
                 <label className="label">Meeting Link</label>
                 <input className="input-base" type="url" value={formData.meeting_link} onChange={e => setFormData({...formData, meeting_link: e.target.value})} placeholder="https://zoom.us/j/..." />
               </div>
-              <button type="submit" className="btn btn-primary btn-md w-full" style={{ marginTop: 8 }} disabled={saving}>
-                {saving ? <Loader size={14} className="cc-spinner" /> : 'Schedule Meeting'}
-              </button>
+              <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+                <button type="button" className="btn btn-ghost" onClick={() => setIsAdding(false)} style={{ flex: 1 }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 2 }} disabled={saving}>
+                  {saving ? <Loader size={14} className="cc-spinner" /> : 'Schedule Meeting'}
+                </button>
+              </div>
             </form>
           </div>
         )}

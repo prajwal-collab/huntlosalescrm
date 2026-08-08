@@ -62,7 +62,7 @@ const VIEWS = [
 ];
 
 // ── Lead Row ────────────────────────────────────────────
-function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user, onConvertToDeal }) {
+function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user, onConvertToDeal, onStageChange }) {
   const score = useMemo(() => computeSignalScore(lead), [lead]);
   const priority = getPriority(score);
   const signals = lead.signals || {};
@@ -126,59 +126,60 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user, 
 
       {/* Owner */}
       <div className="lc" onClick={(e) => e.stopPropagation()}>
-        <select 
-          style={{ 
-            background: 'transparent',
-            color: 'var(--text-secondary)',
-            border: 'none', 
-            cursor: 'pointer',
-            outline: 'none',
-            fontSize: '12px',
-            width: '100%',
-            appearance: 'none'
-          }}
-          value={lead.owner_id || ''}
-          onChange={(e) => updateLead(lead.id, { owner_id: e.target.value || null })}
-        >
-          <option value="" style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>Unassigned</option>
-          {team?.map(t => (
-            <option key={t.id} value={t.id} style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>
-              {t.name}
-            </option>
-          ))}
-        </select>
+        <div className="lead-owner-select-wrap" onClick={e => e.stopPropagation()} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <select 
+            style={{ 
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+              border: '1px solid transparent', 
+              cursor: 'pointer',
+              outline: 'none',
+              fontSize: '12px',
+              width: '100%',
+              paddingRight: '18px',
+              borderRadius: 6,
+              transition: 'border-color 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--bg-border)'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}
+            value={lead.owner_id || ''}
+            onChange={(e) => updateLead(lead.id, { owner_id: e.target.value || null })}
+          >
+            <option value="" style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>Unassigned</option>
+            {team?.map(t => (
+              <option key={t.id} value={t.id} style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={11} style={{ position: 'absolute', right: 3, pointerEvents: 'none', color: 'var(--text-tertiary)', opacity: 0.7 }} />
+        </div>
       </div>
 
       {/* Stage */}
       <div className="lc" onClick={(e) => e.stopPropagation()}>
-        <select 
-          className="stage-badge"
-          style={{ 
-            background: stageStyle.bg, 
-            color: stageStyle.color, 
-            border: 'none', 
-            cursor: 'pointer',
-            appearance: 'none',
-            outline: 'none'
-          }}
-          value={lead.stage || 'New Lead'}
-          onChange={(e) => {
-            const newStage = e.target.value;
-            let updateObj = { stage: newStage };
-            if (newStage === 'Lost') {
-              const reason = window.prompt("Why was this lead lost? (e.g. Pricing, Competitor, No Need)");
-              if (reason) {
-                updateObj.lost_reason = reason;
-                updateObj.notes = lead.notes ? `${lead.notes}\n[Lost Reason]: ${reason}` : `[Lost Reason]: ${reason}`;
-              }
-            }
-            updateLead(lead.id, updateObj);
-          }}
-        >
-          {Object.keys(STAGE_COLORS).map(st => (
-            <option key={st} value={st} style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>{st}</option>
-          ))}
-        </select>
+        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', width: '100%' }}>
+          <select 
+            className="stage-badge"
+            style={{ 
+              background: stageStyle.bg, 
+              color: stageStyle.color, 
+              border: `1px solid ${stageStyle.bg}`,
+              cursor: 'pointer',
+              paddingRight: '20px',
+              outline: 'none',
+              borderRadius: 20,
+              width: '100%',
+            }}
+            value={lead.stage || 'New Lead'}
+            onChange={(e) => onStageChange(lead, e.target.value)}
+          >
+            {Object.keys(STAGE_COLORS).map(st => (
+              <option key={st} value={st} style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>{st}</option>
+            ))}
+          </select>
+          <ChevronDown size={11} style={{ position: 'absolute', right: 6, pointerEvents: 'none', color: stageStyle.color, opacity: 0.7 }} />
+        </div>
       </div>
 
       {/* Completeness */}
@@ -366,7 +367,7 @@ function LeadKanbanColumn({ stage, leads, onLeadClick, onDrop, team, user }) {
 export default function Leads() {
   const { leads, deleteLead, bulkDeleteLeads, updateLead } = useDataStore();
   const { team, user } = useAuthStore();
-  const { showConfirm } = useDialog();
+  const { showConfirm, showPrompt } = useDialog();
   const [activeView, setActiveView] = useState('all');
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'board'
   const [search, setSearch] = useState('');
@@ -487,6 +488,26 @@ export default function Leads() {
     Object.fromEntries(VIEWS.map(v => [v.id, enriched.filter(v.filter).length])),
     [enriched]
   );
+
+  const handleStageChange = async (lead, newStage) => {
+    let updateObj = { stage: newStage };
+    if (newStage === 'Lost') {
+      const reason = await showPrompt(
+        'Mark Lead as Lost',
+        `Why is ${lead.company_name || 'this lead'} being marked as lost?`,
+        'e.g. Pricing, Competitor, No Need…',
+        'Mark as Lost',
+        'Cancel'
+      );
+      if (reason) {
+        updateObj.lost_reason = reason;
+        updateObj.notes = lead.notes ? `${lead.notes}\n[Lost Reason]: ${reason}` : `[Lost Reason]: ${reason}`;
+      } else {
+        return; // user cancelled
+      }
+    }
+    updateLead(lead.id, updateObj);
+  };
 
   return (
     <div className="leads-page">
@@ -738,6 +759,7 @@ export default function Leads() {
                     team={team}
                     user={user}
                     onConvertToDeal={(l) => setConvertLead(l)}
+                    onStageChange={handleStageChange}
                   />
                 ))
               )}

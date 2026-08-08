@@ -407,3 +407,16 @@
   backdrop-filter: blur(4px);
   z-index: 40;
 }
+
+/* Task row edit/delete action buttons */
+.task-row-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  flex-shrink: 0;
+}
+.task-row:hover .task-row-actions {
+  opacity: 1;
+}

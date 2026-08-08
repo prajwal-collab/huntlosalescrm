@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { CheckCircle2, XCircle, AlertTriangle, Info, HelpCircle } from 'lucide-react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { CheckCircle2, XCircle, AlertTriangle, Info, HelpCircle, MessageSquare } from 'lucide-react';
 
 const DialogContext = createContext(null);
 
@@ -14,13 +14,15 @@ export const useDialog = () => {
 export function DialogProvider({ children }) {
   const [dialog, setDialog] = useState({
     isOpen: false,
-    type: 'info', // 'info' | 'success' | 'error' | 'warning' | 'confirm'
+    type: 'info', // 'info' | 'success' | 'error' | 'warning' | 'confirm' | 'prompt'
     title: '',
     message: '',
     confirmText: 'OK',
     cancelText: 'Cancel',
+    placeholder: '',
     resolver: null,
   });
+  const [promptValue, setPromptValue] = useState('');
 
   const showAlert = (title, message = '', type = 'info', confirmText = 'OK') => {
     return new Promise((resolve) => {
@@ -45,6 +47,24 @@ export function DialogProvider({ children }) {
         message,
         confirmText,
         cancelText,
+        placeholder: '',
+        resolver: resolve,
+      });
+    });
+  };
+
+  // Styled replacement for window.prompt() — returns typed string or null if cancelled
+  const showPrompt = (title, message = '', placeholder = '', confirmText = 'Submit', cancelText = 'Cancel') => {
+    return new Promise((resolve) => {
+      setPromptValue('');
+      setDialog({
+        isOpen: true,
+        type: 'prompt',
+        title,
+        message,
+        confirmText,
+        cancelText,
+        placeholder,
         resolver: resolve,
       });
     });
@@ -55,31 +75,47 @@ export function DialogProvider({ children }) {
   const showWarning = (title, message = '') => showAlert(title, message, 'warning');
 
   const handleConfirm = () => {
-    if (dialog.resolver) dialog.resolver(true);
+    if (dialog.type === 'prompt') {
+      if (dialog.resolver) dialog.resolver(promptValue.trim() || null);
+    } else {
+      if (dialog.resolver) dialog.resolver(true);
+    }
     setDialog((d) => ({ ...d, isOpen: false }));
+    setPromptValue('');
   };
 
   const handleCancel = () => {
-    if (dialog.resolver) dialog.resolver(false);
+    if (dialog.resolver) dialog.resolver(dialog.type === 'prompt' ? null : false);
     setDialog((d) => ({ ...d, isOpen: false }));
+    setPromptValue('');
   };
 
   return (
-    <DialogContext.Provider value={{ showAlert, showConfirm, showSuccess, showError, showWarning }}>
+    <DialogContext.Provider value={{ showAlert, showConfirm, showPrompt, showSuccess, showError, showWarning }}>
       {children}
       {dialog.isOpen && (
         <DialogPortal 
           dialog={dialog} 
           onConfirm={handleConfirm} 
-          onCancel={handleCancel} 
+          onCancel={handleCancel}
+          promptValue={promptValue}
+          setPromptValue={setPromptValue}
         />
       )}
     </DialogContext.Provider>
   );
 }
 
-function DialogPortal({ dialog, onConfirm, onCancel }) {
-  const { type, title, message, confirmText, cancelText } = dialog;
+function DialogPortal({ dialog, onConfirm, onCancel, promptValue, setPromptValue }) {
+  const { type, title, message, confirmText, cancelText, placeholder } = dialog;
+  const promptInputRef = useRef(null);
+
+  // Auto-focus prompt input
+  useEffect(() => {
+    if (type === 'prompt' && promptInputRef.current) {
+      promptInputRef.current.focus();
+    }
+  }, [type]);
 
   // Render a gorgeous glassmorphism dialog matching Huntlo design system
   let icon = <Info size={22} />;
@@ -108,6 +144,12 @@ function DialogPortal({ dialog, onConfirm, onCancel }) {
     confirmBorder = '1px solid #b45309';
   } else if (type === 'confirm') {
     icon = <HelpCircle size={22} />;
+    color = 'var(--accent-blue)';
+    bgGlow = 'rgba(59, 130, 246, 0.1)';
+    confirmBg = 'linear-gradient(180deg, #4f8cf6 0%, #2563eb 100%)';
+    confirmBorder = '1px solid #1d4ed8';
+  } else if (type === 'prompt') {
+    icon = <MessageSquare size={22} />;
     color = 'var(--accent-blue)';
     bgGlow = 'rgba(59, 130, 246, 0.1)';
     confirmBg = 'linear-gradient(180deg, #4f8cf6 0%, #2563eb 100%)';
@@ -228,6 +270,30 @@ function DialogPortal({ dialog, onConfirm, onCancel }) {
               <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                 {message}
               </p>
+            )}
+            {type === 'prompt' && (
+              <input
+                ref={promptInputRef}
+                value={promptValue}
+                onChange={e => setPromptValue(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') onConfirm(); if (e.key === 'Escape') onCancel(); }}
+                placeholder={placeholder || ''}
+                style={{
+                  marginTop: 12,
+                  width: '100%',
+                  padding: '8px 12px',
+                  fontSize: 13,
+                  borderRadius: 8,
+                  border: '1px solid var(--bg-border)',
+                  background: 'var(--bg-base)',
+                  color: 'var(--text-primary)',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.15s',
+                }}
+                onFocus={e => e.target.style.borderColor = 'var(--accent-blue)'}
+                onBlur={e => e.target.style.borderColor = 'var(--bg-border)'}
+              />
             )}
           </div>
         </div>

@@ -377,6 +377,10 @@ export default function Companies() {
   const [error, setError] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [deleting, setDeleting] = useState(false);
+  
+  // Filter/Sort States
+  const [filterSize, setFilterSize] = useState('');
+  const [sortBy, setSortBy] = useState('name_asc');
 
   const handleBulkDelete = async () => {
     const confirmed = await showConfirm(
@@ -400,10 +404,20 @@ export default function Companies() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const filtered = companies.filter(c => {
-    const q = (search || '').toLowerCase();
-    return (c.name || '').toLowerCase().includes(q) || (c.industry || '').toLowerCase().includes(q);
-  });
+  const filtered = companies
+    .filter(c => {
+      const q = (search || '').toLowerCase();
+      const matchesSearch = (c.name || '').toLowerCase().includes(q) || (c.industry || '').toLowerCase().includes(q);
+      const matchesSize = filterSize ? c.size === filterSize : true;
+      return matchesSearch && matchesSize;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name_asc') return (a.name || '').localeCompare(b.name || '');
+      if (sortBy === 'name_desc') return (b.name || '').localeCompare(a.name || '');
+      if (sortBy === 'eng_desc') return (b.engagement_score || 0) - (a.engagement_score || 0);
+      if (sortBy === 'mrr_desc') return (b.arr_estimate || 0) - (a.arr_estimate || 0);
+      return 0;
+    });
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -480,12 +494,32 @@ export default function Companies() {
           />
           {search && <X size={14} style={{ cursor: 'pointer', color: 'var(--text-tertiary)', flexShrink: 0 }} onClick={() => setSearch('')} />}
         </div>
-        <button className="btn btn-ghost btn-sm" style={{ gap: 5, fontSize: 12 }}>
-          <SlidersHorizontal size={13} /> Filter
-        </button>
-        <button className="btn btn-ghost btn-sm" style={{ gap: 5, fontSize: 12 }}>
-          <ChevronDown size={13} /> Sort
-        </button>
+        
+        <select 
+          className="input-base" 
+          style={{ width: 'auto', fontSize: 12, padding: '6px 12px', height: '32px' }}
+          value={filterSize}
+          onChange={e => setFilterSize(e.target.value)}
+        >
+          <option value="">All Sizes</option>
+          <option value="1-10">1-10</option>
+          <option value="11-50">11-50</option>
+          <option value="51-200">51-200</option>
+          <option value="201-1000">201-1000</option>
+          <option value="1000+">1000+</option>
+        </select>
+
+        <select 
+          className="input-base" 
+          style={{ width: 'auto', fontSize: 12, padding: '6px 12px', height: '32px' }}
+          value={sortBy}
+          onChange={e => setSortBy(e.target.value)}
+        >
+          <option value="name_asc">Name (A-Z)</option>
+          <option value="name_desc">Name (Z-A)</option>
+          <option value="eng_desc">Engagement (High-Low)</option>
+          <option value="mrr_desc">MRR (High-Low)</option>
+        </select>
       </div>
 
       {/* Layout */}

@@ -2,11 +2,12 @@
 // HUNTLO SALES OS — TASKS PAGE
 // ============================================
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Plus, CheckCircle, Clock, AlertCircle, X, Loader, Filter, BookOpen, Phone, Link2, ChevronDown, UploadCloud, Play, Save } from 'lucide-react';
+import { Search, Plus, CheckCircle, Clock, AlertCircle, X, Loader, Filter, BookOpen, Phone, Link2, ChevronDown, UploadCloud, Play, Save, Pencil, Trash2 } from 'lucide-react';
 import { format, isPast, isValid } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import useDataStore from '../store/useDataStore';
 import { useKeyboard } from '../hooks/useKeyboard';
+import { useDialog } from '../context/DialogContext';
 import './Tasks.css';
 
 const PRIORITY_COLORS = {
@@ -50,13 +51,17 @@ function safeIsPast(dateStr) {
 
 
 export default function Tasks() {
-  const { tasks, deals, leads, createTask, toggleTaskCompletion, teamMembers, appendLeadNotes } = useDataStore();
+  const { tasks, deals, leads, createTask, updateTask, deleteTask, toggleTaskCompletion, teamMembers, appendLeadNotes } = useDataStore();
+  const { showConfirm } = useDialog();
   const [filter, setFilter] = useState('pending');
   const [search, setSearch] = useState('');
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [isAdding, setIsAdding] = useState(false);
+  const [editingTask, setEditingTask] = useState(null); // task being edited
+  const [editForm, setEditForm] = useState({ title: '', deal_id: '', priority: 'medium', type: 'follow-up', due: '' });
   const [formData, setFormData] = useState({ title: '', deal_id: '', priority: 'medium', type: 'follow-up', due: '' });
   const [saving, setSaving] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
   const [error, setError] = useState(null);
   
 
@@ -137,6 +142,50 @@ export default function Tasks() {
       setError(error.message || 'Failed to create task');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async (taskId) => {
+    const confirmed = await showConfirm(
+      'Delete Task',
+      'Are you sure you want to delete this task? This cannot be undone.',
+      'Yes, Delete',
+      'Cancel',
+      'error'
+    );
+    if (confirmed) {
+      try { await deleteTask(taskId); } catch (err) { console.error(err); }
+    }
+  };
+
+  const openEdit = (task) => {
+    setEditingTask(task);
+    setEditForm({
+      title: task.title || '',
+      deal_id: task.deal_id || '',
+      priority: task.priority || 'medium',
+      type: task.type || 'follow-up',
+      due: task.due ? task.due.slice(0, 16) : '',
+    });
+  };
+
+  const handleEditSave = async (e) => {
+    e.preventDefault();
+    if (!editForm.title || !editingTask) return;
+    setEditSaving(true);
+    try {
+      await updateTask(editingTask.id, {
+        title: editForm.title,
+        deal_id: editForm.deal_id || null,
+        priority: editForm.priority,
+        type: editForm.type,
+        due: editForm.due || editingTask.due,
+      });
+      setEditingTask(null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -279,6 +328,25 @@ export default function Tasks() {
                   <div className="avatar avatar-sm" style={{ background: owner?.color || '#3b82f6', color: '#fff', fontSize: '10px' }} title={ownerName !== 'ME' ? ownerName : undefined}>
                     {ownerInitials}
                   </div>
+                  {/* Edit + Delete actions — visible on row hover */}
+                  <div className="task-row-actions">
+                    <button
+                      aria-label="Edit task"
+                      title="Edit task"
+                      onClick={(e) => { e.stopPropagation(); openEdit(task); }}
+                      style={{ background: 'var(--bg-hover)', border: '1px solid var(--bg-border)', borderRadius: 6, padding: '3px 7px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}
+                    >
+                      <Pencil size={12} />
+                    </button>
+                    <button
+                      aria-label="Delete task"
+                      title="Delete task"
+                      onClick={(e) => { e.stopPropagation(); handleDelete(task.id); }}
+                      style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '3px 7px', cursor: 'pointer', color: 'var(--danger)', display: 'flex', alignItems: 'center' }}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
                 </div>
                 </motion.div>
               );
@@ -347,6 +415,64 @@ export default function Tasks() {
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => setIsAdding(false)} style={{ flex: 1 }}>Cancel</button>
               <button type="submit" className="btn btn-primary btn-sm" style={{ flex: 2 }} disabled={saving}>
                 {saving ? <Loader size={14} className="cc-spinner" /> : 'Save Task'}
+              </button>
+            </div>
+          </form>
+        </motion.div>
+        </>
+      )}
+      </AnimatePresence>
+
+      {/* Edit Task panel */}
+      <AnimatePresence>
+      {editingTask && (
+        <>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="drawer-overlay" onClick={() => setEditingTask(null)} />
+        <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="contact-detail" style={{ position: 'fixed', right: 0, top: 0, bottom: 0, width: 400, background: 'var(--bg-surface)', borderLeft: '1px solid var(--bg-border)', zIndex: 50, overflowY: 'auto' }}>
+          <div className="panel-header" style={{ marginBottom: 24, padding: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 className="panel-title">Edit Task</h2>
+            <button className="drawer-close" onClick={() => setEditingTask(null)}><X size={16}/></button>
+          </div>
+          <form onSubmit={handleEditSave} style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 24px 24px' }}>
+            <div className="form-group">
+              <label className="label">Task Title *</label>
+              <input className="input-base" autoFocus required value={editForm.title} onChange={e => setEditForm({...editForm, title: e.target.value})} placeholder="e.g. Send follow-up email" />
+            </div>
+            <div className="form-group">
+              <label className="label">Related Deal</label>
+              <select className="input-base" value={editForm.deal_id} onChange={e => setEditForm({...editForm, deal_id: e.target.value})}>
+                <option value="">No Deal</option>
+                {deals.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="label">Type</label>
+              <select className="input-base" value={editForm.type} onChange={e => setEditForm({...editForm, type: e.target.value})}>
+                <option value="follow-up">Follow-up</option>
+                <option value="email">Email</option>
+                <option value="call">Call</option>
+                <option value="cold_call">Cold Call</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="prep">Prep</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="label">Priority</label>
+              <select className="input-base" value={editForm.priority} onChange={e => setEditForm({...editForm, priority: e.target.value})}>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="label">Due Date &amp; Time</label>
+              <input className="input-base" type="datetime-local" value={editForm.due} onChange={e => setEditForm({...editForm, due: e.target.value})} />
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditingTask(null)} style={{ flex: 1 }}>Cancel</button>
+              <button type="submit" className="btn btn-primary btn-sm" style={{ flex: 2 }} disabled={editSaving}>
+                {editSaving ? <Loader size={14} className="cc-spinner" /> : 'Save Changes'}
               </button>
             </div>
           </form>

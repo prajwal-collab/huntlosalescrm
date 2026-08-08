@@ -3,7 +3,7 @@ import { X, AlertCircle, Loader, Search, ChevronDown, Link2, User } from 'lucide
 import useDataStore from '../../store/useDataStore';
 import './DealDrawer.css';
 
-export default function NewDealDrawer({ onClose, prefilledLead = null }) {
+export default function NewDealDrawer({ onClose, prefilledLead = null, prefilledStage = 'Discovery' }) {
   const { companies, contacts, leads, createDeal } = useDataStore();
 
   // Pre-fill from a lead if passed in (Convert Lead → Deal flow)
@@ -95,7 +95,7 @@ export default function NewDealDrawer({ onClose, prefilledLead = null }) {
         title: formData.title,
         company_id: formData.company_id,
         arr: Number(formData.arr) || 0,
-        stage: 'Discovery',
+        stage: prefilledStage,
         urgency: formData.urgency,
         engagement_score: 0,
         notes: formData.lead_id ? `Converted from Lead #${formData.lead_id}` : '',
@@ -249,8 +249,8 @@ export default function NewDealDrawer({ onClose, prefilledLead = null }) {
 
           <div className="form-group">
             <label className="label">Pricing Plan</label>
-            <select className="input-base" required value={formData.plan} onChange={handlePlanChange}>
-              <option value="">Select a Plan</option>
+            <select className="input-base" value={formData.plan} onChange={handlePlanChange}>
+              <option value="">Custom Plan / Other</option>
               <option value="trial">7-Day Free Trial (₹0/mo)</option>
               <option value="starter">Starter (₹8,299/mo)</option>
               <option value="growth">Growth (₹24,999/mo)</option>
@@ -258,28 +258,17 @@ export default function NewDealDrawer({ onClose, prefilledLead = null }) {
             </select>
           </div>
 
-          {(formData.plan === 'enterprise' || (formData.arr && formData.plan === '')) && (
-            <div className="form-group animate-fade-in">
-              <label className="label">
-                {formData.plan === 'enterprise' ? 'Custom MRR (₹)' : 'MRR / Deal Value (₹)'}
-              </label>
-              <input
-                className="input-base"
-                type="number"
-                required={formData.plan === 'enterprise'}
-                value={formData.arr}
-                onChange={e => setFormData({...formData, arr: e.target.value})}
-                placeholder="e.g. 50000"
-              />
-            </div>
-          )}
-
-          {/* Show pre-filled MRR hint */}
-          {formData.arr && formData.plan !== 'enterprise' && formData.plan !== '' && (
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: -8, paddingLeft: 2 }}>
-              MRR: ₹{Number(formData.arr).toLocaleString('en-IN')}/mo
-            </div>
-          )}
+          <div className="form-group animate-fade-in">
+            <label className="label">MRR / Deal Value (₹/mo)</label>
+            <input
+              className="input-base"
+              type="number"
+              required
+              value={formData.arr}
+              onChange={e => setFormData({...formData, arr: e.target.value, plan: formData.plan === 'trial' || formData.plan === 'starter' || formData.plan === 'growth' ? '' : formData.plan})}
+              placeholder="e.g. 50000"
+            />
+          </div>
 
           <div className="form-group">
             <label className="label">Urgency</label>

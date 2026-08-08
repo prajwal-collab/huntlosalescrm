@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { MapPin, Camera, CheckCircle, Navigation, Clock, LogOut, Search, User, Building2, UploadCloud, Map, Briefcase, AlertTriangle, Star } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import useAuthStore from '../store/useAuthStore';
+import { useDialog } from '../context/DialogContext';
 import './FieldOps.css';
 
 export default function FieldOps() {
@@ -11,6 +12,7 @@ export default function FieldOps() {
   // Role checks & Profile
   const userProfile = team?.find(m => m.id === user?.id);
   const isAdmin = user?.email === 'prajwal@earlyjobs.in' || userProfile?.role === 'Admin' || userProfile?.role === 'Manager';
+  const { showError } = useDialog();
   
   const name = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
   const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -84,13 +86,13 @@ export default function FieldOps() {
         },
         (error) => {
           console.error('Error getting location:', error);
-          alert('Failed to get location. Please ensure location permissions are granted.');
+          showError('Location Error', 'Failed to get location. Please ensure location permissions are granted.');
           setIsLocating(false);
         },
         { enableHighAccuracy: true }
       );
     } else {
-      alert('Geolocation is not supported by your browser.');
+      showError('Not Supported', 'Geolocation is not supported by your browser.');
       setIsLocating(false);
     }
   };

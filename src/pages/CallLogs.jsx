@@ -33,7 +33,7 @@ function safeFormatDate(dateStr) {
 
 export default function CallLogs() {
   const { tasks, leads, contacts, createTask, appendLeadNotes } = useDataStore();
-  const { user, team } = useAuthStore();
+  const { user, team, updateProfileMeta } = useAuthStore();
 
   // Role detection — admin sees all SDR data; SDRs see only their own
   const userProfile = team?.find(m => m.id === user?.id);
@@ -532,9 +532,11 @@ export default function CallLogs() {
 
       // ── Update Streak ──────────────────────────────────────────────────
       const todayStr = new Date().toDateString();
-      const rawStreak = localStorage.getItem('huntlo_call_streak');
+      const rawStreak = user?.user_metadata?.huntlo_call_streak || localStorage.getItem('huntlo_call_streak');
       let streakData = { count: 0, lastDate: null };
-      if (rawStreak) { try { streakData = JSON.parse(rawStreak); } catch(e) {} }
+      if (rawStreak) { 
+        try { streakData = typeof rawStreak === 'string' ? JSON.parse(rawStreak) : rawStreak; } catch(e) {} 
+      }
       if (streakData.lastDate !== todayStr) {
         const lastD = streakData.lastDate ? new Date(streakData.lastDate) : new Date(0);
         const todayD = new Date(todayStr);
@@ -544,6 +546,9 @@ export default function CallLogs() {
         if (!streakData.count) streakData.count = 1;
         streakData.lastDate = todayStr;
         localStorage.setItem('huntlo_call_streak', JSON.stringify(streakData));
+        if (updateProfileMeta) {
+          updateProfileMeta({ huntlo_call_streak: streakData }).catch(() => {});
+        }
       }
 
       // 3. Force-refresh leads table so the Leads page reflects new entries immediately
@@ -663,9 +668,11 @@ export default function CallLogs() {
 
       // ── Update Streak ──────────────────────────────────────────────────
       const todayStr = new Date().toDateString();
-      const rawStreak = localStorage.getItem('huntlo_call_streak');
+      const rawStreak = user?.user_metadata?.huntlo_call_streak || localStorage.getItem('huntlo_call_streak');
       let streakData = { count: 0, lastDate: null };
-      if (rawStreak) { try { streakData = JSON.parse(rawStreak); } catch(e) {} }
+      if (rawStreak) { 
+        try { streakData = typeof rawStreak === 'string' ? JSON.parse(rawStreak) : rawStreak; } catch(e) {} 
+      }
       if (streakData.lastDate !== todayStr) {
         const lastD = streakData.lastDate ? new Date(streakData.lastDate) : new Date(0);
         const todayD = new Date(todayStr);
@@ -675,8 +682,10 @@ export default function CallLogs() {
         if (!streakData.count) streakData.count = 1;
         streakData.lastDate = todayStr;
         localStorage.setItem('huntlo_call_streak', JSON.stringify(streakData));
+        if (updateProfileMeta) {
+          updateProfileMeta({ huntlo_call_streak: streakData }).catch(() => {});
+        }
       }
-
       if (closeAfter) {
         setShowCallLogger(false);
       }

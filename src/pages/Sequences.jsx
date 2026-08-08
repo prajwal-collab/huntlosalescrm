@@ -383,6 +383,7 @@ export default function Sequences() {
 
 // ── Global Sequence Hub Dashboard ──────────────────────────
 function SequenceHubDashboard({ sequences, onCreateClick }) {
+  const { showConfirm } = useDialog();
   const activeCount = sequences.filter(s => s.status === 'active' || s.status === 'Active').length;
   const totalEnrolled = sequences.reduce((acc, s) => acc + (s.enrolled || 0), 0);
   const avgReplyRate = sequences.length > 0
@@ -444,11 +445,26 @@ function SequenceHubDashboard({ sequences, onCreateClick }) {
                     {isActive ? 'Active' : 'Draft'}
                   </span>
                 </div>
-                <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--text-tertiary)' }}>
+                <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 16 }}>
                   <span>{seq.steps || 0} steps</span>
                   <span>{seq.enrolled || 0} enrolled</span>
                   <span style={{ color: 'var(--accent-blue)' }}>{seq.reply_rate || 0}% reply</span>
                 </div>
+                <button
+                  className="btn btn-ghost btn-sm w-full"
+                  style={{ border: '1px solid var(--border-color)' }}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    await showConfirm(
+                      'Enroll Contacts',
+                      'To enroll people in this sequence, go to the People page, select the contacts you want, and click "Enroll in Sequence".',
+                      'Got it',
+                      null
+                    );
+                  }}
+                >
+                  <Users size={14} /> Enroll Contacts
+                </button>
               </div>
             );
           })}

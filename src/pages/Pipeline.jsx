@@ -9,6 +9,7 @@ import useDataStore from '../store/useDataStore';
 import useAuthStore from '../store/useAuthStore';
 import DealDrawer from '../components/pipeline/DealDrawer';
 import NewDealDrawer from '../components/pipeline/NewDealDrawer';
+import { useDialog } from '../context/DialogContext';
 import './Pipeline.css';
 
 // ── INR Formatter ─────────────────────────────────────────────
@@ -139,7 +140,7 @@ function DraggableDealCard({ deal, onClick, onDelete, user, team }) {
 
 const PIPELINE_STAGES = ['Discovery', 'Qualification', 'Trial', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'];
 
-function KanbanColumn({ stage, deals, onDealClick, onDeleteClick, onDrop, user, team }) {
+function KanbanColumn({ stage, deals, onDealClick, onDeleteClick, onAddClick, onDrop, user, team }) {
   const [dragOver, setDragOver] = useState(false);
   const total = deals.reduce((s, d) => s + (d.arr || 0), 0);
 
@@ -151,7 +152,12 @@ function KanbanColumn({ stage, deals, onDealClick, onDeleteClick, onDrop, user, 
       onDrop={e => { e.preventDefault(); setDragOver(false); onDrop(e, stage); }}
     >
       <div className="kanban-col-header">
-        <span className="kanban-stage">{stage}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span className="kanban-stage">{stage}</span>
+          <button className="kanban-add-btn" onClick={() => onAddClick(stage)} title="Add Deal to this stage">
+            <Plus size={12} />
+          </button>
+        </div>
         <div className="kanban-meta">
           <span className="kanban-count">{deals.length}</span>
           {total > 0 && <span className="kanban-arr">{fmtINR(total)}</span>}
@@ -173,17 +179,26 @@ export default function Pipeline() {
   const { drawerOpen, selectedDealId, selectDeal, closeDrawer, moveDeal, setSearch, search, filter, setFilter, getFilteredDeals } = usePipelineStore();
   const { companies, deals, createDeal, updateDeal, deleteDeal } = useDataStore();
   const { user, team } = useAuthStore();
+  const { showConfirm, showPrompt } = useDialog();
   const [isAdding, setIsAdding] = useState(false);
+  const [addingStage, setAddingStage] = useState('Discovery');
   const [formData, setFormData] = useState({ title: '', company_id: '', arr: '', urgency: 'medium' });
 
   const filtered = getFilteredDeals();
 
   const handleDeleteDeal = async (dealId) => {
-    if (window.confirm("Are you sure you want to delete this deal? This action cannot be undone.")) {
+    const confirmed = await showConfirm(
+      'Delete Deal',
+      'Are you sure you want to delete this deal? This action cannot be undone.',
+      'Yes, Delete',
+      'Cancel',
+      'error'
+    );
+    if (confirmed) {
       try {
         await deleteDeal(dealId);
       } catch (err) {
-        console.error("Failed to delete deal:", err);
+        console.error('Failed to delete deal:', err);
       }
     }
   };
@@ -192,7 +207,13 @@ export default function Pipeline() {
     const dealId = e.dataTransfer.getData('dealId');
     if (dealId) {
       if (stage === 'Closed Lost') {
-        const reason = window.prompt("Why was this deal lost? (e.g. Pricing, Competitor, No Need)");
+        const reason = await showPrompt(
+          'Mark Deal as Lost',
+          'Please provide a reason for closing this deal as lost.',
+          'e.g. Pricing, Competitor, No Need…',
+          'Mark as Lost',
+          'Cancel'
+        );
         if (reason) {
           await updateDeal(dealId, { 
             stage: 'Closed Lost',
@@ -242,7 +263,11 @@ export default function Pipeline() {
           <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 500 }}>
             {filtered.length} deal{filtered.length !== 1 ? 's' : ''}
           </span>
-          <button className="btn btn-primary btn-sm" onClick={() => setIsAdding(true)}><Plus size={13} /> Add Deal</button>
+          <div className="page-header-right">
+            <button className="btn btn-primary" onClick={() => { setAddingStage('Discovery'); setIsAdding(true); }}>
+              <Plus size={14} /> Add Deal
+            </button>
+          </div>
         </div>
       </div>
 
@@ -254,6 +279,7 @@ export default function Pipeline() {
             deals={filtered.filter(d => d.stage === stage)}
             onDealClick={selectDeal}
             onDeleteClick={handleDeleteDeal}
+            onAddClick={(st) => { setAddingStage(st); setIsAdding(true); }}
             onDrop={handleDrop}
             user={user}
             team={team}
@@ -262,7 +288,10 @@ export default function Pipeline() {
       </div>
 
       {isAdding && (
-        <NewDealDrawer onClose={() => setIsAdding(false)} />
+        <NewDealDrawer 
+          onClose={() => setIsAdding(false)} 
+          prefilledStage={addingStage}
+        />
       )}
 
       {drawerOpen && selectedDealId && !isAdding && (

@@ -424,6 +424,10 @@ export default function Contacts() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
 
+  // Filter/Sort States
+  const [filterStatus, setFilterStatus] = useState('');
+  const [sortBy, setSortBy] = useState('name_asc');
+
   const handleBulkDelete = async () => {
     const confirmed = await showConfirm(
       'Delete Selected Contacts',
@@ -446,16 +450,25 @@ export default function Contacts() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const filtered = contacts.filter(c => {
-    const q = (search || '').toLowerCase();
-    const comp = companies.find(co => co.id === c.company_id);
-    return (
-      (c.name || '').toLowerCase().includes(q) ||
-      (c.email || '').toLowerCase().includes(q) ||
-      (c.designation || '').toLowerCase().includes(q) ||
-      (comp?.name || '').toLowerCase().includes(q)
-    );
-  });
+  const filtered = contacts
+    .filter(c => {
+      const q = (search || '').toLowerCase();
+      const comp = companies.find(co => co.id === c.company_id);
+      const matchesSearch = (
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.email || '').toLowerCase().includes(q) ||
+        (c.designation || '').toLowerCase().includes(q) ||
+        (comp?.name || '').toLowerCase().includes(q)
+      );
+      const matchesStatus = filterStatus ? (c.status === filterStatus || (!c.status && filterStatus === 'New')) : true;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name_asc') return (a.name || '').localeCompare(b.name || '');
+      if (sortBy === 'name_desc') return (b.name || '').localeCompare(a.name || '');
+      if (sortBy === 'eng_desc') return (b.engagement_score || 0) - (a.engagement_score || 0);
+      return 0;
+    });
 
   // Reset pagination when search changes
   useMemo(() => setCurrentPage(1), [filtered.length, itemsPerPage]);
@@ -528,12 +541,30 @@ export default function Contacts() {
           />
           {search && <X size={14} style={{ cursor: 'pointer', color: 'var(--text-tertiary)', flexShrink: 0 }} onClick={() => setSearch('')} />}
         </div>
-        <button className="btn btn-ghost btn-sm" style={{ gap: 5, fontSize: 12 }}>
-          <SlidersHorizontal size={13} /> Filter
-        </button>
-        <button className="btn btn-ghost btn-sm" style={{ gap: 5, fontSize: 12 }}>
-          <ChevronDown size={13} /> Sort
-        </button>
+        
+        <select 
+          className="input-base" 
+          style={{ width: 'auto', fontSize: 12, padding: '6px 12px', height: '32px' }}
+          value={filterStatus}
+          onChange={e => setFilterStatus(e.target.value)}
+        >
+          <option value="">All Statuses</option>
+          <option value="New">New</option>
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+          <option value="DNC">Do Not Contact</option>
+        </select>
+
+        <select 
+          className="input-base" 
+          style={{ width: 'auto', fontSize: 12, padding: '6px 12px', height: '32px' }}
+          value={sortBy}
+          onChange={e => setSortBy(e.target.value)}
+        >
+          <option value="name_asc">Name (A-Z)</option>
+          <option value="name_desc">Name (Z-A)</option>
+          <option value="eng_desc">Engagement (High-Low)</option>
+        </select>
       </div>
 
       {/* Layout */}
