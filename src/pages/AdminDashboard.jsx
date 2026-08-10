@@ -10,7 +10,7 @@ import {
 import {
   TrendingUp, Clock, Target, ArrowUpRight, BarChart2,
   DollarSign, Briefcase, Star, Sparkles, Users, Phone,
-  UserPlus, Activity, CheckCircle, Calendar
+  UserPlus, Activity, CheckCircle, Calendar, MapPin
 } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import useAuthStore from '../store/useAuthStore';
@@ -238,6 +238,33 @@ export default function AdminDashboard() {
     ];
   }, [allDeals, leads]);
 
+  // ── Field Visits ───────────────────────────────────────────────────────────
+  const fieldVisits = useMemo(() => {
+    return tasks
+      .filter(t => t.type === 'field_visit')
+      .map(t => {
+        let parsed = {};
+        try { parsed = JSON.parse(t.notes || '{}'); } catch(e) {}
+        const lead = leads.find(l => l.id === parsed.lead_id);
+        const owner = team?.find(m => m.id === t.owner_id);
+        return {
+          id: t.id,
+          status: t.status,
+          ownerName: owner?.name || owner?.email || 'Unknown Rep',
+          leadName: lead?.contact_name || lead?.company_name || 'Unknown Lead',
+          lat: parsed.check_in_lat,
+          lng: parsed.check_in_lng,
+          checkInTime: parsed.check_in_time,
+          checkOutTime: parsed.check_out_time,
+          photo: parsed.photo_url,
+          notes: parsed.meeting_notes,
+          timestamp: new Date(t.created_at).getTime()
+        };
+      })
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .filter(v => matchesTimeframe(v.timestamp, timeframe));
+  }, [tasks, leads, team, timeframe]);
+
   // ── Generate Executive Summary ──────────────────────────────────────────
   const handleGenerateAI = async () => {
     setAiLoading(true);
@@ -292,6 +319,7 @@ export default function AdminDashboard() {
             { id: 'overview',     label: '📊 Overview' },
             { id: 'sdr-activity', label: '👤 SDR Activity' },
             { id: 'leaderboard',  label: '🏆 Team Performance' },
+            { id: 'field-ops',    label: '📍 Field Ops' },
             { id: 'ai-insights',  label: '🧠 Founder Insights' },
           ].map(t => (
             <button
@@ -610,6 +638,77 @@ export default function AdminDashboard() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* ── Field Ops tab ── */}
+        {activeTab === 'field-ops' && (
+          <div className="adm-table-card" style={{ padding: '24px' }}>
+            <div className="adm-table-header" style={{ marginBottom: '24px' }}>
+              <span className="adm-table-title">📍 Field Operations Tracking — {TIMEFRAME_LABELS[timeframe]}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{fieldVisits.length} visits logged</span>
+            </div>
+
+            {fieldVisits.length === 0 ? (
+              <div style={{ padding: 60, textAlign: 'center', color: '#9ca3af', background: '#f9fafb', borderRadius: 20, border: '1px dashed #d1d5db' }}>
+                <MapPin size={48} style={{ opacity: 0.5, margin: '0 auto 16px auto' }} />
+                No field visits logged in this timeframe.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+                {fieldVisits.map(visit => (
+                  <div key={visit.id} style={{ background: '#fff', borderRadius: '16px', padding: '20px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#eff6ff', color: '#1b66f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '16px' }}>
+                          {visit.ownerName.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: '600', color: '#111827', fontSize: '14px' }}>{visit.ownerName}</div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                            {visit.checkInTime ? new Date(visit.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Unknown time'}
+                          </div>
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '11px', fontWeight: '600', padding: '4px 8px', borderRadius: '12px', background: visit.status === 'in_progress' ? '#fef3c7' : '#d1fae5', color: visit.status === 'in_progress' ? '#d97706' : '#059669', textTransform: 'uppercase' }}>
+                        {visit.status === 'in_progress' ? 'Active' : 'Completed'}
+                      </span>
+                    </div>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#4b5563', marginBottom: '16px', background: '#f9fafb', padding: '8px 12px', borderRadius: '8px' }}>
+                      <Briefcase size={14} color="#6b7280" /> 
+                      {visit.leadName}
+                    </div>
+                    
+                    {visit.photo && (
+                      <img src={visit.photo} alt="Verification" style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '8px', marginBottom: '16px' }} />
+                    )}
+                    
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #f3f4f6' }}>
+                      {visit.lat && visit.lng ? (
+                        <a href={`https://maps.google.com/?q=${visit.lat},${visit.lng}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#1b66f2', textDecoration: 'none', fontWeight: '500' }}>
+                          <MapPin size={16} /> View on Map
+                        </a>
+                      ) : (
+                        <span style={{ fontSize: '13px', color: '#9ca3af' }}>No GPS</span>
+                      )}
+                      
+                      {visit.status === 'completed' && visit.checkOutTime && (
+                        <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>
+                          Out: {new Date(visit.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      )}
+                    </div>
+
+                    {visit.notes && (
+                      <div style={{ marginTop: '16px', padding: '12px', background: '#f9fafb', borderRadius: '8px', fontSize: '13px', color: '#4b5563', border: '1px solid #e5e7eb' }}>
+                        {visit.notes}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
