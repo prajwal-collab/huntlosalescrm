@@ -91,6 +91,11 @@ export default function NewDealDrawer({ onClose, prefilledLead = null, prefilled
         ? null
         : formData.contact_id || null;
 
+      let finalNotes = formData.lead_id ? `Converted from Lead #${formData.lead_id}` : '';
+      if (realContactId) {
+        finalNotes += (finalNotes ? '\n' : '') + `Assigned Lead: ${realContactId}`;
+      }
+
       await createDeal({
         title: formData.title,
         company_id: formData.company_id,
@@ -98,7 +103,7 @@ export default function NewDealDrawer({ onClose, prefilledLead = null, prefilled
         stage: prefilledStage,
         urgency: formData.urgency,
         engagement_score: 0,
-        notes: formData.lead_id ? `Converted from Lead #${formData.lead_id}` : '',
+        notes: finalNotes,
       });
       onClose();
     } catch (err) {

@@ -391,7 +391,7 @@ function ProposalsTab({ deal, showAlert, showSuccess }) {
 // ── Main DealDrawer ────────────────────────────
 export default function DealDrawer({ dealId, onClose }) {
   const { getSelectedDeal, addActivity } = usePipelineStore();
-  const { contacts, tasks, meetings, createTask, updateTask, deleteTask, updateDeal, createDeal, deleteDeal, teamMembers, createContact, leads } = useDataStore();
+  const { contacts, tasks, meetings, createTask, updateTask, deleteTask, updateDeal, createDeal, deleteDeal, teamMembers, createContact, createLead, leads } = useDataStore();
   const { showAlert, showSuccess } = useDialog();
   const deal = getSelectedDeal();
   const [activeTab, setActiveTab] = useState('Overview');
@@ -425,7 +425,7 @@ export default function DealDrawer({ dealId, onClose }) {
 
     setContactSaving(true);
     try {
-      await createContact({
+      const newContact = await createContact({
         name: contactForm.name,
         email: contactForm.email || null,
         whatsapp: contactForm.phone || null,
@@ -433,9 +433,33 @@ export default function DealDrawer({ dealId, onClose }) {
         role: contactForm.role !== 'default' ? contactForm.role : null,
         company_id: deal.company_id || null
       });
+
+      try {
+        await createLead({
+          contact_name: contactForm.name,
+          email: contactForm.email || null,
+          phone: contactForm.phone || null,
+          designation: contactForm.designation || null,
+          company_name: deal.company || deal.title || 'Unknown Company',
+          stage: 'New Lead',
+          source: 'Deal Drawer'
+        });
+      } catch (err) {
+        console.warn('Non-fatal: failed to create lead for contact', err);
+      }
+
+      try {
+        if (newContact && newContact.id) {
+          const newNotes = deal.notes ? `${deal.notes}\nAssigned Lead: ${newContact.id}` : `Assigned Lead: ${newContact.id}`;
+          await updateDeal(deal.id, { notes: newNotes });
+        }
+      } catch (err) {
+        console.warn('Non-fatal: failed to assign lead to deal context', err);
+      }
+
       setShowContactForm(false);
       setContactForm({ name: '', email: '', phone: '', designation: '', role: 'default' });
-      showSuccess('Contact Added', 'The contact has been successfully linked.');
+      showSuccess('Contact Added', 'The contact has been successfully linked and added as a lead.');
     } catch (e) {
       showAlert('Error', e.message || 'Failed to create contact.');
     } finally {

@@ -16,6 +16,7 @@ import useDataStore from '../store/useDataStore';
 import useAuthStore from '../store/useAuthStore';
 import { format, isValid, subDays, startOfDay, startOfWeek, startOfMonth, formatDistanceToNow } from 'date-fns';
 import { generateExecutiveSummary } from '../lib/gemini';
+import LeadDrawer from '../components/leads/LeadDrawer';
 import './AdminDashboard.css';
 
 const TIMEFRAME_LABELS = { today: 'Today', week: 'This Week', month: 'This Month', all: 'All Time' };
@@ -50,12 +51,14 @@ function fmtINR(amount) {
 export default function AdminDashboard() {
   const { deals, tasks, leads, meetings } = useDataStore();
   const { user, team, fetchTeam } = useAuthStore();
-  const [timeframe, setTimeframe] = useState('month');
-  const [activeTab, setActiveTab] = useState('overview');
-  const [selectedSdr, setSelectedSdr] = useState(null); // for drill-down
-
+  const [timeframe, setTimeframe] = useState('week'); // today, week, month, all
+  const [activeTab, setActiveTab] = useState('overview'); // overview, activity, leaderboard, field-ops, ai-insights
+  const [expandedRepId, setExpandedRepId] = useState(null);
+  
+  // AI Insights
   const [aiSummary, setAiSummary] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+  const [selectedLeadId, setSelectedLeadId] = useState(null);
 
   useEffect(() => { fetchTeam(); }, [fetchTeam]);
 
@@ -249,6 +252,7 @@ export default function AdminDashboard() {
         const owner = team?.find(m => m.id === t.owner_id);
         return {
           id: t.id,
+          leadId: lead?.id,
           status: t.status,
           ownerName: owner?.name || owner?.email || 'Unknown Rep',
           leadName: lead?.contact_name || lead?.company_name || 'Unknown Lead',
@@ -657,7 +661,11 @@ export default function AdminDashboard() {
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
                 {fieldVisits.map(visit => (
-                  <div key={visit.id} style={{ background: '#fff', borderRadius: '16px', padding: '20px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+                  <div 
+                    key={visit.id} 
+                    style={{ background: '#fff', borderRadius: '16px', padding: '20px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', cursor: visit.leadId ? 'pointer' : 'default' }}
+                    onClick={() => { if(visit.leadId) setSelectedLeadId(visit.leadId); }}
+                  >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#eff6ff', color: '#1b66f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '16px' }}>
@@ -745,6 +753,13 @@ export default function AdminDashboard() {
         )}
 
       </main>
+      
+      {selectedLeadId && (
+        <LeadDrawer
+          leadId={selectedLeadId}
+          onClose={() => setSelectedLeadId(null)}
+        />
+      )}
     </div>
   );
 }
