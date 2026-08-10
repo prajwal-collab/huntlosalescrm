@@ -409,7 +409,7 @@ export default function DealDrawer({ dealId, onClose }) {
 
   // New Contact Form State
   const [showContactForm, setShowContactForm] = useState(false);
-  const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', designation: '', role: 'default' });
+  const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', designation: '', role: 'default', selectedLeadId: '' });
   const [contactSaving, setContactSaving] = useState(false);
   
   const handleAddContact = async () => {
@@ -434,18 +434,20 @@ export default function DealDrawer({ dealId, onClose }) {
         company_id: deal.company_id || null
       });
 
-      try {
-        await createLead({
-          contact_name: contactForm.name,
-          email: contactForm.email || null,
-          phone: contactForm.phone || null,
-          designation: contactForm.designation || null,
-          company_name: deal.company || deal.title || 'Unknown Company',
-          stage: 'New Lead',
-          source: 'Deal Drawer'
-        });
-      } catch (err) {
-        console.warn('Non-fatal: failed to create lead for contact', err);
+      if (!contactForm.selectedLeadId) {
+        try {
+          await createLead({
+            contact_name: contactForm.name,
+            email: contactForm.email || null,
+            phone: contactForm.phone || null,
+            designation: contactForm.designation || null,
+            company_name: deal.company || deal.title || 'Unknown Company',
+            stage: 'New Lead',
+            source: 'Deal Drawer'
+          });
+        } catch (err) {
+          console.warn('Non-fatal: failed to create lead for contact', err);
+        }
       }
 
       try {
@@ -458,8 +460,8 @@ export default function DealDrawer({ dealId, onClose }) {
       }
 
       setShowContactForm(false);
-      setContactForm({ name: '', email: '', phone: '', designation: '', role: 'default' });
-      showSuccess('Contact Added', 'The contact has been successfully linked and added as a lead.');
+      setContactForm({ name: '', email: '', phone: '', designation: '', role: 'default', selectedLeadId: '' });
+      showSuccess('Contact Added', 'The contact has been successfully linked.');
     } catch (e) {
       showAlert('Error', e.message || 'Failed to create contact.');
     } finally {
@@ -904,6 +906,35 @@ export default function DealDrawer({ dealId, onClose }) {
                     <button className="drawer-close" style={{ position: 'static' }} onClick={() => setShowContactForm(false)}><X size={14} /></button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <select 
+                      className="input-base" 
+                      value={contactForm.selectedLeadId || ''}
+                      onChange={(e) => {
+                        const leadId = e.target.value;
+                        const lead = leads.find(l => l.id === leadId);
+                        if (lead) {
+                          setContactForm({
+                            ...contactForm,
+                            name: lead.contact_name || '',
+                            email: lead.email || '',
+                            phone: lead.phone || lead.whatsapp || '',
+                            designation: lead.designation || '',
+                            selectedLeadId: leadId
+                          });
+                        } else {
+                          setContactForm({ ...contactForm, selectedLeadId: '' });
+                        }
+                      }}
+                      style={{ marginBottom: '8px' }}
+                    >
+                      <option value="">-- Or select an existing Lead from CRM --</option>
+                      {leads.map(l => (
+                        <option key={l.id} value={l.id}>
+                          {l.contact_name || l.email || 'Unnamed'} ({l.company_name || 'No Company'})
+                        </option>
+                      ))}
+                    </select>
+
                     <input className="input-base" placeholder="Name *" value={contactForm.name} onChange={e => setContactForm({ ...contactForm, name: e.target.value })} />
                     <input className="input-base" placeholder="Email" type="email" value={contactForm.email} onChange={e => setContactForm({ ...contactForm, email: e.target.value })} />
                     <div style={{ display: 'flex', gap: 10 }}>
