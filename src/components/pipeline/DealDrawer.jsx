@@ -414,6 +414,15 @@ export default function DealDrawer({ dealId, onClose }) {
   
   const handleAddContact = async () => {
     if (!contactForm.name.trim()) return;
+
+    if (contactForm.email) {
+      const existing = contacts.find(c => c.email?.toLowerCase() === contactForm.email.toLowerCase());
+      if (existing) {
+        showAlert('Contact Exists', 'A contact with this email already exists in your CRM.');
+        return;
+      }
+    }
+
     setContactSaving(true);
     try {
       await createContact({
@@ -423,13 +432,13 @@ export default function DealDrawer({ dealId, onClose }) {
         designation: contactForm.designation || null,
         role: contactForm.role !== 'default' ? contactForm.role : null,
         lead_id: contactForm.lead_id || null,
-        company_id: deal.company_id
+        company_id: deal.company_id || null
       });
       setShowContactForm(false);
       setContactForm({ name: '', email: '', phone: '', designation: '', role: 'default', lead_id: '' });
       showSuccess('Contact Added', 'The contact has been successfully linked.');
     } catch (e) {
-      showAlert('Error', 'Failed to create contact.');
+      showAlert('Error', e.message || 'Failed to create contact.');
     } finally {
       setContactSaving(false);
     }
