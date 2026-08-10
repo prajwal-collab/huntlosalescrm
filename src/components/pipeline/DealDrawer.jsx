@@ -391,7 +391,7 @@ function ProposalsTab({ deal, showAlert, showSuccess }) {
 // ── Main DealDrawer ────────────────────────────
 export default function DealDrawer({ dealId, onClose }) {
   const { getSelectedDeal, addActivity } = usePipelineStore();
-  const { contacts, tasks, meetings, createTask, updateTask, deleteTask, updateDeal, createDeal, deleteDeal, teamMembers } = useDataStore();
+  const { contacts, tasks, meetings, createTask, updateTask, deleteTask, updateDeal, createDeal, deleteDeal, teamMembers, createContact } = useDataStore();
   const { showAlert, showSuccess } = useDialog();
   const deal = getSelectedDeal();
   const [activeTab, setActiveTab] = useState('Overview');
@@ -406,6 +406,33 @@ export default function DealDrawer({ dealId, onClose }) {
   const [headerForm, setHeaderForm] = useState({ title: '', arr: '', stage: '', urgency: '', owner_id: '' });
   const [successMetrics, setSuccessMetrics] = useState(deal?.success_metrics || '');
   const [metricsSaving, setMetricsSaving] = useState(false);
+
+  // New Contact Form State
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', designation: '', role: 'default' });
+  const [contactSaving, setContactSaving] = useState(false);
+  
+  const handleAddContact = async () => {
+    if (!contactForm.name.trim()) return;
+    setContactSaving(true);
+    try {
+      await createContact({
+        name: contactForm.name,
+        email: contactForm.email || null,
+        whatsapp: contactForm.phone || null,
+        designation: contactForm.designation || null,
+        role: contactForm.role !== 'default' ? contactForm.role : null,
+        company_id: deal.company_id
+      });
+      setShowContactForm(false);
+      setContactForm({ name: '', email: '', phone: '', designation: '', role: 'default' });
+      showSuccess('Contact Added', 'The contact has been successfully linked.');
+    } catch (e) {
+      showAlert('Error', 'Failed to create contact.');
+    } finally {
+      setContactSaving(false);
+    }
+  };
 
   const handleEditHeaderClick = () => {
     setHeaderForm({
@@ -828,6 +855,41 @@ export default function DealDrawer({ dealId, onClose }) {
           {/* ── Contacts ── */}
           {activeTab === 'Contacts' && (
             <div className="drawer-contacts">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Linked Contacts</h3>
+                {!showContactForm && (
+                  <button className="btn btn-primary btn-sm" onClick={() => setShowContactForm(true)}>
+                    <Plus size={13} /> Add Contact
+                  </button>
+                )}
+              </div>
+
+              {showContactForm && (
+                <div style={{ background: 'var(--bg-raised)', padding: 16, borderRadius: 8, border: '1px solid var(--bg-border)', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>New Contact</h4>
+                    <button className="drawer-close" style={{ position: 'static' }} onClick={() => setShowContactForm(false)}><X size={14} /></button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <input className="input-base" placeholder="Name *" value={contactForm.name} onChange={e => setContactForm({ ...contactForm, name: e.target.value })} />
+                    <input className="input-base" placeholder="Email" type="email" value={contactForm.email} onChange={e => setContactForm({ ...contactForm, email: e.target.value })} />
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <input className="input-base" style={{ flex: 1 }} placeholder="Phone / WhatsApp" value={contactForm.phone} onChange={e => setContactForm({ ...contactForm, phone: e.target.value })} />
+                      <input className="input-base" style={{ flex: 1 }} placeholder="Designation" value={contactForm.designation} onChange={e => setContactForm({ ...contactForm, designation: e.target.value })} />
+                    </div>
+                    <select className="input-base" value={contactForm.role} onChange={e => setContactForm({ ...contactForm, role: e.target.value })}>
+                      <option value="default">General Contact</option>
+                      <option value="Champion">Champion ⭐</option>
+                      <option value="Economic Buyer">Economic Buyer 💰</option>
+                      <option value="CEO">CEO 👑</option>
+                    </select>
+                    <button className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }} onClick={handleAddContact} disabled={contactSaving || !contactForm.name.trim()}>
+                      {contactSaving ? 'Saving...' : 'Save Contact'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {linkedContacts.length > 0 ? linkedContacts.map((c, i) => (
                 <div key={c.id || i} className="contact-row">
                   <div className="avatar avatar-sm" style={{ background: `hsl(${(c.name?.charCodeAt(0) || i * 40) * 7}, 55%, 48%)`, color: '#fff', flexShrink: 0 }}>
@@ -867,11 +929,13 @@ export default function DealDrawer({ dealId, onClose }) {
                   </div>
                 </div>
               )) : (
-                <div className="empty-state" style={{ padding: 'var(--space-8)' }}>
-                  <User size={28} />
-                  <h3>No Contacts Linked</h3>
-                  <p>Create a Lead for this company to auto-generate a contact, or add one via the Contacts page.</p>
-                </div>
+                !showContactForm && (
+                  <div className="empty-state" style={{ padding: 'var(--space-8)' }}>
+                    <User size={28} />
+                    <h3>No Contacts Linked</h3>
+                    <p>Create a Lead for this company to auto-generate a contact, or add one via the Contacts page.</p>
+                  </div>
+                )
               )}
             </div>
           )}

@@ -206,22 +206,35 @@ export default function Pipeline() {
   const handleDrop = async (e, stage) => {
     const dealId = e.dataTransfer.getData('dealId');
     if (dealId) {
-      if (stage === 'Closed Lost') {
-        const reason = await showPrompt(
-          'Mark Deal as Lost',
-          'Please provide a reason for closing this deal as lost.',
-          'e.g. Pricing, Competitor, No Need…',
-          'Mark as Lost',
-          'Cancel'
-        );
-        if (reason) {
-          await updateDeal(dealId, { 
-            stage: 'Closed Lost',
-            lost_reason: reason
-          });
+      try {
+        if (stage === 'Closed Lost') {
+          const reason = await showPrompt(
+            'Mark Deal as Lost',
+            'Please provide a reason for closing this deal as lost.',
+            'e.g. Pricing, Competitor, No Need…',
+            'Mark as Lost',
+            'Cancel'
+          );
+          if (reason) {
+            const dealToUpdate = deals.find(d => d.id === dealId);
+            const updatedNotes = dealToUpdate?.notes 
+              ? `${dealToUpdate.notes}\n\nLost Reason: ${reason}` 
+              : `Lost Reason: ${reason}`;
+              
+            await updateDeal(dealId, { 
+              stage: 'Closed Lost',
+              notes: updatedNotes
+            });
+          }
+        } else {
+          await moveDeal(dealId, stage);
         }
-      } else {
-        moveDeal(dealId, stage);
+      } catch (err) {
+        console.error('Failed to move deal:', err);
+        // Fallback if updateDeal fails (e.g. due to missing columns)
+        try {
+           moveDeal(dealId, stage);
+        } catch(e) {}
       }
     }
   };
