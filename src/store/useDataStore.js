@@ -517,7 +517,6 @@ const useDataStore = create((set, get) => ({
         website: lead.website || null,
         industry: lead.industry || null,
         size: lead.employee_size || null,
-        lead_id: lead.id,
         ...(orgId ? { organization_id: orgId } : {}),
       };
       const { data: newComp, error: compErr } = await supabase
@@ -546,7 +545,6 @@ const useDataStore = create((set, get) => ({
           designation: lead.designation || null,
           linkedin: lead.contact_linkedin || null,
           company_id: company?.id || null,
-          lead_id: lead.id,
           ...(orgId ? { organization_id: orgId } : {}),
         };
         const { data: newContact, error: contactErr } = await supabase

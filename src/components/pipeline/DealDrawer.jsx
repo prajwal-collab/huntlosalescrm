@@ -409,7 +409,7 @@ export default function DealDrawer({ dealId, onClose }) {
 
   // New Contact Form State
   const [showContactForm, setShowContactForm] = useState(false);
-  const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', designation: '', role: 'default', lead_id: '' });
+  const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', designation: '', role: 'default' });
   const [contactSaving, setContactSaving] = useState(false);
   
   const handleAddContact = async () => {
@@ -431,11 +431,10 @@ export default function DealDrawer({ dealId, onClose }) {
         whatsapp: contactForm.phone || null,
         designation: contactForm.designation || null,
         role: contactForm.role !== 'default' ? contactForm.role : null,
-        lead_id: contactForm.lead_id || null,
         company_id: deal.company_id || null
       });
       setShowContactForm(false);
-      setContactForm({ name: '', email: '', phone: '', designation: '', role: 'default', lead_id: '' });
+      setContactForm({ name: '', email: '', phone: '', designation: '', role: 'default' });
       showSuccess('Contact Added', 'The contact has been successfully linked.');
     } catch (e) {
       showAlert('Error', e.message || 'Failed to create contact.');
@@ -893,12 +892,7 @@ export default function DealDrawer({ dealId, onClose }) {
                       <option value="Economic Buyer">Economic Buyer 💰</option>
                       <option value="CEO">CEO 👑</option>
                     </select>
-                    <select className="input-base" value={contactForm.lead_id} onChange={e => setContactForm({ ...contactForm, lead_id: e.target.value })}>
-                      <option value="">Select a Lead (Optional)</option>
-                      {leads.map(l => (
-                        <option key={l.id} value={l.id}>{l.company_name || l.contact_name || 'Unknown Lead'}</option>
-                      ))}
-                    </select>
+
                     <button className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }} onClick={handleAddContact} disabled={contactSaving || !contactForm.name.trim()}>
                       {contactSaving ? 'Saving...' : 'Save Contact'}
                     </button>
