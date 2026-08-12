@@ -191,6 +191,30 @@ export default function NotificationManager() {
           });
         }
       });
+
+      // ─────────────────────────────────────────────
+      // 7. DAILY LEADS SUMMARY (5 PM)
+      // ─────────────────────────────────────────────
+      if (now.getHours() === 17 && now.getMinutes() < 10) {
+        const todayDateStr = now.toISOString().split('T')[0];
+        const firedToday = localStorage.getItem('daily-leads-notif');
+        if (firedToday !== todayDateStr) {
+          const startOfToday = new Date();
+          startOfToday.setHours(0,0,0,0);
+          const leadsAddedToday = leads.filter(l => l.created_at && new Date(l.created_at) >= startOfToday).length;
+
+          fireOnce(`daily-leads-summary-${todayDateStr}`, {
+            id: `daily-leads-summary-${todayDateStr}`,
+            type: 'sdr',
+            title: 'Daily Leads Summary 📊',
+            message: `Your team added ${leadsAddedToday} lead(s) today. Keep it up!`,
+            route: '/leads',
+            unread: true,
+            time: now.toISOString(),
+          });
+          localStorage.setItem('daily-leads-notif', todayDateStr);
+        }
+      }
     };
 
     // Run immediately on mount + data change

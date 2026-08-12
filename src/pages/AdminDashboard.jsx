@@ -144,8 +144,12 @@ export default function AdminDashboard() {
     // Average Deal Size (based on all won deals in timeframe)
     const avgDealSize = wonCount > 0 ? (wonMRR / wonCount) : 0;
 
-    return { pipelineMRR, wonMRR, winRate, avgDealSize, pipelineDealsCount: pipelineDeals.length, wonCount };
-  }, [filteredDeals, allDeals, timeframe]);
+    const startOfToday = new Date();
+    startOfToday.setHours(0,0,0,0);
+    const dailyLeadsCount = leads.filter(l => l.created_at && new Date(l.created_at) >= startOfToday).length;
+
+    return { pipelineMRR, wonMRR, winRate, avgDealSize, pipelineDealsCount: pipelineDeals.length, wonCount, dailyLeadsCount };
+  }, [filteredDeals, allDeals, timeframe, leads]);
 
   // ── SDR Performance (enriched with leads, meetings, tasks, calls) ─────────
   const sdrStats = useMemo(() => {
@@ -375,6 +379,15 @@ export default function AdminDashboard() {
             </div>
             <div className="adm-metric-value">{fmtINR(kpis.avgDealSize)}</div>
             <div className="adm-metric-sub">Based on won deals</div>
+          </div>
+
+          <div className="adm-metric-card" style={{ '--card-accent': '#0ea5e9', '--icon-bg': 'rgba(14,165,233,0.12)' }}>
+            <div className="adm-metric-top">
+              <span className="adm-metric-label">Team Daily Leads</span>
+              <span className="adm-metric-icon"><UserPlus size={15} /></span>
+            </div>
+            <div className="adm-metric-value">{kpis.dailyLeadsCount}</div>
+            <div className="adm-metric-sub">Added today</div>
           </div>
         </div>
 
