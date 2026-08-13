@@ -462,7 +462,7 @@ export default function AdminDashboard() {
               {sdrStats.map(sdr => {
                 const name = sdr.full_name || sdr.name || sdr.email || 'Unknown';
                 const initials = getInitials(name);
-                const isExpanded = selectedSdr === sdr.id;
+                const isExpanded = expandedRepId === sdr.id;
                 const connectPct = sdr.totalCalls > 0 ? Math.round((sdr.connectedCalls / sdr.totalCalls) * 100) : 0;
 
                 return (
@@ -471,7 +471,7 @@ export default function AdminDashboard() {
                     {/* Card header */}
                     <div
                       style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', cursor: 'pointer', background: isExpanded ? 'rgba(59,130,246,0.06)' : 'transparent' }}
-                      onClick={() => setSelectedSdr(isExpanded ? null : sdr.id)}
+                      onClick={() => setExpandedRepId(isExpanded ? null : sdr.id)}
                     >
                       <div className="adm-lb-avatar" style={{ width: 44, height: 44, fontSize: 15, flexShrink: 0, background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)' }}>{initials}</div>
                       <div style={{ flex: 1 }}>
