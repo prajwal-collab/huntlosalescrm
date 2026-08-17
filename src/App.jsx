@@ -62,11 +62,10 @@ export default function App() {
   const { initialize } = useAuthStore();
   const { theme } = useUIStore();
 
-  // Show setup screen if Supabase is not configured
-  if (!isConfigured) return <SetupRequired />;
-
   useEffect(() => {
-    initialize();
+    if (isConfigured) {
+      initialize();
+    }
   }, [initialize]);
 
   useEffect(() => {
@@ -76,6 +75,9 @@ export default function App() {
       document.documentElement.classList.remove('light-mode');
     }
   }, [theme]);
+
+  // Show setup screen if Supabase is not configured
+  if (!isConfigured) return <SetupRequired />;
 
   return (
     <DialogProvider>
