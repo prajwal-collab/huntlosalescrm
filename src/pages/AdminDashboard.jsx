@@ -51,7 +51,7 @@ function fmtINR(amount) {
 export default function AdminDashboard() {
   const { deals, tasks, leads, meetings } = useDataStore();
   const { user, team, fetchTeam } = useAuthStore();
-  const [timeframe, setTimeframe] = useState('week'); // today, week, month, all
+  const [timeframe, setTimeframe] = useState('all'); // today, week, month, all
   const [activeTab, setActiveTab] = useState('overview'); // overview, activity, leaderboard, field-ops, ai-insights
   const [expandedRepId, setExpandedRepId] = useState(null);
   
