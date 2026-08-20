@@ -12,6 +12,7 @@ import { format, isValid } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import useDataStore from '../store/useDataStore';
 import useAuthStore from '../store/useAuthStore';
+import useUIStore from '../store/useUIStore';
 import CsvImporterModal from '../components/CsvImporterModal';
 import './CallLogs.css';
 
@@ -34,6 +35,7 @@ function safeFormatDate(dateStr) {
 export default function CallLogs() {
   const { tasks, leads, contacts, createTask, appendLeadNotes } = useDataStore();
   const { user, team, updateProfileMeta } = useAuthStore();
+  const { addNotification } = useUIStore();
 
   // Role detection — admin sees all SDR data; SDRs see only their own
   const userProfile = team?.find(m => m.id === user?.id);
@@ -564,12 +566,70 @@ export default function CallLogs() {
     }
   };
 
-
   const handleSkip = async () => {
-    const savedForm = { ...activeCallForm };
-    setActiveCallForm({ outcome: '', duration: '', notes: '' });
-    await saveActiveCallWithForm('skipped', savedForm);
-    advanceToNextPending(activeCallIdx);
+    setSaving(true);
+    try {
+      const curr = callingList[activeCallIdx];
+      const savedForm = { ...activeCallForm, outcome: 'skipped' };
+      setActiveCallForm({ outcome: '', duration: '', notes: '' });
+      await saveActiveCallWithForm('skipped', savedForm, true);
+
+      const callNote = `⏭️ [${new Date().toLocaleDateString()}] Skipped from Power Dialer`;
+
+      const currentLeads = useDataStore.getState().leads;
+      const existingLead = currentLeads.find(l => {
+        if (curr.phone && l.phone && l.phone.replace(/\s+/g, '') === curr.phone.replace(/\s+/g, '')) return true;
+        if (curr.email && l.email && l.email.toLowerCase() === curr.email.toLowerCase()) return true;
+        if (curr.contact_name && l.contact_name && l.contact_name.toLowerCase() === curr.contact_name.toLowerCase()) return true;
+        if (curr.company_name && l.company_name && l.company_name.toLowerCase() === curr.company_name.toLowerCase()) return true;
+        return false;
+      });
+
+      if (existingLead) {
+        await useDataStore.getState().appendLeadNotes(existingLead.id, callNote, null);
+      } else {
+        const uniqueCompany = curr.company_name
+          || (curr.contact_name ? `${curr.contact_name} (Individual)` : null)
+          || `Dialer-${curr.id}`;
+        const leadData = {
+          company_name: uniqueCompany,
+          contact_name: curr.contact_name || '',
+          phone: curr.phone || '',
+          ...(curr.email ? { email: curr.email } : {}),
+          stage: 'New Lead',
+          source: 'Power Dialer',
+          notes: callNote,
+        };
+        await useDataStore.getState().bulkCreateLeadsFromDialer([leadData]);
+      }
+
+      const due = new Date();
+      due.setDate(due.getDate() + 1);
+      await useDataStore.getState().createTask({
+        title: `Follow-up Skipped Lead: ${curr.contact_name || curr.company_name || 'Dialer Contact'}`,
+        type: 'follow-up',
+        priority: 'high',
+        due: due.toISOString(),
+        status: 'pending'
+      });
+
+      useDataStore.getState()._refreshTable('leads');
+
+      addNotification({
+        id: `skip-${Date.now()}`,
+        type: 'reminder',
+        title: 'Lead Skipped',
+        message: `Skipped ${curr.contact_name || curr.company_name || 'contact'}. Reminder task created for tomorrow.`,
+        time: new Date().toISOString(),
+        unread: true,
+      });
+
+      advanceToNextPending(activeCallIdx);
+    } catch(e) {
+      alert("Error skipping call: " + e.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleLogColdCall = async (e, closeAfter = true) => {
