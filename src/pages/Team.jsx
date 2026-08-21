@@ -63,6 +63,8 @@ function MemberCard({ member, leads, deals, tasks, meetings, now, onView }) {
   const overdueTasks = myTasks.filter(t => t.status !== 'completed' && t.due && new Date(t.due) < new Date(now));
   const pendingTasks = myTasks.filter(t => t.status !== 'completed');
   const hotLeads     = myLeads.filter(l => computeSignalScore(l) >= 70 && l.stage !== 'Lost');
+  const pendingLeads = myLeads.filter(l => l.stage !== 'Lost');
+  const leadsAdded   = myLeads.length;
   const pipelineMRR  = activeDeals.reduce((s, d) => s + (d.arr || 0), 0);
   const wonMRR       = wonDeals.reduce((s, d) => s + (d.arr || 0), 0);
   const convRate     = myLeads.length > 0 ? Math.round((myDeals.length / myLeads.length) * 100) : 0;
@@ -103,8 +105,9 @@ function MemberCard({ member, leads, deals, tasks, meetings, now, onView }) {
 
         {/* Quick stats */}
         <div className="tc-member-stats">
+          <StatPill label="Leads Added" value={leadsAdded} color="#8b5cf6" icon={Users} />
+          <StatPill label="Pending Leads" value={pendingLeads.length} color="#d97706" icon={Activity} />
           <StatPill label="Active Deals" value={activeDeals.length} color="#3b82f6" icon={BarChart3} />
-          <StatPill label="Hot Leads" value={hotLeads.length} color="#dc2626" icon={Target} />
           <StatPill label="Overdue Tasks" value={overdueTasks.length} color={overdueTasks.length > 0 ? '#dc2626' : '#94a3b8'} icon={AlertCircle} />
           <StatPill label="Pipeline MRR" value={fmtINR(pipelineMRR)} color="#8b5cf6" icon={TrendingUp} />
           <StatPill label="Won MRR" value={fmtINR(wonMRR)} color="#16a34a" icon={Award} />
