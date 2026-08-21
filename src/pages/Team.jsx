@@ -55,7 +55,7 @@ function MemberCard({ member, leads, deals, tasks, meetings, now, onView }) {
 
   const myLeads   = leads.filter(l => l.owner_id === member.id);
   const myDeals   = deals.filter(d => d.owner_id === member.id);
-  const myTasks   = tasks.filter(t => t.assigned_to === member.id || t.owner_id === member.id);
+  const myTasks   = tasks.filter(t => (t.assigned_to || t.owner_id) === member.id);
   const myMtgs    = meetings.filter(m => m.owner_id === member.id);
 
   const activeDeals  = myDeals.filter(d => d.stage !== 'Closed Won' && d.stage !== 'Closed Lost');
@@ -308,7 +308,7 @@ export default function Team() {
 
   const filteredDeals = useMemo(() => deals.filter(d => filteredTeamIds.has(d.owner_id) && isDateInRange(d.updated_at || d.created_at)), [deals, filteredTeamIds, dateRange, now]);
   const filteredLeads = useMemo(() => leads.filter(l => filteredTeamIds.has(l.owner_id) && isDateInRange(l.created_at)), [leads, filteredTeamIds, dateRange, now]);
-  const filteredTasks = useMemo(() => tasks.filter(t => (filteredTeamIds.has(t.assigned_to) || filteredTeamIds.has(t.owner_id)) && isDateInRange(t.due || t.created_at)), [tasks, filteredTeamIds, dateRange, now]);
+  const filteredTasks = useMemo(() => tasks.filter(t => filteredTeamIds.has(t.assigned_to || t.owner_id) && isDateInRange(t.due || t.created_at)), [tasks, filteredTeamIds, dateRange, now]);
   const filteredMtgs = useMemo(() => meetings.filter(m => filteredTeamIds.has(m.owner_id) && isDateInRange(m.date || m.created_at)), [meetings, filteredTeamIds, dateRange, now]);
 
   // Team-wide stats based on filtered data
