@@ -65,6 +65,7 @@ function MemberCard({ member, leads, deals, tasks, meetings, now, onView }) {
   const hotLeads     = myLeads.filter(l => computeSignalScore(l) >= 70 && l.stage !== 'Lost');
   const pendingLeads = myLeads.filter(l => l.stage !== 'Lost');
   const leadsAdded   = myLeads.length;
+  const callsDone    = myTasks.filter(t => (t.type === 'cold_call' || t.type === 'calling_list_item') && t.status === 'completed').length;
   const pipelineMRR  = activeDeals.reduce((s, d) => s + (d.arr || 0), 0);
   const wonMRR       = wonDeals.reduce((s, d) => s + (d.arr || 0), 0);
   const convRate     = myLeads.length > 0 ? Math.round((myDeals.length / myLeads.length) * 100) : 0;
@@ -106,6 +107,7 @@ function MemberCard({ member, leads, deals, tasks, meetings, now, onView }) {
         {/* Quick stats */}
         <div className="tc-member-stats">
           <StatPill label="Leads Added" value={leadsAdded} color="#8b5cf6" icon={Users} />
+          <StatPill label="Calls Done" value={callsDone} color="#10b981" icon={Phone} />
           <StatPill label="Pending Leads" value={pendingLeads.length} color="#d97706" icon={Activity} />
           <StatPill label="Active Deals" value={activeDeals.length} color="#3b82f6" icon={BarChart3} />
           <StatPill label="Overdue Tasks" value={overdueTasks.length} color={overdueTasks.length > 0 ? '#dc2626' : '#94a3b8'} icon={AlertCircle} />
