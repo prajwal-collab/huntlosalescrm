@@ -8,7 +8,7 @@ import {
   Users, Target, BarChart3, CheckSquare, Calendar,
   TrendingUp, AlertCircle, Clock, Award, Zap,
   ArrowRight, ChevronDown, ChevronRight, Mail, Phone,
-  Activity, Eye, Filter, Search
+  Activity, Eye, Filter, Search, ChevronUp
 } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
 import useAuthStore from '../store/useAuthStore';
@@ -257,51 +257,91 @@ export default function Team() {
   const { team, user } = useAuthStore();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [dateRange, setDateRange] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('All Roles');
   const [now] = useState(() => Date.now());
 
   const teamMap = useMemo(() =>
     new Map(team.map(m => [m.id, m])), [team]);
 
-  const filteredTeam = useMemo(() => {
-    if (!search.trim()) return team;
-    const q = search.toLowerCase();
-    return team.filter(m =>
-      (m.name || '').toLowerCase().includes(q) ||
-      (m.email || '').toLowerCase().includes(q)
-    );
-  }, [team, search]);
+  const uniqueRoles = useMemo(() => {
+    const roles = new Set(team.map(m => m.role).filter(Boolean));
+    return ['All Roles', ...Array.from(roles)];
+  }, [team]);
 
-  // Team-wide stats
-  const totalPipelineMRR = deals
+  const filteredTeam = useMemo(() => {
+    let res = team;
+    if (roleFilter !== 'All Roles') {
+      res = res.filter(m => m.role === roleFilter);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      res = res.filter(m =>
+        (m.name || '').toLowerCase().includes(q) ||
+        (m.email || '').toLowerCase().includes(q)
+      );
+    }
+    return res;
+  }, [team, search, roleFilter]);
+
+  const filteredTeamIds = useMemo(() => new Set(filteredTeam.map(m => m.id)), [filteredTeam]);
+
+  // Date filtering helper
+  const isDateInRange = (dateStr) => {
+    if (!dateStr || dateRange === 'all') return true;
+    const d = new Date(dateStr);
+    const today = new Date(now);
+    if (dateRange === 'this_month') {
+      return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+    }
+    if (dateRange === 'last_month') {
+      const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      return d.getMonth() === lastMonth.getMonth() && d.getFullYear() === lastMonth.getFullYear();
+    }
+    if (dateRange === 'this_quarter') {
+      const currentQuarter = Math.floor(today.getMonth() / 3);
+      const dQuarter = Math.floor(d.getMonth() / 3);
+      return currentQuarter === dQuarter && d.getFullYear() === today.getFullYear();
+    }
+    return true;
+  };
+
+  const filteredDeals = useMemo(() => deals.filter(d => filteredTeamIds.has(d.owner_id) && isDateInRange(d.updated_at || d.created_at)), [deals, filteredTeamIds, dateRange, now]);
+  const filteredLeads = useMemo(() => leads.filter(l => filteredTeamIds.has(l.owner_id) && isDateInRange(l.created_at)), [leads, filteredTeamIds, dateRange, now]);
+  const filteredTasks = useMemo(() => tasks.filter(t => (filteredTeamIds.has(t.assigned_to) || filteredTeamIds.has(t.owner_id)) && isDateInRange(t.due || t.created_at)), [tasks, filteredTeamIds, dateRange, now]);
+  const filteredMtgs = useMemo(() => meetings.filter(m => filteredTeamIds.has(m.owner_id) && isDateInRange(m.date || m.created_at)), [meetings, filteredTeamIds, dateRange, now]);
+
+  // Team-wide stats based on filtered data
+  const totalPipelineMRR = filteredDeals
     .filter(d => d.stage !== 'Closed Lost')
     .reduce((s, d) => s + (d.arr || 0), 0);
-  const totalWonMRR = deals
+  const totalWonMRR = filteredDeals
     .filter(d => d.stage === 'Closed Won')
     .reduce((s, d) => s + (d.arr || 0), 0);
-  const totalActiveDeals = deals.filter(d => d.stage !== 'Closed Won' && d.stage !== 'Closed Lost').length;
-  const totalOverdueTasks = tasks.filter(t => t.status !== 'completed' && t.due && new Date(t.due) < new Date(now)).length;
-  const totalHotLeads = leads.filter(l => computeSignalScore(l) >= 70 && l.stage !== 'Lost').length;
-  const unassignedLeads = leads.filter(l => !l.owner_id).length;
+  const totalActiveDeals = filteredDeals.filter(d => d.stage !== 'Closed Won' && d.stage !== 'Closed Lost').length;
+  const totalOverdueTasks = filteredTasks.filter(t => t.status !== 'completed' && t.due && new Date(t.due) < new Date(now)).length;
+  const totalHotLeads = filteredLeads.filter(l => computeSignalScore(l) >= 70 && l.stage !== 'Lost').length;
+  const unassignedLeads = leads.filter(l => !l.owner_id && isDateInRange(l.created_at)).length;
 
-  // Activity feed — last 30 events across team
+  // Activity feed — last 40 events across filtered team
   const activityFeed = useMemo(() => {
     const feed = [];
-    deals.forEach(d => {
+    filteredDeals.forEach(d => {
       if (d.updated_at || d.created_at) {
         feed.push({ type: 'deal', text: `${d.stage === 'Closed Won' ? '🎉 won' : 'updated'} deal: ${d.title || d.company}`, owner_id: d.owner_id, ts: d.updated_at || d.created_at });
       }
     });
-    leads.forEach(l => {
+    filteredLeads.forEach(l => {
       if (l.created_at && (now - new Date(l.created_at).getTime()) < 7 * 86400000) {
         feed.push({ type: 'lead', text: `added lead: ${l.company_name}`, owner_id: l.owner_id, ts: l.created_at });
       }
     });
-    meetings.forEach(m => {
+    filteredMtgs.forEach(m => {
       if (m.created_at) {
         feed.push({ type: 'meeting', text: `scheduled meeting: ${m.title}`, owner_id: m.owner_id, ts: m.created_at });
       }
     });
-    tasks.forEach(t => {
+    filteredTasks.forEach(t => {
       if (t.status === 'completed' && t.updated_at) {
         feed.push({ type: 'task', text: `completed task: ${t.title}`, owner_id: t.assigned_to || t.owner_id, ts: t.updated_at });
       }
@@ -310,18 +350,18 @@ export default function Team() {
       .filter(f => f.ts)
       .sort((a, b) => new Date(b.ts) - new Date(a.ts))
       .slice(0, 40);
-  }, [deals, leads, meetings, tasks, now]);
+  }, [filteredDeals, filteredLeads, filteredMtgs, filteredTasks, now]);
 
   // Leaderboard
   const leaderboard = useMemo(() => {
-    return team.map(m => {
-      const mDeals = deals.filter(d => d.owner_id === m.id && d.stage === 'Closed Won');
-      const mLeads = leads.filter(l => l.owner_id === m.id);
-      const mActive = deals.filter(d => d.owner_id === m.id && d.stage !== 'Closed Won' && d.stage !== 'Closed Lost');
+    return filteredTeam.map(m => {
+      const mDeals = filteredDeals.filter(d => d.owner_id === m.id && d.stage === 'Closed Won');
+      const mLeads = filteredLeads.filter(l => l.owner_id === m.id);
+      const mActive = filteredDeals.filter(d => d.owner_id === m.id && d.stage !== 'Closed Won' && d.stage !== 'Closed Lost');
       const wonMRR = mDeals.reduce((s, d) => s + (d.arr || 0), 0);
       return { ...m, wonMRR, wonCount: mDeals.length, leadCount: mLeads.length, activeCount: mActive.length };
     }).sort((a, b) => b.wonMRR - a.wonMRR);
-  }, [team, deals, leads]);
+  }, [filteredTeam, filteredDeals, filteredLeads]);
 
   return (
     <div className="team-page">
@@ -331,11 +371,34 @@ export default function Team() {
           <h1 className="page-big-title">Team Coordination</h1>
           <p className="page-big-sub">Full visibility · Accountability · Real-time tracking across all reps</p>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <div className="search-box" style={{ width: 240 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Filters */}
+          <div className="tc-filters">
+            <select
+              className="tc-select"
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+            >
+              {uniqueRoles.map(r => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+            <select
+              className="tc-select"
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value)}
+            >
+              <option value="all">All Time</option>
+              <option value="this_month">This Month</option>
+              <option value="last_month">Last Month</option>
+              <option value="this_quarter">This Quarter</option>
+            </select>
+          </div>
+
+          <div className="search-box" style={{ width: 200 }}>
             <Search size={14} style={{ color: 'var(--text-tertiary)' }} />
             <input
-              placeholder="Search team members..."
+              placeholder="Search members..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{ fontSize: 13 }}
@@ -376,8 +439,8 @@ export default function Team() {
         </div>
         <div className="tc-kpi-card">
           <div className="tc-kpi-label">Active Members</div>
-          <div className="tc-kpi-value" style={{ color: '#8b5cf6' }}>{team.length}</div>
-          <div className="tc-kpi-sub">In workspace</div>
+          <div className="tc-kpi-value" style={{ color: '#8b5cf6' }}>{filteredTeam.length}</div>
+          <div className="tc-kpi-sub">Matching filters</div>
         </div>
       </div>
 
@@ -405,10 +468,10 @@ export default function Team() {
                 <MemberCard
                   key={member.id}
                   member={member}
-                  leads={leads}
-                  deals={deals}
-                  tasks={tasks}
-                  meetings={meetings}
+                  leads={filteredLeads}
+                  deals={filteredDeals}
+                  tasks={filteredTasks}
+                  meetings={filteredMtgs}
                   now={now}
                 />
               ))}

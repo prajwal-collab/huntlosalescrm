@@ -10,6 +10,35 @@
   animation: fade-in 0.25s ease;
 }
 
+/* ── Header Filters ─────────────────────────── */
+.tc-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tc-select {
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--bg-border);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.tc-select:hover {
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.tc-select:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
 /* ── KPI Row ────────────────────────────────── */
 .tc-kpi-row {
   display: grid;
