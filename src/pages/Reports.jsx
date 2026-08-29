@@ -28,14 +28,7 @@ function inRange(dateStr, range) {
 
 const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#64748b'];
 
-// ── INR formatter ─────────────────────────────────────────
-function fmtINR(val) {
-  const n = Number(val) || 0;
-  if (n >= 10000000) return `₹${(n/10000000).toFixed(2)}Cr`;
-  if (n >= 100000)   return `₹${(n/100000).toFixed(1)}L`;
-  if (n >= 1000)     return `₹${(n/1000).toFixed(1)}k`;
-  return `₹${n.toLocaleString('en-IN')}`;
-}
+import { fmtINR } from '../utils/formatINR';
 
 function StatCard({ label, value, trend, isPositive }) {
   return (

@@ -29,6 +29,24 @@ const handleAssignmentNotification = (type, title, oldOwnerId, newOwnerId, itemI
   }).catch(e => console.warn('Failed to send assignment notification:', e));
 };
 
+// Helper to paginate past Supabase's 1000 row API limit
+const fetchAllRows = async (table, orderCol = null, ascending = false) => {
+  let allData = [];
+  let from = 0;
+  const step = 1000;
+  while (from < 50000) {
+    let req = supabase.from(table).select('*').range(from, from + step - 1);
+    if (orderCol) req = req.order(orderCol, { ascending });
+    const { data, error } = await req;
+    if (error) return { data: allData, error }; // return what we have on error
+    if (!data || data.length === 0) break;
+    allData = allData.concat(data);
+    if (data.length < step) break;
+    from += step;
+  }
+  return { data: allData, error: null };
+};
+
 const useDataStore = create((set, get) => ({
   companies: [],
   contacts: [],
@@ -131,41 +149,23 @@ const useDataStore = create((set, get) => ({
       // Auto-repair profile/organization if missing
       await get().ensureProfile();
 
-      // Helper to paginate past Supabase's 1000 row API limit
-      const fetchAll = async (table, orderCol = null, ascending = false) => {
-        let allData = [];
-        let from = 0;
-        const step = 1000;
-        while (from < 50000) {
-          let req = supabase.from(table).select('*').range(from, from + step - 1);
-          if (orderCol) req = req.order(orderCol, { ascending });
-          const { data, error } = await req;
-          if (error) return { data: allData, error }; // return what we have on error
-          if (!data || data.length === 0) break;
-          allData = allData.concat(data);
-          if (data.length < step) break;
-          from += step;
-        }
-        return { data: allData, error: null };
-      };
-
       const results = await Promise.allSettled([
-        fetchAll('companies', 'created_at', false),
-        fetchAll('contacts', 'created_at', false),
-        fetchAll('deals', 'created_at', false),
-        fetchAll('tasks', 'due', true),
-        fetchAll('meetings', 'date', true),
-        fetchAll('documents', 'created_at', false),
-        fetchAll('sequences', 'created_at', false),
-        fetchAll('leads', 'created_at', false),
-        fetchAll('profiles', 'id', true), // Profiles usually doesn't have created_at
-        fetchAll('proposals', 'created_at', false),
-        fetchAll('webinars', 'date_time', true),
-        fetchAll('webinar_funnel_stages', 'due_date', true),
-        fetchAll('webinar_registrants', 'created_at', false),
-        fetchAll('webinar_content_assets', 'created_at', false),
-        fetchAll('webinar_follow_ups', 'day_offset', true),
-        fetchAll('webinar_sops', 'created_at', false),
+        fetchAllRows('companies', 'created_at', false),
+        fetchAllRows('contacts', 'created_at', false),
+        fetchAllRows('deals', 'created_at', false),
+        fetchAllRows('tasks', 'due', true),
+        fetchAllRows('meetings', 'date', true),
+        fetchAllRows('documents', 'created_at', false),
+        fetchAllRows('sequences', 'created_at', false),
+        fetchAllRows('leads', 'created_at', false),
+        fetchAllRows('profiles', 'id', true), // Profiles usually doesn't have created_at
+        fetchAllRows('proposals', 'created_at', false),
+        fetchAllRows('webinars', 'date_time', true),
+        fetchAllRows('webinar_funnel_stages', 'due_date', true),
+        fetchAllRows('webinar_registrants', 'created_at', false),
+        fetchAllRows('webinar_content_assets', 'created_at', false),
+        fetchAllRows('webinar_follow_ups', 'day_offset', true),
+        fetchAllRows('webinar_sops', 'created_at', false),
       ]);
 
       const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes, leadsRes, teamRes, proposalsRes, webinarsRes, funnelStagesRes, registrantsRes, assetsRes, followUpsRes, sopsRes] = results;
@@ -364,21 +364,22 @@ const useDataStore = create((set, get) => ({
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sequences' }, () => {
         get()._refreshTable('sequences');
       })
+      // L7 FIX: Realtime subscription for proposals
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'proposals' }, () => {
+        get()._refreshTable('proposals');
+      })
       .subscribe();
 
     set({ _realtimeChannel: channel });
   },
 
   // Refresh a single table (called by Realtime)
+  // M5 FIX: Paginate properly with fetchAllRows to support up to 50k items
   _refreshTable: async (table) => {
     try {
       const orderCol = table === 'tasks' ? 'due' : table === 'meetings' ? 'date' : 'created_at';
       const ascending = table === 'tasks' || table === 'meetings';
-      const { data, error } = await supabase
-        .from(table)
-        .select('*')
-        .limit(50000)
-        .order(orderCol, { ascending });
+      const { data, error } = await fetchAllRows(table, orderCol, ascending);
       if (!error && data) {
         set({ [table]: data });
       }

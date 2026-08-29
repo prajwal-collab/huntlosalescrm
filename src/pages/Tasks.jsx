@@ -66,13 +66,19 @@ export default function Tasks() {
   
 
   const [scratchpad, setScratchpad] = useState(() => localStorage.getItem('huntlo_scratchpad') || '');
+  const [scratchpadSaved, setScratchpadSaved] = useState(true);
 
 
 
 
 
   useEffect(() => {
-    localStorage.setItem('huntlo_scratchpad', scratchpad);
+    setScratchpadSaved(false);
+    const timer = setTimeout(() => {
+      localStorage.setItem('huntlo_scratchpad', scratchpad);
+      setScratchpadSaved(true);
+    }, 400);
+    return () => clearTimeout(timer);
   }, [scratchpad]);
 
 
@@ -501,7 +507,7 @@ export default function Tasks() {
             placeholder="What's on your mind today? Write down meeting notes, ideas, or quick to-dos..."
           />
           <div className="scratchpad-footer">
-            <span className="save-indicator"><CheckCircle size={14} /> Saved just now</span>
+            <span className="save-indicator">{scratchpadSaved ? <><CheckCircle size={14} /> Saved</> : <><Clock size={14} /> Saving...</>}</span>
           </div>
         </div>
       </div>

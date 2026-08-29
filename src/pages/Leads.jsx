@@ -2,7 +2,7 @@
 // HUNTLO — LEADS PAGE
 // AI-Native Signal-Driven Lead System
 // ============================================
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Search, Plus, X, Zap, TrendingUp, Building2,
   Mail, Link2, Phone, Globe, ChevronDown, ChevronLeft, ChevronRight,
@@ -50,8 +50,11 @@ const VIEWS = [
     return s.hiring_activity || s.recruiter_hiring || s.funding_activity || l.demo_requested || l.positive_interest;
   }},
   { id: 'followup',    label: '⏰ Needs Follow-up',  dot: '#d97706',  filter: l => {
-    if (!l.next_action_due) return false;
-    return new Date(l.next_action_due) < new Date();
+    // H12 FIX: Guard against empty strings and invalid dates
+    if (!l.next_action_due || l.next_action_due === '') return false;
+    const d = new Date(l.next_action_due);
+    if (isNaN(d.getTime())) return false;
+    return d < new Date();
   }},
   { id: 'demo',        label: '📅 Demo Scheduled',   dot: '#7c3aed',  filter: l => l.stage === 'Demo Scheduled' },
   { id: 'trial',       label: '🧪 Trial Users',       dot: '#0891b2',  filter: l => l.stage === 'Trial Started' },
@@ -439,7 +442,8 @@ export default function Leads() {
   }, [viewFiltered, search, filterStage, filterSource, filterDateFrom, filterDateTo]);
 
   // Reset pagination when search or view changes
-  useMemo(() => setCurrentPage(1), [filtered.length, itemsPerPage]);
+  // H11 FIX: Use useEffect instead of useMemo for side effects
+  useEffect(() => { setCurrentPage(1); }, [filtered.length, itemsPerPage]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
   const paginatedLeads = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -534,9 +538,7 @@ export default function Leads() {
               Board
             </button>
           </div>
-          <button className="btn btn-ghost btn-sm" style={{ gap: 6, fontSize: 12 }}>
-            <SlidersHorizontal size={14} /> Filter
-          </button>
+
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => exportToCsv('leads.csv', filtered)}
@@ -815,7 +817,15 @@ export default function Leads() {
                 onLeadClick={handleLeadClick}
                 onDrop={(e, newStage) => {
                   const leadId = e.dataTransfer.getData('leadId');
-                  if (leadId) updateLead(leadId, { stage: newStage });
+                  if (leadId) {
+                    // C5 FIX: Use handleStageChange for proper lost-reason prompt
+                    const lead = filtered.find(l => l.id === leadId);
+                    if (lead) {
+                      handleStageChange(lead, newStage);
+                    } else {
+                      updateLead(leadId, { stage: newStage });
+                    }
+                  }
                 }}
               />
             ))}

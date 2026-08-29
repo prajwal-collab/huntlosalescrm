@@ -17,13 +17,7 @@ import { formatDistanceToNow } from 'date-fns';
 import './Team.css';
 
 // ── Helpers ──────────────────────────────────────────────────
-function fmtINR(n) {
-  if (!n || n === 0) return '₹0';
-  if (n >= 10000000) return `₹${(n / 10000000).toFixed(1)}Cr`;
-  if (n >= 100000)   return `₹${(n / 100000).toFixed(1)}L`;
-  if (n >= 1000)     return `₹${(n / 1000).toFixed(0)}K`;
-  return `₹${n}`;
-}
+import { fmtINR } from '../utils/formatINR';
 
 function Avatar({ name = '?', color = '#3b82f6', size = 36 }) {
   const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();

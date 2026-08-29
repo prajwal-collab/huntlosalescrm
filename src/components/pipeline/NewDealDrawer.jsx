@@ -15,7 +15,9 @@ export default function NewDealDrawer({ onClose, prefilledLead = null, prefilled
     arr: prefilledLead.estimated_mrr ? String(prefilledLead.estimated_mrr) : '',
     urgency: 'medium',
     lead_id: prefilledLead.id,
-  } : { title: '', company_id: '', contact_id: '', plan: '', arr: '', urgency: 'medium', lead_id: '' };
+    expected_payment_date: '',
+    follow_up_date: '',
+  } : { title: '', company_id: '', contact_id: '', plan: '', arr: '', urgency: 'medium', lead_id: '', expected_payment_date: '', follow_up_date: '' };
 
   const [formData, setFormData] = useState(initFromLead);
   const [saving, setSaving] = useState(false);
@@ -104,6 +106,8 @@ export default function NewDealDrawer({ onClose, prefilledLead = null, prefilled
         urgency: formData.urgency,
         engagement_score: 0,
         notes: finalNotes,
+        expected_payment_date: formData.expected_payment_date || null,
+        follow_up_date: formData.follow_up_date || null,
       });
       onClose();
     } catch (err) {
@@ -283,6 +287,26 @@ export default function NewDealDrawer({ onClose, prefilledLead = null, prefilled
               <option value="high">High</option>
               <option value="urgent">Urgent</option>
             </select>
+          </div>
+
+          <div className="form-group">
+            <label className="label">Expected Payment Date</label>
+            <input
+              type="date"
+              className="input-base"
+              value={formData.expected_payment_date}
+              onChange={e => setFormData({...formData, expected_payment_date: e.target.value})}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="label">Follow up Date</label>
+            <input
+              type="date"
+              className="input-base"
+              value={formData.follow_up_date}
+              onChange={e => setFormData({...formData, follow_up_date: e.target.value})}
+            />
           </div>
 
           </div>

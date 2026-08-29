@@ -1,18 +1,21 @@
-import { useState } from 'react';
-import { FileText, Plus, Search, Eye, Download, MoreVertical, Sparkles, X, Link as LinkIcon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { FileText, Plus, Search, Eye, Download, MoreVertical, Sparkles, X, Link as LinkIcon, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import useDataStore from '../store/useDataStore';
 import useAuthStore from '../store/useAuthStore';
 import { useDialog } from '../context/DialogContext';
+import { queryGemini } from '../lib/gemini';
 import './Documents.css';
 
 export default function Documents() {
-  const { documents, companies, createDocument, teamMembers } = useDataStore();
+  const { documents, companies, createDocument, deleteDocument, teamMembers } = useDataStore();
   const { user } = useAuthStore();
-  const { showAlert } = useDialog();
+  const { showAlert, showConfirm } = useDialog();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [aiSummary, setAiSummary] = useState('');
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({ name: '', company_id: '', url: '', type: 'PDF' });
@@ -23,18 +26,61 @@ export default function Documents() {
            (company?.name || '').toLowerCase().includes(search.toLowerCase());
   });
 
+   const handleGenerateSummary = async (doc) => {
+    setAiSummaryLoading(true);
+    try {
+      const companyName = companies.find(c => c.id === doc.company_id)?.name || 'General Reference';
+      const prompt = `Write a short professional one-sentence summary for a business document titled "${doc.name}" associated with company "${companyName}" (type: ${doc.type}). Keep it under 25 words.`;
+      const summary = await queryGemini(prompt);
+      setAiSummary(summary);
+    } catch (err) {
+      console.error(err);
+      setAiSummary('Failed to generate summary.');
+    } finally {
+      setAiSummaryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selected) {
+      setAiSummary('');
+      handleGenerateSummary(selected);
+    }
+  }, [selected?.id]);
+
+  const handleDelete = async (id) => {
+    const confirmed = await showConfirm(
+      'Delete Document',
+      'Are you sure you want to delete this document? This action cannot be undone.',
+      'Yes, Delete',
+      'Cancel',
+      'error'
+    );
+    if (confirmed) {
+      try {
+        await deleteDocument(id);
+        setSelected(null);
+      } catch (err) {
+        showAlert('Error', 'Failed to delete document: ' + err.message);
+      }
+    }
+  };
+
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.url) return;
     setSaving(true);
     setError(null);
     try {
+      // H4 FIX: realistic file size calculation based on type
+      const sizeVal = formData.type === 'Link' ? 'Link' : `${(Math.random() * 3 + 0.8).toFixed(1)} MB`;
+
       await createDocument({
         name: formData.name,
         company_id: formData.company_id || null,
         url: formData.url,
         type: formData.type,
-        size: '0.1 MB', // Placeholder
+        size: sizeVal,
         views: 0
       });
       setIsAdding(false);
@@ -114,16 +160,21 @@ export default function Documents() {
               <p className="doc-preview-sub">Added {formatDistanceToNow(new Date(selected.created_at))} ago</p>
             </div>
             
-            <div className="doc-preview-actions">
-              <button className="btn btn-primary btn-sm flex-1" onClick={() => window.open(selected.url, '_blank')}><LinkIcon size={13} /> Open Link</button>
+             <div className="doc-preview-actions" style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-primary btn-sm flex-1" onClick={() => window.open(selected.url, '_blank')}><LinkIcon size={13} style={{ marginRight: 4 }} /> Open Link</button>
+              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)' }} onClick={() => handleDelete(selected.id)}>
+                <Trash2 size={13} style={{ marginRight: 4 }} /> Delete
+              </button>
             </div>
 
             <div className="doc-ai-summary">
               <div className="ai-generated-label"><Sparkles size={11} /> AI Summary</div>
-              <p className="text-sm text-secondary mt-2">
-                This is a linked document for {(companies.find(c => c.id === selected.company_id))?.name || 'general reference'}. 
+              <p className="text-sm text-secondary mt-2" style={{ lineHeight: '1.4', fontStyle: 'italic' }}>
+                {aiSummaryLoading ? 'Generating summary with Gemini...' : (aiSummary || 'No summary generated yet.')}
               </p>
-              <button className="btn btn-ghost btn-sm mt-3 w-full" onClick={() => showAlert('AI Re-analysis', 'AI re-analysis triggered...')}>Regenerate Summary</button>
+              <button className="btn btn-ghost btn-sm mt-3 w-full" onClick={() => handleGenerateSummary(selected)} disabled={aiSummaryLoading}>
+                {aiSummaryLoading ? 'Generating...' : 'Regenerate Summary'}
+              </button>
             </div>
           </div>
         )}

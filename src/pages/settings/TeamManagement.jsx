@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../store/useAuthStore';
 import useDataStore from '../../store/useDataStore';
 import { sendTeamInvitation } from '../../lib/resend';
+import { fmtINR } from '../../utils/formatINR';
 import { useDialog } from '../../context/DialogContext';
 import { supabase } from '../../lib/supabase';
 import InviteModal from '../../components/auth/InviteModal';
@@ -297,13 +298,7 @@ export default function TeamManagement() {
     setTimeout(() => setRefreshing(false), 600);
   };
 
-  const fmtINR = (n) => {
-    if (!n) return '₹0';
-    if (n >= 10000000) return `₹${(n/10000000).toFixed(1)}Cr`;
-    if (n >= 100000)   return `₹${(n/100000).toFixed(1)}L`;
-    if (n >= 1000)     return `₹${(n/1000).toFixed(0)}K`;
-    return `₹${n}`;
-  };
+
 
   return (
     <div className="settings-panel animate-fade-in">

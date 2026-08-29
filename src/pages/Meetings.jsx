@@ -1,10 +1,11 @@
 // ============================================
 // HUNTLO SALES OS — MEETINGS PAGE
 // ============================================
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Calendar, Clock, Video, Users, ExternalLink, Search, Plus, Sparkles, X, AlertCircle, Loader, ChevronLeft, ChevronRight, CheckCircle2, Edit3, Save, Mail } from 'lucide-react';
 import { format } from 'date-fns';
 import useDataStore from '../store/useDataStore';
+import useAuthStore from '../store/useAuthStore';
 import { useDialog } from '../context/DialogContext';
 import { queryGemini } from '../lib/gemini';
 import './Meetings.css';
@@ -314,6 +315,7 @@ Best,
 
 export default function Meetings() {
   const { meetings, deals, createMeeting, updateMeeting, teamMembers } = useDataStore();
+  const { user } = useAuthStore();
   const { showSuccess } = useDialog();
   const [selected, setSelected] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -323,22 +325,28 @@ export default function Meetings() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  // H2 FIX: Stable timestamp for memoization (doesn't change on re-render)
+  const [stableNow] = useState(() => Date.now());
+
   // ── SDR Demo Targets ───────────────────────────────────────────────────
   const DEMO_TARGET_MONTH = 25;
   const DEMO_TARGET_WEEK = 6;
-  const now = new Date();
   
   const { completedDemosThisWeek, completedDemosThisMonth } = useMemo(() => {
     let weekCount = 0;
     let monthCount = 0;
-    const nowTime = now.getTime();
-    const today = new Date(now);
+    const nowTime = stableNow;
+    const today = new Date(stableNow);
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
     
-    const currentDay = today.getDay(); // 0 is Sunday
-    const startOfWeek = today.setHours(0,0,0,0) - (currentDay * 86400000);
+    // C1 FIX: Avoid mutating `today`
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const currentDay = today.getDay();
+    const startOfWeek = todayMidnight - (currentDay * 86400000);
 
     meetings.forEach(m => {
+      // H10 FIX: Only count current user's demos
+      if (m.owner_id && m.owner_id !== user?.id) return;
       if ((m.type === 'Demo' || m.type === 'demo' || m.type === 'Discovery') && m.status === 'completed') {
         const d = new Date(m.date).getTime();
         if (d >= startOfMonth && d <= nowTime) {
@@ -350,7 +358,10 @@ export default function Meetings() {
       }
     });
     return { completedDemosThisWeek: weekCount, completedDemosThisMonth: monthCount };
-  }, [meetings, now]);
+  }, [meetings, stableNow, user]);
+
+  // Use a fresh `now` for filter comparisons (OK since these aren't memoized)
+  const now = new Date();
 
   // Filter meetings based on active tab
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -387,8 +398,10 @@ export default function Meetings() {
   // Reset to page 1 when filter changes
   const handleFilterChange = (f) => { setMeetingFilter(f); setCurrentPage(1); };
 
+  // M2 FIX: Auto-correct pagination when items decrease
   const totalPages = Math.ceil(filteredMeetings.length / itemsPerPage) || 1;
-  const paginatedMeetings = filteredMeetings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedMeetings = filteredMeetings.slice((safePage - 1) * itemsPerPage, safePage * itemsPerPage);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -566,7 +579,7 @@ export default function Meetings() {
               </div>
               <div className="form-group">
                 <label className="label">Date & Time</label>
-                <input className="input-base" type="datetime-local" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+                <input className="input-base" type="datetime-local" required min={new Date().toISOString().slice(0, 16)} value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
               </div>
               <div className="form-group">
                 <label className="label">Duration (minutes)</label>

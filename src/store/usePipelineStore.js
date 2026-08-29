@@ -18,7 +18,7 @@ const usePipelineStore = create((set, get) => ({
   closeDrawer: () => set({ drawerOpen: false, selectedDealId: null }),
 
   getSelectedDeal: () => {
-    const { deals, companies, contacts, teamMembers } = useDataStore.getState();
+    const { deals, companies, contacts, teamMembers, tasks } = useDataStore.getState();
     const { selectedDealId } = get();
     const rawDeal = deals.find(d => d.id === selectedDealId);
     if (!rawDeal) return null;
@@ -27,6 +27,16 @@ const usePipelineStore = create((set, get) => ({
     const dealContacts = contacts.filter(c => c.company_id === rawDeal.company_id).map(c => c.name);
     const owner = teamMembers?.find(tm => tm.id === rawDeal.owner_id);
     const ownerName = owner?.full_name || owner?.email || 'Unknown';
+
+    // C4 FIX: Compute real task count for this deal
+    const dealTaskCount = tasks.filter(t => t.deal_id === selectedDealId).length;
+
+    // C3 FIX: Parse persisted activities from deal notes JSON, or use empty array
+    let activities = [];
+    try {
+      const meta = rawDeal._activities ? JSON.parse(rawDeal._activities) : [];
+      if (Array.isArray(meta)) activities = meta;
+    } catch { /* ignore parse errors */ }
     
     return {
       ...rawDeal,
@@ -39,10 +49,34 @@ const usePipelineStore = create((set, get) => ({
         initials: (owner?.initials || ownerName.substring(0, 2)).toUpperCase()
       },
       contacts: dealContacts,
-      activities: [], // Mock activities
+      activities,
       engagementScore: rawDeal.engagement_score || 0,
-      taskCount: 0 // Mock task count
+      taskCount: dealTaskCount
     };
+  },
+
+  // C3 FIX: Persist activities to deal record
+  addActivity: async (activity) => {
+    const { selectedDealId } = get();
+    if (!selectedDealId) return;
+    const { deals } = useDataStore.getState();
+    const deal = deals.find(d => d.id === selectedDealId);
+    if (!deal) return;
+
+    let existing = [];
+    try {
+      existing = deal._activities ? JSON.parse(deal._activities) : [];
+      if (!Array.isArray(existing)) existing = [];
+    } catch { existing = []; }
+
+    existing.unshift({ ...activity, time: new Date().toISOString() });
+    // Keep last 50 activities max
+    if (existing.length > 50) existing = existing.slice(0, 50);
+
+    await useDataStore.getState().updateDeal(selectedDealId, {
+      _activities: JSON.stringify(existing),
+      last_activity: new Date().toISOString()
+    });
   },
 
   moveDeal: (dealId, newStage) => {

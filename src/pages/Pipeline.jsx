@@ -10,16 +10,8 @@ import useAuthStore from '../store/useAuthStore';
 import DealDrawer from '../components/pipeline/DealDrawer';
 import NewDealDrawer from '../components/pipeline/NewDealDrawer';
 import { useDialog } from '../context/DialogContext';
+import { fmtINR } from '../utils/formatINR';
 import './Pipeline.css';
-
-// ── INR Formatter ─────────────────────────────────────────────
-function fmtINR(amount) {
-  const n = Number(amount) || 0;
-  if (n >= 10000000) return `₹${(n/10000000).toFixed(2)}Cr`;
-  if (n >= 100000)   return `₹${(n/100000).toFixed(1)}L`;
-  if (n >= 1000)     return `₹${(n/1000).toFixed(0)}k`;
-  return `₹${n}`;
-}
 
 const URGENCY_COLOR = { urgent: 'var(--danger)', high: 'var(--warning)', medium: 'var(--accent-blue)', low: 'var(--text-tertiary)' };
 
@@ -215,26 +207,28 @@ export default function Pipeline() {
             'Mark as Lost',
             'Cancel'
           );
-          if (reason) {
-            const dealToUpdate = deals.find(d => d.id === dealId);
-            const updatedNotes = dealToUpdate?.notes 
-              ? `${dealToUpdate.notes}\n\nLost Reason: ${reason}` 
-              : `Lost Reason: ${reason}`;
-              
-            await updateDeal(dealId, { 
-              stage: 'Closed Lost',
-              notes: updatedNotes
-            });
-          }
+          // C2 FIX: If user cancels, do nothing (deal stays in original column)
+          if (!reason) return;
+          const dealToUpdate = deals.find(d => d.id === dealId);
+          const updatedNotes = dealToUpdate?.notes 
+            ? `${dealToUpdate.notes}\n\nLost Reason: ${reason}` 
+            : `Lost Reason: ${reason}`;
+            
+          await updateDeal(dealId, { 
+            stage: 'Closed Lost',
+            notes: updatedNotes
+          });
+        } else if (stage === 'Closed Won') {
+          // M13 FIX: Celebration on Closed Won
+          await moveDeal(dealId, stage);
+          const wonDeal = deals.find(d => d.id === dealId);
+          showAlert('🎉 Deal Won!', `Congratulations! "${wonDeal?.title || 'Deal'}" has been closed as Won! Revenue: ${fmtINR(wonDeal?.arr || 0)} MRR`);
         } else {
           await moveDeal(dealId, stage);
         }
       } catch (err) {
         console.error('Failed to move deal:', err);
-        // Fallback if updateDeal fails (e.g. due to missing columns)
-        try {
-           moveDeal(dealId, stage);
-        } catch(e) {}
+        // M3 FIX: Removed duplicate moveDeal fallback — single error log is sufficient
       }
     }
   };
@@ -247,7 +241,7 @@ export default function Pipeline() {
         title: formData.title,
         company_id: formData.company_id,
         arr: Number(formData.arr),
-        stage: 'Discovery',
+        stage: addingStage,  // H8 FIX: Use the selected stage, not hardcoded 'Discovery'
         urgency: formData.urgency,
         engagement_score: 0
       });

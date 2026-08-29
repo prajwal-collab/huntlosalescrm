@@ -17,6 +17,7 @@ import './DealDrawer.css';
 
 const TABS = ['Overview', 'Proposals', 'Activity', 'Contacts', 'Notes', 'Tasks', 'AI Insights'];
 const ACTIVITY_ICONS = { email: '📧', call: '📞', meeting: '📅', note: '📝', proposal: '📋', default: '•' };
+import { fmtINR } from '../../utils/formatINR';
 
 const BUYING_COMMITTEE_COLORS = {
   'Champion': { bg: 'rgba(34,197,94,0.12)', color: '#16a34a', emoji: '⭐' },
@@ -28,11 +29,7 @@ const BUYING_COMMITTEE_COLORS = {
 // ── Format INR ─────────────────────────────
 function formatINR(amount) {
   if (!amount && amount !== 0) return '—';
-  const num = Number(amount);
-  if (num >= 10000000) return `₹${(num / 10000000).toFixed(2)}Cr`;
-  if (num >= 100000)   return `₹${(num / 100000).toFixed(1)}L`;
-  if (num >= 1000)     return `₹${(num / 1000).toFixed(1)}k`;
-  return `₹${num.toLocaleString('en-IN')}`;
+  return fmtINR(amount);
 }
 
 // ── Proposal Status Badge ────────────────────
@@ -403,9 +400,17 @@ export default function DealDrawer({ dealId, onClose }) {
   const [editedNotes, setEditedNotes] = useState('');
 
   const [isEditingHeader, setIsEditingHeader] = useState(false);
-  const [headerForm, setHeaderForm] = useState({ title: '', arr: '', stage: '', urgency: '', owner_id: '' });
+  const [headerForm, setHeaderForm] = useState({ title: '', arr: '', stage: '', urgency: '', owner_id: '', expected_payment_date: '', follow_up_date: '' });
   const [successMetrics, setSuccessMetrics] = useState(deal?.success_metrics || '');
   const [metricsSaving, setMetricsSaving] = useState(false);
+
+  // M9 & M10 Sync notes and metrics when deal changes
+  useEffect(() => {
+    if (deal) {
+      setEditedNotes(deal.notes || '');
+      setSuccessMetrics(deal.success_metrics || '');
+    }
+  }, [deal?.id, deal?.notes, deal?.success_metrics]);
 
   // New Contact Form State
   const [showContactForm, setShowContactForm] = useState(false);
@@ -475,7 +480,9 @@ export default function DealDrawer({ dealId, onClose }) {
       arr: deal.arr || 0,
       stage: deal.stage || 'Discovery',
       urgency: deal.urgency || 'medium',
-      owner_id: deal.owner_id || ''
+      owner_id: deal.owner_id || '',
+      expected_payment_date: deal.expected_payment_date || '',
+      follow_up_date: deal.follow_up_date || ''
     });
     setIsEditingHeader(true);
   };
@@ -488,7 +495,9 @@ export default function DealDrawer({ dealId, onClose }) {
         arr: Number(headerForm.arr),
         stage: headerForm.stage,
         urgency: headerForm.urgency,
-        owner_id: headerForm.owner_id
+        owner_id: headerForm.owner_id,
+        expected_payment_date: headerForm.expected_payment_date || null,
+        follow_up_date: headerForm.follow_up_date || null
       });
       setIsEditingHeader(false);
       showSuccess('Deal Updated', 'Deal details saved successfully.');
@@ -618,7 +627,7 @@ export default function DealDrawer({ dealId, onClose }) {
   const handleGenerateFollowUp = async () => {
     setAiLoading(true);
     try {
-      const res = await generateFollowUp(deal.company, deal.stage, deal.lastActivity, deal.contacts?.[0] || 'the team');
+      const res = await generateFollowUp(deal.company, deal.stage, deal.lastActivity || deal.last_activity, deal.contacts?.[0] || 'the team');
       setFollowUp(res);
     } finally {
       setAiLoading(false);
@@ -657,7 +666,7 @@ export default function DealDrawer({ dealId, onClose }) {
                 onChange={e => setHeaderForm({ ...headerForm, title: e.target.value })}
                 placeholder="Deal Name"
               />
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <select className="input-base" style={{ flex: 1, minWidth: 120 }} value={headerForm.stage} onChange={e => setHeaderForm({ ...headerForm, stage: e.target.value })}>
                   {['Discovery', 'Qualification', 'Trial', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'].map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -676,6 +685,16 @@ export default function DealDrawer({ dealId, onClose }) {
                   {(teamMembers || []).map(t => <option key={t.id} value={t.id}>{t.full_name || t.name || 'Unknown'}</option>)}
                 </select>
               </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: 160, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Expected Payment Date</span>
+                  <input className="input-base" type="date" value={headerForm.expected_payment_date} onChange={e => setHeaderForm({ ...headerForm, expected_payment_date: e.target.value })} />
+                </div>
+                <div style={{ flex: 1, minWidth: 160, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Follow up Date</span>
+                  <input className="input-base" type="date" value={headerForm.follow_up_date} onChange={e => setHeaderForm({ ...headerForm, follow_up_date: e.target.value })} />
+                </div>
+              </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="btn btn-primary btn-sm" onClick={handleSaveHeader} disabled={saving}>
                   {saving ? 'Saving...' : <><Save size={13} /> Save</>}
@@ -692,7 +711,7 @@ export default function DealDrawer({ dealId, onClose }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <h2 className="drawer-deal-name">{deal.company || deal.title}</h2>
                   <button className="icon-btn" onClick={handleEditHeaderClick} title="Edit Deal">
-                    <Edit3 size={14} />
+                     <Edit3 size={14} />
                   </button>
                 </div>
                 <div className="drawer-deal-meta">
@@ -709,7 +728,6 @@ export default function DealDrawer({ dealId, onClose }) {
               </div>
             </>
           )}
-          <button className="drawer-close" onClick={handleDeleteDeal} style={{ right: 52, color: 'var(--danger)' }} title="Delete Deal"><Trash2 size={16} /></button>
           <button className="drawer-close" onClick={onClose}><X size={16} /></button>
         </div>
 
@@ -756,6 +774,22 @@ export default function DealDrawer({ dealId, onClose }) {
                     {deal.lastActivity || deal.last_activity
                       ? formatDistanceToNow(new Date(deal.lastActivity || deal.last_activity), { addSuffix: true })
                       : 'New'}
+                  </span>
+                </div>
+                <div className="ov-stat">
+                  <span className="ov-stat-label">Expected Payment</span>
+                  <span className="ov-stat-val" style={{ color: 'var(--accent-blue)' }}>
+                    {deal.expected_payment_date
+                      ? new Date(deal.expected_payment_date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })
+                      : 'Not Set'}
+                  </span>
+                </div>
+                <div className="ov-stat">
+                  <span className="ov-stat-label">Follow Up Date</span>
+                  <span className="ov-stat-val" style={{ color: 'var(--accent-purple)' }}>
+                    {deal.follow_up_date
+                      ? new Date(deal.follow_up_date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })
+                      : 'Not Set'}
                   </span>
                 </div>
               </div>
@@ -1039,7 +1073,7 @@ export default function DealDrawer({ dealId, onClose }) {
               <textarea
                 className="input-base"
                 rows={8}
-                defaultValue={deal.notes}
+                value={editedNotes}
                 onChange={e => setEditedNotes(e.target.value)}
                 placeholder="Add deal notes, context, current workflow, competition..."
                 style={{ resize: 'vertical' }}
@@ -1167,7 +1201,10 @@ export default function DealDrawer({ dealId, onClose }) {
         </div>
         
         {/* Drawer Footer */}
-        <div className="drawer-footer" style={{ marginTop: 'auto', borderTop: '1px solid var(--bg-border)', padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', background: 'var(--bg-surface)', flexShrink: 0, zIndex: 10 }}>
+        <div className="drawer-footer" style={{ marginTop: 'auto', borderTop: '1px solid var(--bg-border)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', background: 'var(--bg-surface)', flexShrink: 0, zIndex: 10 }}>
+          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)' }} onClick={handleDeleteDeal}>
+            <Trash2 size={13} style={{ marginRight: 4 }} /> Delete Deal
+          </button>
           <button className="btn btn-primary btn-sm" onClick={onClose}>Done / Close</button>
         </div>
       </div>

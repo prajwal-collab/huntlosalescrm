@@ -11,16 +11,8 @@ import useAuthStore from '../store/useAuthStore';
 import { queryGemini } from '../lib/gemini';
 import { useDialog } from '../context/DialogContext';
 import { computeSignalScore, getPriority, computeCompleteness, isLeadStale } from '../utils/leadScoring';
+import { fmtINR } from '../utils/formatINR';
 import './HomeOS.css';
-
-// ── INR Formatter ─────────────────────────────────────────
-function fmtINR(val) {
-  const n = Number(val) || 0;
-  if (n >= 10000000) return `₹${(n/10000000).toFixed(2)}Cr`;
-  if (n >= 100000)   return `₹${(n/100000).toFixed(1)}L`;
-  if (n >= 1000)     return `₹${(n/1000).toFixed(0)}k`;
-  return `₹${n.toLocaleString('en-IN')}`;
-}
 
 
 function PriorityCard({ icon: Icon, label, count, urgency, color, onClick }) {
@@ -107,11 +99,14 @@ export default function HomeOS() {
     const today = new Date(now);
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
     
-    // For week, we take the last 7 days, or the start of the current week (Sunday)
+    // C1 FIX: Avoid mutating `today` — create a separate date for start-of-week
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
     const currentDay = today.getDay(); // 0 is Sunday
-    const startOfWeek = today.setHours(0,0,0,0) - (currentDay * 86400000);
+    const startOfWeek = todayMidnight - (currentDay * 86400000);
 
     meetings.forEach(m => {
+      // H10 FIX: Only count current user's demos
+      if (m.owner_id && m.owner_id !== user?.id) return;
       if ((m.type === 'Demo' || m.type === 'demo' || m.type === 'Discovery') && m.status === 'completed') {
         const d = new Date(m.date).getTime();
         if (d >= startOfMonth && d <= nowTime) {
@@ -123,7 +118,7 @@ export default function HomeOS() {
       }
     });
     return { completedDemosThisWeek: weekCount, completedDemosThisMonth: monthCount };
-  }, [meetings, now]);
+  }, [meetings, now, user]);
   
   const DEMO_TARGET_MONTH = 25;
   const DEMO_TARGET_WEEK = 6;
@@ -458,7 +453,7 @@ export default function HomeOS() {
           <span className="home-qs-val">{todayMeetings.length}</span>
           <span className="home-qs-label">Meetings Today</span>
         </div>
-        <div className="home-qs-item" onClick={() => navigate('/leads')}>
+        <div className="home-qs-item" onClick={() => navigate('/tasks')}>
           <span className="home-qs-val" style={{ color: '#dc2626' }}>{overdueTasks.length}</span>
           <span className="home-qs-label">Overdue Tasks</span>
         </div>

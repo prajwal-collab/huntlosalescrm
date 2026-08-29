@@ -124,6 +124,8 @@ CREATE TABLE public.deals (
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
   last_activity TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  expected_payment_date DATE,
+  follow_up_date DATE,
   deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
 );
 
