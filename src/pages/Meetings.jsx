@@ -323,8 +323,36 @@ export default function Meetings() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // Filter meetings based on active tab
+  // ── SDR Demo Targets ───────────────────────────────────────────────────
+  const DEMO_TARGET_MONTH = 25;
+  const DEMO_TARGET_WEEK = 6;
   const now = new Date();
+  
+  const { completedDemosThisWeek, completedDemosThisMonth } = useMemo(() => {
+    let weekCount = 0;
+    let monthCount = 0;
+    const nowTime = now.getTime();
+    const today = new Date(now);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
+    
+    const currentDay = today.getDay(); // 0 is Sunday
+    const startOfWeek = today.setHours(0,0,0,0) - (currentDay * 86400000);
+
+    meetings.forEach(m => {
+      if ((m.type === 'Demo' || m.type === 'demo' || m.type === 'Discovery') && m.status === 'completed') {
+        const d = new Date(m.date).getTime();
+        if (d >= startOfMonth && d <= nowTime) {
+          monthCount++;
+        }
+        if (d >= startOfWeek && d <= nowTime) {
+          weekCount++;
+        }
+      }
+    });
+    return { completedDemosThisWeek: weekCount, completedDemosThisMonth: monthCount };
+  }, [meetings, now]);
+
+  // Filter meetings based on active tab
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const endOfToday = new Date(startOfToday.getTime() + 86400000 - 1);
   const in7Days = new Date(now.getTime() + 7 * 86400000);
@@ -398,7 +426,25 @@ export default function Meetings() {
           <h1 className="page-big-title">Meetings & Demos</h1>
           <p className="page-big-sub">Central hub for demos, discovery, and onboarding calls</p>
         </div>
-        <button className="btn btn-primary btn-sm" onClick={() => { setIsAdding(true); setSelected(null); }}><Plus size={13} /> Schedule Meeting</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '12px' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
+               <span style={{ color: 'var(--text-secondary)' }}>Target (Mo):</span>
+               <span style={{ fontWeight: 600 }}>{completedDemosThisMonth} / {DEMO_TARGET_MONTH}</span>
+               <div style={{ width: 60, height: 4, background: 'var(--bg-border)', borderRadius: 2 }}>
+                 <div style={{ width: `${Math.min((completedDemosThisMonth / DEMO_TARGET_MONTH) * 100, 100)}%`, height: '100%', background: 'var(--accent-purple)', borderRadius: 2 }} />
+               </div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+               <span style={{ color: 'var(--text-secondary)' }}>Target (Wk):</span>
+               <span style={{ fontWeight: 600 }}>{completedDemosThisWeek} / {DEMO_TARGET_WEEK}</span>
+               <div style={{ width: 60, height: 4, background: 'var(--bg-border)', borderRadius: 2 }}>
+                 <div style={{ width: `${Math.min((completedDemosThisWeek / DEMO_TARGET_WEEK) * 100, 100)}%`, height: '100%', background: 'var(--accent-blue)', borderRadius: 2 }} />
+               </div>
+            </div>
+          </div>
+          <button className="btn btn-primary btn-sm" onClick={() => { setIsAdding(true); setSelected(null); }}><Plus size={13} /> Schedule Meeting</button>
+        </div>
       </div>
 
       {/* Filter Tabs + Search */}

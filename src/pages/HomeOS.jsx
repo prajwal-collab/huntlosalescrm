@@ -99,6 +99,35 @@ export default function HomeOS() {
     }).length;
   }, [tasks]);
 
+  // ── SDR Demo Targets ───────────────────────────────────────────────────
+  const { completedDemosThisWeek, completedDemosThisMonth } = useMemo(() => {
+    let weekCount = 0;
+    let monthCount = 0;
+    const nowTime = now;
+    const today = new Date(now);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
+    
+    // For week, we take the last 7 days, or the start of the current week (Sunday)
+    const currentDay = today.getDay(); // 0 is Sunday
+    const startOfWeek = today.setHours(0,0,0,0) - (currentDay * 86400000);
+
+    meetings.forEach(m => {
+      if ((m.type === 'Demo' || m.type === 'demo' || m.type === 'Discovery') && m.status === 'completed') {
+        const d = new Date(m.date).getTime();
+        if (d >= startOfMonth && d <= nowTime) {
+          monthCount++;
+        }
+        if (d >= startOfWeek && d <= nowTime) {
+          weekCount++;
+        }
+      }
+    });
+    return { completedDemosThisWeek: weekCount, completedDemosThisMonth: monthCount };
+  }, [meetings, now]);
+  
+  const DEMO_TARGET_MONTH = 25;
+  const DEMO_TARGET_WEEK = 6;
+
   // ── Top 5 leads to call today (hottest by score, not yet contacted today) ──
   const topLeadsToCall = useMemo(() => {
     const today = new Date().toDateString();
@@ -344,6 +373,30 @@ export default function HomeOS() {
                   ⚠ {pendingCallLogs} unpushed → Push Now
                 </button>
               )}
+            </div>
+          </div>
+
+          {/* SDR Demo Target Progress */}
+          <div className="home-call-goal" style={{ marginTop: '16px' }}>
+            <div className="home-goal-top">
+              <span className="home-goal-label">🎯 Demo Target (SDR)</span>
+              <span className="home-goal-target">Target: {DEMO_TARGET_MONTH} / mo</span>
+            </div>
+            
+            <div className="home-goal-bar">
+              <div className="home-goal-fill" style={{ width: `${Math.min((completedDemosThisMonth / DEMO_TARGET_MONTH) * 100, 100)}%`, background: 'var(--accent-purple)' }} />
+            </div>
+            <div className="home-goal-bottom">
+              <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{completedDemosThisMonth}</span>
+              <span style={{ color: 'var(--text-tertiary)' }}>of {DEMO_TARGET_MONTH} demos completed this month</span>
+            </div>
+
+            <div className="home-goal-bar" style={{ marginTop: '12px' }}>
+              <div className="home-goal-fill" style={{ width: `${Math.min((completedDemosThisWeek / DEMO_TARGET_WEEK) * 100, 100)}%`, background: 'var(--accent-blue)' }} />
+            </div>
+            <div className="home-goal-bottom">
+              <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{completedDemosThisWeek}</span>
+              <span style={{ color: 'var(--text-tertiary)' }}>of {DEMO_TARGET_WEEK} demos completed this week</span>
             </div>
           </div>
 
