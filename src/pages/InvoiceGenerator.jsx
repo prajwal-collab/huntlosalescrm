@@ -154,6 +154,56 @@ export default function InvoiceGenerator() {
           { id: 3, text: 'Custom Branding' },
         ]
       }));
+    } else if (type === 'Blue Collar Standard') {
+      setInvoiceData(prev => ({
+        ...prev,
+        page2Title: 'FRONT-LINE RECRUITMENT INFRASTRUCTURE',
+        page2Desc: 'AI-powered WhatsApp engagement and voice screening built for high-volume frontline recruitment.',
+        includedCredits: [
+          { id: 1, service: 'WhatsApp Conversations', allocation: '2,500 / mo' },
+          { id: 2, service: 'AI Voice Minutes', allocation: '1,500 / mo' },
+          { id: 3, service: 'User Access', allocation: '3 Users' },
+        ],
+        additionalPricing: [
+           { id: 1, service: 'Additional WhatsApp', price: '₹3.00 / conv' },
+           { id: 2, service: 'AI Voice (Up to 10k)', price: '₹5.00 / min' },
+           { id: 3, service: 'AI Voice (10k-25k)', price: '₹4.50 / min' },
+        ],
+        inclusions: [
+          { id: 1, text: 'WhatsApp Campaigns & Tracking' },
+          { id: 2, text: 'AI Voice Screening & Workflows' },
+          { id: 3, text: 'Structured Candidate Qualification' },
+          { id: 4, text: 'Automated Recruiter Handoff' },
+          { id: 5, text: 'Campaign Analytics Dashboard' },
+          { id: 6, text: 'Priority Support & Onboarding' },
+        ]
+      }));
+    } else if (type === 'White Collar Standard') {
+      setInvoiceData(prev => ({
+        ...prev,
+        page2Title: 'ENTERPRISE RECRUITMENT PLATFORM',
+        page2Desc: 'One platform to help recruitment teams discover candidates, engage them faster and automate repetitive screening workflows.',
+        includedCredits: [
+          { id: 1, service: 'AI Candidate Searches', allocation: '400 / mo' },
+          { id: 2, service: 'Verified Mobile Numbers', allocation: '500 / mo' },
+          { id: 3, service: 'WhatsApp Conversations', allocation: '600 / mo' },
+          { id: 4, service: 'AI Voice Calling', allocation: '1,000 min / mo' },
+          { id: 5, service: 'Team Seats', allocation: '3 Users' },
+        ],
+        additionalPricing: [
+           { id: 1, service: 'AI Candidate Search', price: '₹2 / Search' },
+           { id: 2, service: 'Verified Mobile Number', price: '₹2 / Contact' },
+           { id: 3, service: 'WhatsApp Conversation', price: '₹5 / Conv' },
+           { id: 4, service: 'AI Voice Calling', price: '₹5 / Min' },
+        ],
+        inclusions: [
+          { id: 1, text: 'AI Candidate Ranking' },
+          { id: 2, text: 'Campaign Management' },
+          { id: 3, text: 'AI Outreach Templates' },
+          { id: 4, text: 'Recruiter Analytics' },
+          { id: 5, text: 'Priority Support & Workflow Review' },
+        ]
+      }));
     }
   };
 
@@ -230,11 +280,17 @@ export default function InvoiceGenerator() {
           <div className="inv-section-title">Quick Actions</div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
              <button className="btn btn-outline btn-sm" onClick={() => downloadStandardProposal('Enterprise Pilot')}>
-               <Download size={14} /> Standard Proposal 1
+               <Download size={14} /> Enterprise Pilot
              </button>
              <button className="btn btn-outline btn-sm" onClick={() => downloadStandardProposal('Standard SaaS')}>
-               <Download size={14} /> Standard Proposal 2
+               <Download size={14} /> Standard SaaS
              </button>
+             <a className="btn btn-outline btn-sm" href="#" target="_blank" rel="noreferrer" title="Replace # with your actual PDF URL">
+               <Download size={14} /> Blue Collar PDF
+             </a>
+             <a className="btn btn-outline btn-sm" href="#" target="_blank" rel="noreferrer" title="Replace # with your actual PDF URL">
+               <Download size={14} /> White Collar PDF
+             </a>
           </div>
         </div>
 
@@ -317,9 +373,11 @@ export default function InvoiceGenerator() {
           <>
              <div className="invoice-section">
               <div className="inv-section-title">Load Pre-filled Template</div>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button className="btn btn-outline btn-sm" onClick={() => loadTemplate('Enterprise Pilot')}>Enterprise Pilot</button>
                 <button className="btn btn-outline btn-sm" onClick={() => loadTemplate('Standard SaaS')}>Standard SaaS</button>
+                <button className="btn btn-outline btn-sm" onClick={() => loadTemplate('Blue Collar Standard')}>Blue Collar</button>
+                <button className="btn btn-outline btn-sm" onClick={() => loadTemplate('White Collar Standard')}>White Collar</button>
               </div>
             </div>
 
