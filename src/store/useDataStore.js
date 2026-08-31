@@ -914,7 +914,19 @@ const useDataStore = create((set, get) => ({
     const { user } = useAuthStore.getState();
     const orgId = await get()._getOrgId();
     const newDeal = { ...deal, owner_id: user?.id, ...(orgId ? { organization_id: orgId } : {}) };
-    const { data, error } = await supabase.from('deals').insert(newDeal).select().single();
+    let { data, error } = await supabase.from('deals').insert(newDeal).select().single();
+
+    // If the migration adding expected_payment_date / follow_up_date hasn't been run
+    // yet, Supabase returns a schema-cache error. Retry without those columns so the
+    // app is never hard-blocked while the migration is pending.
+    if (error && error.message?.includes('schema cache')) {
+      console.warn('Schema cache miss — retrying without date fields. Run the migration: 20260829_deal_payment_followup_dates.sql');
+      const { expected_payment_date, follow_up_date, ...dealWithoutDates } = newDeal;
+      const retry = await supabase.from('deals').insert(dealWithoutDates).select().single();
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (error) {
       console.error('Supabase insert failed:', error.message);
       throw error;

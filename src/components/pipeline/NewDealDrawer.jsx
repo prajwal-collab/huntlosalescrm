@@ -149,8 +149,13 @@ export default function NewDealDrawer({ onClose, prefilledLead = null, prefilled
         <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
           <div className="drawer-body" style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '24px', flex: 1, overflowY: 'auto' }}>
           {error && (
-            <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <AlertCircle size={14} /> {error}
+            <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '13px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+              <span>
+                {error.includes('schema cache')
+                  ? <>Column missing in DB. Run this migration in your Supabase SQL Editor:<br /><code style={{ fontSize: 11, opacity: 0.85 }}>20260829_deal_payment_followup_dates.sql</code></>
+                  : error}
+              </span>
             </div>
           )}
 
