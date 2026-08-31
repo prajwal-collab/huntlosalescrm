@@ -1,7 +1,7 @@
 // ============================================
 // HUNTLO SALES OS — DEAL DRAWER (v3 — Intelligent)
 // ============================================
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   X, Mail, Sparkles, Plus, CheckSquare, Calendar, FileText,
   Send, Clock, CheckCircle2, AlertCircle, IndianRupee, TrendingUp,

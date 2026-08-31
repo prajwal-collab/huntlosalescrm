@@ -171,7 +171,7 @@ export default function Pipeline() {
   const { drawerOpen, selectedDealId, selectDeal, closeDrawer, moveDeal, setSearch, search, filter, setFilter, getFilteredDeals } = usePipelineStore();
   const { companies, deals, createDeal, updateDeal, deleteDeal } = useDataStore();
   const { user, team } = useAuthStore();
-  const { showConfirm, showPrompt } = useDialog();
+  const { showConfirm, showPrompt, showAlert, showSuccess } = useDialog();
   const [isAdding, setIsAdding] = useState(false);
   const [addingStage, setAddingStage] = useState('Discovery');
   const [formData, setFormData] = useState({ title: '', company_id: '', arr: '', urgency: 'medium' });
