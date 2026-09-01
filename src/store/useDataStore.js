@@ -624,6 +624,90 @@ const useDataStore = create((set, get) => ({
     return data;
   },
 
+  // Used by the "Import & Update" flow — enriches existing leads with contact
+  // details filled in offline. Matches each row by `id` first; falls back to
+  // company_name match. Never creates new lead records (update-only).
+  bulkUpdateLeadsFromCsv: async (rowsList) => {
+    const currentLeads = get().leads;
+    let updated = 0;
+    let notFound = 0;
+    const updatedLeads = [];
+
+    // Fields we allow to be patched via this enrichment flow
+    const ALLOWED_FIELDS = [
+      'contact_name', 'designation', 'phone', 'email',
+      'website', 'linkedin_url', 'contact_linkedin',
+      'location', 'industry', 'stage', 'notes',
+    ];
+
+    for (const row of rowsList) {
+      // ── Find the matching lead ────────────────────────────────────────
+      let existingLead = null;
+
+      // Priority 1: match by id (exact UUID)
+      if (row.id && row.id.trim()) {
+        existingLead = currentLeads.find(l => l.id === row.id.trim());
+      }
+
+      // Priority 2: fallback to company_name (case-insensitive)
+      if (!existingLead && row.company_name && row.company_name.trim()) {
+        existingLead = currentLeads.find(
+          l => l.company_name?.toLowerCase().trim() === row.company_name.toLowerCase().trim()
+        );
+      }
+
+      if (!existingLead) {
+        notFound++;
+        continue;
+      }
+
+      // ── Build the patch object (only non-empty enrichment fields) ─────
+      const patch = {};
+      ALLOWED_FIELDS.forEach(field => {
+        if (row[field] !== undefined && row[field] !== null && String(row[field]).trim() !== '') {
+          patch[field] = String(row[field]).trim();
+        }
+      });
+
+      if (Object.keys(patch).length === 0) {
+        // Nothing to update for this row
+        notFound++;
+        continue;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('leads')
+          .update(patch)
+          .eq('id', existingLead.id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('[UpdateLeads] Supabase update error:', error.message, row);
+          notFound++;
+        } else if (data) {
+          updated++;
+          updatedLeads.push(data);
+        }
+      } catch (err) {
+        console.error('[UpdateLeads] Unexpected error:', err);
+        notFound++;
+      }
+    }
+
+    // Patch the in-memory store for all updated leads
+    if (updatedLeads.length > 0) {
+      const updatedMap = Object.fromEntries(updatedLeads.map(l => [l.id, l]));
+      set(state => ({
+        leads: state.leads.map(l => updatedMap[l.id] ? updatedMap[l.id] : l)
+      }));
+    }
+
+    console.log(`[UpdateLeads] ${updated} updated, ${notFound} not matched.`);
+    return { updated, notFound };
+  },
+
   // Used by Power Dialer "Push to CRM" — contacts often have no email.
   // For existing leads (matched by company_name), call notes are APPENDED to
   // the existing notes rather than overwritten. For new leads, a fresh record is created.

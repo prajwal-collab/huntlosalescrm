@@ -419,12 +419,31 @@ export default function CallLogs() {
   const handlePushAllPendingToLeads = async () => {
     const pending = callingList.filter(c => c.status === 'pending');
     if (!pending.length) { alert('No pending contacts to push.'); return; }
-    
-    if (!window.confirm(`Are you sure you want to push ${pending.length} pending contacts to your Leads pipeline?`)) return;
-    
+
+    // Identify contacts that should be skipped because they already exist as
+    // an Account (Company) record in the CRM. We match by company_name (exact,
+    // case-insensitive). These are already tracked as Accounts — not Leads.
+    const currentCompanies = useDataStore.getState().companies;
+    const existingAccountNames = new Set(
+      currentCompanies.map(co => (co.name || '').toLowerCase().trim())
+    );
+    const toSkip = pending.filter(c =>
+      c.company_name && existingAccountNames.has(c.company_name.toLowerCase().trim())
+    );
+    const toPush = pending.filter(c =>
+      !c.company_name || !existingAccountNames.has(c.company_name.toLowerCase().trim())
+    );
+
+    let confirmMsg = `Push ${toPush.length} contact(s) to the Leads pipeline?`;
+    if (toSkip.length > 0) {
+      confirmMsg += `\n\n${toSkip.length} contact(s) will be skipped because they already exist as Accounts in your CRM:\n${toSkip.slice(0, 5).map(c => c.company_name).join(', ')}${toSkip.length > 5 ? '…' : ''}`;
+    }
+    if (!window.confirm(confirmMsg)) return;
+    if (toPush.length === 0) { alert('No contacts to push (all match existing Accounts).'); return; }
+
     setSaving(true);
     try {
-      const leadsToCreate = pending.map(curr => {
+      const leadsToCreate = toPush.map(curr => {
         const uniqueCompany = curr.company_name
           || (curr.contact_name ? `${curr.contact_name} (Individual)` : null)
           || `Dialer-${curr.id}`;
@@ -442,6 +461,7 @@ export default function CallLogs() {
       await useDataStore.getState().bulkCreateLeadsFromDialer(leadsToCreate);
       
       const allTasks = useDataStore.getState().tasks;
+      // Mark ALL pending tasks (including skipped accounts) as completed
       const tasksToUpdate = pending.map(curr => {
         const originalTask = allTasks.find(t => t.id === curr.id);
         return {
@@ -451,7 +471,7 @@ export default function CallLogs() {
       });
       await useDataStore.getState().bulkUpdateTasks(tasksToUpdate);
       
-      alert(`Successfully pushed ${leadsToCreate.length} pending contacts to CRM Leads!`);
+      alert(`Successfully pushed ${leadsToCreate.length} contact(s) to CRM Leads!${toSkip.length > 0 ? `\n${toSkip.length} skipped (existing Accounts).` : ''}`);
     } catch (e) {
       console.error(e);
       alert('Error pushing leads.');
@@ -1283,7 +1303,15 @@ export default function CallLogs() {
                   <div className={`cl-status-dot ${c.status}`} />
                   <div className="cl-item-text">
                     <div className="cl-item-title">{c.contact_name || c.company_name || 'Unknown'}</div>
-                    <div className="cl-item-sub">{c.phone}</div>
+                    <div className="cl-item-sub" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {c.phone ? c.phone : (
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4,
+                          background: 'rgba(249,115,22,0.15)', color: '#f97316',
+                          whiteSpace: 'nowrap'
+                        }}>📵 No Phone</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1323,7 +1351,19 @@ export default function CallLogs() {
                     <h2 className="cl-active-name">{callingList[activeCallIdx].contact_name || 'Unknown Contact'}</h2>
                     <div className="cl-active-company">{callingList[activeCallIdx].company_name}</div>
                   </div>
-                  <div className="cl-active-phone">{callingList[activeCallIdx].phone}</div>
+                  <div>
+                    {callingList[activeCallIdx].phone ? (
+                      <div className="cl-active-phone">{callingList[activeCallIdx].phone}</div>
+                    ) : (
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.3)',
+                        borderRadius: 8, padding: '6px 12px', color: '#f97316', fontWeight: 600, fontSize: 13
+                      }}>
+                        <AlertTriangle size={14} /> No phone number — lead will still be pushed to CRM
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="cl-progress">

@@ -12,7 +12,7 @@ import {
 import useDataStore from '../store/useDataStore';
 import useAuthStore from '../store/useAuthStore';
 import useUIStore from '../store/useUIStore';
-import { exportToCsv } from '../utils/exportCsv';
+import { exportToCsv, exportLeadsForEnrichment } from '../utils/exportCsv';
 import LeadDrawer from '../components/leads/LeadDrawer';
 import NewLeadForm from '../components/leads/NewLeadForm';
 import NewDealDrawer from '../components/pipeline/NewDealDrawer';
@@ -62,6 +62,8 @@ const VIEWS = [
   { id: 'stale',       label: '🕸️ Stale (>14d)',      dot: '#94a3b8',  filter: l => isLeadStale(l, 14) && l.stage !== 'Customer' && l.stage !== 'Lost' },
   { id: 'incomplete',  label: '⚠️ Incomplete',         dot: '#d97706',  filter: l => computeCompleteness(l) < 50 },
   { id: 'highMRR',     label: '💰 High MRR Potential',dot: '#16a34a', filter: l => (l.estimated_mrr || 0) >= 500 },
+  { id: 'no_contact',  label: '📵 No Contact',         dot: '#f97316',
+    filter: l => !l.phone && !l.email && !l.contact_name },
 ];
 
 // ── Lead Row ────────────────────────────────────────────
@@ -380,6 +382,7 @@ export default function Leads() {
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
+  const [showImporterUpdate, setShowImporterUpdate] = useState(false);
   const [convertLead, setConvertLead] = useState(null); // lead being converted to deal
 
   // Pagination State
@@ -538,6 +541,28 @@ export default function Leads() {
               Board
             </button>
           </div>
+
+          {/* No-Contact view: enrichment actions */}
+          {activeView === 'no_contact' && filtered.length > 0 && (
+            <>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => exportLeadsForEnrichment(filtered)}
+                style={{ gap: 6, fontSize: 13, color: '#f97316', borderColor: 'rgba(249,115,22,0.3)', background: 'rgba(249,115,22,0.07)' }}
+                title="Download CSV with id column — fill contact details and re-import to update"
+              >
+                📥 Export for Enrichment
+              </button>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => setShowImporterUpdate(true)}
+                style={{ gap: 6, fontSize: 13, color: '#16a34a', borderColor: 'rgba(22,163,74,0.3)', background: 'rgba(22,163,74,0.07)' }}
+                title="Re-import enriched CSV to update contact details on existing leads"
+              >
+                🔄 Import & Update
+              </button>
+            </>
+          )}
 
           <button
             className="btn btn-ghost btn-sm"
@@ -870,11 +895,18 @@ export default function Leads() {
         />
       )}
 
-      {/* CSV Importer Modal */}
+      {/* CSV Importer Modal — standard import */}
       <CsvImporterModal
         isOpen={showImporter}
         onClose={() => setShowImporter(false)}
         type="leads"
+      />
+
+      {/* CSV Importer Modal — update existing leads (enrichment re-import) */}
+      <CsvImporterModal
+        isOpen={showImporterUpdate}
+        onClose={() => setShowImporterUpdate(false)}
+        type="leads_update"
       />
 
       <BulkEditModal

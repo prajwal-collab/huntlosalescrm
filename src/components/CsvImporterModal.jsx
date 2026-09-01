@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import Papa from 'papaparse';
-import { X, Upload, CheckCircle, AlertCircle, ArrowRight, Download } from 'lucide-react';
+import { X, Upload, CheckCircle, AlertCircle, ArrowRight, Download, RefreshCw } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
-import './CsvImporterModal.css'; // We'll create this next
+import './CsvImporterModal.css';
 
 const CONTACT_FIELDS = [
   { key: 'name', label: 'Full Name', required: true },
@@ -48,6 +48,24 @@ const LEAD_FIELDS = [
   { key: 'stage', label: 'Stage' }
 ];
 
+// Fields for the "Import & Update" (enrichment) mode.
+// `id` is first so users see it at the top of the mapping UI.
+const LEAD_UPDATE_FIELDS = [
+  { key: 'id', label: 'Lead ID (match key)', required: false },
+  { key: 'company_name', label: 'Company Name (fallback match key)' },
+  { key: 'contact_name', label: 'Contact Name' },
+  { key: 'designation', label: 'Designation / Job Title' },
+  { key: 'phone', label: 'Phone / WhatsApp' },
+  { key: 'email', label: 'Email' },
+  { key: 'website', label: 'Website' },
+  { key: 'linkedin_url', label: 'Company LinkedIn' },
+  { key: 'contact_linkedin', label: 'Contact LinkedIn' },
+  { key: 'location', label: 'Location' },
+  { key: 'industry', label: 'Industry' },
+  { key: 'stage', label: 'Stage' },
+  { key: 'notes', label: 'Notes' },
+];
+
 const CALLING_LIST_FIELDS = [
   { key: 'company_name', label: 'Company Name' },
   { key: 'contact_name', label: 'Contact Name' },
@@ -65,13 +83,17 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
   const [rows, setRows] = useState([]);
   const [mapping, setMapping] = useState({});
   const [error, setError] = useState(null);
-  const [results, setResults] = useState({ success: 0, failed: 0 });
+  const [results, setResults] = useState({ success: 0, failed: 0, updated: 0, notFound: 0 });
   const fileInputRef = useRef(null);
 
   const [importType, setImportType] = useState(type);
 
-  const { bulkCreateContacts, bulkCreateCompanies, bulkCreateLeads, contacts, companies, leads } = useDataStore();
-  const crmFields = importType === 'contacts' ? CONTACT_FIELDS : importType === 'leads' ? LEAD_FIELDS : importType === 'calling_list' ? CALLING_LIST_FIELDS : COMPANY_FIELDS;
+  const { bulkCreateContacts, bulkCreateCompanies, bulkCreateLeads, bulkUpdateLeadsFromCsv, contacts, companies, leads } = useDataStore();
+  const crmFields = importType === 'contacts' ? CONTACT_FIELDS
+    : importType === 'leads' ? LEAD_FIELDS
+    : importType === 'leads_update' ? LEAD_UPDATE_FIELDS
+    : importType === 'calling_list' ? CALLING_LIST_FIELDS
+    : COMPANY_FIELDS;
 
   // Reset state when modal opens
   useEffect(() => {
@@ -83,7 +105,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
       setRows([]);
       setMapping({});
       setError(null);
-      setResults({ success: 0, failed: 0 });
+      setResults({ success: 0, failed: 0, updated: 0, notFound: 0 });
     }
   }, [isOpen, type]);
 
@@ -141,6 +163,13 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
     if (importType === 'leads') {
       if (!mapping['company_name']) {
         setError('Company Name is required for Leads.');
+        return;
+      }
+    }
+
+    if (importType === 'leads_update') {
+      if (!mapping['id'] && !mapping['company_name']) {
+        setError('Please map at least Lead ID or Company Name so records can be matched.');
         return;
       }
     }
@@ -245,6 +274,22 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
     if (mappedData.length === 0) {
       setError('No valid data found to import.');
       setStep('map');
+      return;
+    }
+
+    // ── leads_update: update-only, no duplicate creation ────────────────
+    if (importType === 'leads_update') {
+      setStep('importing');
+      setError(null);
+      try {
+        const { updated, notFound } = await bulkUpdateLeadsFromCsv(mappedData);
+        setResults({ success: 0, failed: 0, skipped: 0, updated, notFound });
+        setStep('done');
+      } catch (err) {
+        console.error(err);
+        setError(`Update failed: ${err.message}`);
+        setStep('map');
+      }
       return;
     }
 
@@ -361,11 +406,22 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
           <div className="csv-tabs">
             {type === 'calling_list' ? (
               <button className="csv-tab active">Calling List</button>
+            ) : type === 'leads_update' ? (
+              <button className="csv-tab active" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <RefreshCw size={13} /> Update Leads
+              </button>
             ) : (
               <>
                 <button className={`csv-tab ${importType === 'contacts' ? 'active' : ''}`} onClick={() => setImportType('contacts')}>Contacts</button>
                 <button className={`csv-tab ${importType === 'companies' ? 'active' : ''}`} onClick={() => setImportType('companies')}>Accounts</button>
                 <button className={`csv-tab ${importType === 'leads' ? 'active' : ''}`} onClick={() => setImportType('leads')}>Leads</button>
+                <button
+                  className={`csv-tab ${importType === 'leads_update' ? 'active' : ''}`}
+                  onClick={() => setImportType('leads_update')}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+                >
+                  <RefreshCw size={12} /> Update Leads
+                </button>
               </>
             )}
           </div>
@@ -433,7 +489,11 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
               <div className="csv-actions">
                 <button className="btn btn-ghost" onClick={() => setStep('upload')}>Back</button>
                 <button className="btn btn-primary" onClick={executeImport}>
-                  Import {rows.length} Records <ArrowRight size={16} />
+                  {importType === 'leads_update' ? (
+                    <><RefreshCw size={14} /> Update {rows.length} Records</>
+                  ) : (
+                    <>Import {rows.length} Records <ArrowRight size={16} /></>
+                  )}
                 </button>
               </div>
             </div>
@@ -450,17 +510,33 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
           {step === 'done' && (
             <div className="csv-success-zone">
               <CheckCircle size={48} color="var(--success)" />
-              <h3>Import Complete!</h3>
-              <p>
-                <strong style={{ color: 'var(--success)' }}>{results.success}</strong> record{results.success !== 1 ? 's' : ''} imported successfully.
-              </p>
-              {results.skipped > 0 && (
-                <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', marginTop: 6 }}>
-                  <strong>{results.skipped}</strong> duplicate{results.skipped !== 1 ? 's' : ''} skipped (already exist in your CRM).
-                </p>
+              {importType === 'leads_update' ? (
+                <>
+                  <h3>Update Complete!</h3>
+                  <p>
+                    <strong style={{ color: 'var(--success)' }}>{results.updated}</strong> lead{results.updated !== 1 ? 's' : ''} updated successfully.
+                  </p>
+                  {results.notFound > 0 && (
+                    <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', marginTop: 6 }}>
+                      <strong>{results.notFound}</strong> row{results.notFound !== 1 ? 's' : ''} could not be matched to an existing lead (check ID or company name).
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <h3>Import Complete!</h3>
+                  <p>
+                    <strong style={{ color: 'var(--success)' }}>{results.success}</strong> record{results.success !== 1 ? 's' : ''} imported successfully.
+                  </p>
+                  {results.skipped > 0 && (
+                    <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', marginTop: 6 }}>
+                      <strong>{results.skipped}</strong> duplicate{results.skipped !== 1 ? 's' : ''} skipped (already exist in your CRM).
+                    </p>
+                  )}
+                </>
               )}
               <button className="btn btn-primary mt-4" onClick={onClose}>
-                {type === 'calling_list' ? 'View Calling List' : `View My ${importType === 'contacts' ? 'Contacts' : importType === 'leads' ? 'Leads' : 'Accounts'}`}
+                {importType === 'leads_update' ? 'Back to Leads' : type === 'calling_list' ? 'View Calling List' : `View My ${importType === 'contacts' ? 'Contacts' : importType === 'leads' ? 'Leads' : 'Accounts'}`}
               </button>
             </div>
           )}
