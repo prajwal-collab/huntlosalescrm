@@ -482,6 +482,9 @@ const useDataStore = create((set, get) => ({
 
   // ── Leads ──────────────────────────────────
   createLead: async (lead) => {
+    if (!lead.contact_name || !lead.contact_name.trim() || !lead.phone || !lead.phone.trim()) {
+      throw new Error("Lead must have a contact name and a phone number.");
+    }
     const { user } = useAuthStore.getState();
     const orgId = await get()._getOrgId();
     const newLead = { ...lead, owner_id: user?.id, ...(orgId ? { organization_id: orgId } : {}) };
@@ -610,6 +613,12 @@ const useDataStore = create((set, get) => ({
   },
 
   bulkCreateLeads: async (leadsList) => {
+    // Validate all leads have contact name and phone
+    const invalidLead = leadsList.find(l => !l.contact_name || !l.contact_name.trim() || !l.phone || !l.phone.trim());
+    if (invalidLead) {
+      throw new Error(`All leads must have a contact name and a phone number. Found invalid lead: ${invalidLead.company_name || 'Unknown'}`);
+    }
+
     const { user } = useAuthStore.getState();
     await get().ensureProfile();
     const orgId = await get()._getOrgId();

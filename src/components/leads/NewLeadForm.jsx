@@ -119,8 +119,12 @@ export default function NewLeadForm({ onClose }) {
       setError('Company name is required.');
       return;
     }
-    if (!form.email.trim() && !form.phone.trim()) {
-      setError('Please provide at least an Email or a Phone number.');
+    if (!form.contact_name.trim()) {
+      setError('Contact Name is required.');
+      return;
+    }
+    if (!form.phone.trim()) {
+      setError('Phone number is required.');
       return;
     }
     // ── Block submission if any duplicate detected ────────────────────
@@ -320,12 +324,12 @@ export default function NewLeadForm({ onClose }) {
             <div className="form-section-title" style={{ marginTop: 4 }}>Primary Contact</div>
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Contact Name</label>
+                <label className="form-label">Contact Name *</label>
                 <input
                   className={`form-input${duplicateWarnings.some(w => w.field === 'name') ? ' input-error' : ''}`}
                   placeholder="Jane Doe"
                   value={form.contact_name}
-                  onChange={e => set('contact_name', e.target.value)} />
+                  onChange={e => set('contact_name', e.target.value)} required />
                 {duplicateWarnings.some(w => w.field === 'name') && (
                   <span style={{ fontSize: 11, color: '#d97706', marginTop: 3, display: 'block' }}>
                     ⚠ This name is already in use
@@ -341,7 +345,7 @@ export default function NewLeadForm({ onClose }) {
             </div>
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Email <span style={{fontSize:10, color:'var(--text-tertiary)'}}>(Required if no phone)</span></label>
+                <label className="form-label">Email</label>
                 <input
                   type="email"
                   className={`form-input${duplicateWarnings.some(w => w.field === 'email') ? ' input-error' : ''}`}
@@ -355,12 +359,12 @@ export default function NewLeadForm({ onClose }) {
                 )}
               </div>
               <div className="form-group">
-                <label className="form-label">Phone / WhatsApp <span style={{fontSize:10, color:'var(--text-tertiary)'}}>(Required if no email)</span></label>
+                <label className="form-label">Phone / WhatsApp *</label>
                 <input
                   className={`form-input${duplicateWarnings.some(w => w.field === 'phone') ? ' input-error' : ''}`}
                   placeholder="+44 7700 900000"
                   value={form.phone}
-                  onChange={e => set('phone', e.target.value)} />
+                  onChange={e => set('phone', e.target.value)} required />
                 {duplicateWarnings.some(w => w.field === 'phone') && (
                   <span style={{ fontSize: 11, color: '#d97706', marginTop: 3, display: 'block' }}>
                     ⚠ This phone is already registered
