@@ -189,7 +189,7 @@
   border-radius: var(--radius-md);
   border: 1px solid var(--bg-border);
   cursor: pointer;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.15s, border-color 0.15s;
   background: var(--bg-surface);
   position: relative;
 }
@@ -197,14 +197,12 @@
 .lead-row:hover {
   background: var(--bg-hover);
   border-color: #c4c4cc;
-  box-shadow: var(--shadow-sm);
 }
 .lead-row:hover .lead-row-actions { opacity: 1; }
 
 .lead-row.selected {
   background: rgba(37, 99, 235, 0.02);
   border-color: var(--accent-blue);
-  box-shadow: 0 0 0 1px var(--accent-blue);
 }
 
 /* Hover action buttons — fade in on row hover */
@@ -599,6 +597,17 @@
 }
 .stage-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
 .stage-btn.active { background: var(--accent-blue-muted); border-color: var(--accent-blue); color: var(--accent-blue); font-weight: 600; }
+.stage-btn.active.stage-new-lead { background: rgba(37, 99, 235, 0.08); border-color: #2563eb; color: #2563eb; }
+.stage-btn.active.stage-researching { background: rgba(124, 58, 237, 0.08); border-color: #6d28d9; color: #6d28d9; }
+.stage-btn.active.stage-ready-for-outreach { background: rgba(8, 145, 178, 0.08); border-color: #0e7490; color: #0e7490; }
+.stage-btn.active.stage-outreach-started { background: rgba(217, 119, 6, 0.08); border-color: #b45309; color: #b45309; }
+.stage-btn.active.stage-engaged { background: rgba(234, 88, 12, 0.08); border-color: #ea580c; color: #ea580c; }
+.stage-btn.active.stage-qualified { background: rgba(22, 163, 74, 0.08); border-color: #15803d; color: #15803d; }
+.stage-btn.active.stage-demo-scheduled { background: rgba(20, 184, 166, 0.08); border-color: #0f766e; color: #0f766e; }
+.stage-btn.active.stage-demo-complete { background: rgba(16, 185, 129, 0.08); border-color: #047857; color: #047857; }
+.stage-btn.active.stage-trial-started { background: rgba(59, 130, 246, 0.08); border-color: #1d4ed8; color: #1d4ed8; }
+.stage-btn.active.stage-customer { background: rgba(34, 197, 94, 0.12); border-color: #16a34a; color: #16a34a; }
+.stage-btn.active.stage-lost { background: rgba(220, 38, 38, 0.08); border-color: #b91c1c; color: #b91c1c; }
 
 /* ── New Lead Form Modal ── */
 .lead-form-overlay {

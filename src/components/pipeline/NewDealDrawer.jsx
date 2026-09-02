@@ -39,10 +39,17 @@ export default function NewDealDrawer({ onClose, prefilledLead = null, prefilled
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Unified company + lead search
+  // Unified company + lead search, limited to 50 results to prevent UI freezing
   const filteredCompanies = useMemo(() => {
     const q = companySearch.toLowerCase();
-    return companies.filter(c => c.name?.toLowerCase().includes(q));
+    const results = [];
+    for (const c of companies) {
+      if (results.length >= 50) break;
+      if (c.name?.toLowerCase().includes(q)) {
+        results.push(c);
+      }
+    }
+    return results;
   }, [companies, companySearch]);
 
   const selectedCompany = companies.find(c => c.id === formData.company_id);

@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useDialog } from '../../context/DialogContext';
 import useAuthStore from '../../store/useAuthStore';
 import { computeSignalScore } from '../../utils/leadScoring';
+import { supabase } from '../../lib/supabase';
 
 const STAGES = [
   'New Lead', 'Researching', 'Ready for Outreach', 'Outreach Started',
@@ -57,6 +58,22 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
   const [isHeaderEditing, setIsHeaderEditing] = useState(false);
   const saveTimeout = useRef(null);
   const [form, setForm] = useState({ ...lead });
+  const [history, setHistory] = useState([]);
+
+  // Fetch status history
+  useState(() => {
+    async function fetchHistory() {
+      const { data, error } = await supabase
+        .from('lead_status_history')
+        .select('*')
+        .eq('lead_id', lead.id)
+        .order('created_at', { ascending: false });
+      if (data && !error) {
+        setHistory(data);
+      }
+    }
+    fetchHistory();
+  }, [lead.id]);
 
   const isOwner = user?.id === lead.owner_id;
   const currentUserProfile = team?.find(t => t.id === user?.id);
@@ -254,16 +271,19 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
 
         {/* Stage Selector */}
         <div className="stage-select-wrap" style={{ paddingBottom: 12 }}>
-          {STAGES.map(st => (
-            <button
-              key={st}
-              className={`stage-btn${form.stage === st ? ' active' : ''}`}
-              onClick={() => isOwner && handleStageChange(st)}
-              style={{ cursor: isOwner ? 'pointer' : 'not-allowed', opacity: isOwner ? 1 : 0.7 }}
-            >
-              {st}
-            </button>
-          ))}
+          {STAGES.map(st => {
+            const stageClass = `stage-${st.toLowerCase().replace(/\s+/g, '-')}`;
+            return (
+              <button
+                key={st}
+                className={`stage-btn${form.stage === st ? ` active ${stageClass}` : ''}`}
+                onClick={() => isOwner && handleStageChange(st)}
+                style={{ cursor: isOwner ? 'pointer' : 'not-allowed', opacity: isOwner ? 1 : 0.7 }}
+              >
+                {st}
+              </button>
+            );
+          })}
         </div>
 
         {/* Tabs */}
@@ -783,6 +803,27 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
             </div>
 
             <div className="activity-timeline" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {history.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Status History</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderLeft: '2px solid var(--bg-border)', paddingLeft: 16, marginLeft: 14 }}>
+                    {history.map(h => {
+                      const userObj = team?.find(t => t.id === h.changed_by);
+                      return (
+                        <div key={h.id} style={{ position: 'relative' }}>
+                          <div style={{ position: 'absolute', left: -21, top: 4, width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-blue)', border: '2px solid var(--bg-surface)' }} />
+                          <div style={{ fontSize: 12 }}>
+                            <span style={{ fontWeight: 600 }}>{userObj ? userObj.name : 'Someone'}</span> changed stage from <span className="badge badge-gray">{h.old_stage}</span> to <span className="badge badge-blue">{h.new_stage}</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{new Date(h.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric' })}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Notes & Activity</div>
               {(form.activities || []).length === 0 ? (
                 <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 12, padding: '20px 0' }}>
                   No activity or notes yet.

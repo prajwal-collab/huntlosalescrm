@@ -113,6 +113,44 @@ create trigger leads_updated_at
   before update on public.leads
   for each row execute procedure public.handle_updated_at();
 
+-- ============================================
+-- LEAD STATUS HISTORY TRACKING
+-- ============================================
+create table public.lead_status_history (
+  id uuid primary key default gen_random_uuid(),
+  lead_id uuid references public.leads(id) on delete cascade not null,
+  old_stage text,
+  new_stage text not null,
+  changed_by uuid, -- optional, if you want to track the user
+  created_at timestamptz default now()
+);
+
+-- Enable RLS for history
+alter table public.lead_status_history enable row level security;
+create policy "Tenant isolation check history"
+  on public.lead_status_history
+  for all
+  to authenticated
+  using (
+    lead_id in (select id from public.leads where organization_id = get_user_organization_id())
+  );
+
+create or replace function public.log_lead_stage_change()
+returns trigger language plpgsql as $$
+begin
+  if old.stage is distinct from new.stage then
+    insert into public.lead_status_history (lead_id, old_stage, new_stage, changed_by)
+    values (new.id, old.stage, new.stage, auth.uid());
+  end if;
+  return new;
+end;
+$$;
+
+create trigger lead_stage_change_trigger
+  after update on public.leads
+  for each row execute procedure public.log_lead_stage_change();
+
+
 -- Indexes for performance
 create index leads_stage_idx on public.leads (stage);
 create index leads_priority_idx on public.leads (priority);

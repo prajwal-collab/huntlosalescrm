@@ -10,7 +10,7 @@ import useDataStore from '../../store/useDataStore';
 import useAuthStore from '../../store/useAuthStore';
 import { useKeyboard } from '../../hooks/useKeyboard';
 import NewDealDrawer from '../pipeline/NewDealDrawer';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Outlet } from 'react-router-dom';
 import NotificationManager from './NotificationManager';
 import WorkflowGuideModal from './WorkflowGuideModal';
 import MobileBottomNav from './MobileBottomNav';
@@ -76,7 +76,7 @@ export default function Layout({ children }) {
       <div className="main-area">
         <TopBar onNewDeal={() => setNewDealOpen(true)} />
         <main className="page-content">
-          {children}
+          {children || <Outlet />}
         </main>
       </div>
       {commandCenterOpen && (

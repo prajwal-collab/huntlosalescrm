@@ -364,7 +364,11 @@ export default function NewLeadForm({ onClose }) {
                   className={`form-input${duplicateWarnings.some(w => w.field === 'phone') ? ' input-error' : ''}`}
                   placeholder="+44 7700 900000"
                   value={form.phone}
-                  onChange={e => set('phone', e.target.value)} required />
+                  maxLength={20}
+                  onChange={e => {
+                    const val = e.target.value.replace(/[^\d\+\-\s\(\)]/g, '');
+                    set('phone', val);
+                  }} required />
                 {duplicateWarnings.some(w => w.field === 'phone') && (
                   <span style={{ fontSize: 11, color: '#d97706', marginTop: 3, display: 'block' }}>
                     ⚠ This phone is already registered

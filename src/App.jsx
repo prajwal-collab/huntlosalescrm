@@ -94,27 +94,29 @@ export default function App() {
 
           {/* Protected Routes */}
           <Route element={<AuthGuard />}>
-            <Route element={<Layout><HomeOS /></Layout>} path="/" />
-            <Route element={<Layout><AdminDashboard /></Layout>} path="/admin-dashboard" />
-            <Route element={<Layout><Leads /></Layout>} path="/leads" />
-            <Route element={<Layout><Pipeline /></Layout>} path="/pipeline" />
-            <Route element={<Layout><Companies /></Layout>} path="/companies" />
-            <Route element={<Layout><Contacts /></Layout>} path="/contacts" />
-            <Route element={<Layout><Tasks /></Layout>} path="/tasks" />
-            <Route element={<Layout><Meetings /></Layout>} path="/meetings" />
-            <Route element={<Layout><Sequences /></Layout>} path="/sequences" />
-            <Route element={<Layout><FieldOps /></Layout>} path="/field-ops" />
-            <Route element={<Layout><Documents /></Layout>} path="/documents" />
-            <Route element={<Layout><Reports /></Layout>} path="/reports" />
-            <Route element={<Layout><Calculator /></Layout>} path="/calculator" />
-            <Route element={<Layout><InvoiceGenerator /></Layout>} path="/invoice-generator" />
-            <Route element={<Layout><Settings /></Layout>} path="/settings" />
-            <Route element={<Layout><Team /></Layout>} path="/team" />
-            <Route element={<Layout><CallLogs /></Layout>} path="/call-logs" />
-            <Route element={<Layout><Webinars /></Layout>} path="/webinars" />
-            <Route element={<Layout><WebinarDetail /></Layout>} path="/webinars/:id" />
-            <Route element={<Layout><UTMGenerator /></Layout>} path="/utm" />
-            <Route element={<ProposalViewer />} path="/proposal/preview" />
+            <Route element={<Layout />}>
+              <Route path="/" element={<HomeOS />} />
+              <Route path="/admin-dashboard" element={<AdminDashboard />} />
+              <Route path="/leads" element={<Leads />} />
+              <Route path="/pipeline" element={<Pipeline />} />
+              <Route path="/companies" element={<Companies />} />
+              <Route path="/contacts" element={<Contacts />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/meetings" element={<Meetings />} />
+              <Route path="/sequences" element={<Sequences />} />
+              <Route path="/field-ops" element={<FieldOps />} />
+              <Route path="/documents" element={<Documents />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/calculator" element={<Calculator />} />
+              <Route path="/invoice-generator" element={<InvoiceGenerator />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/team" element={<Team />} />
+              <Route path="/call-logs" element={<CallLogs />} />
+              <Route path="/webinars" element={<Webinars />} />
+              <Route path="/webinars/:id" element={<WebinarDetail />} />
+              <Route path="/utm" element={<UTMGenerator />} />
+            </Route>
+            <Route path="/proposal/preview" element={<ProposalViewer />} />
           </Route>
 
           {/* Fallback */}

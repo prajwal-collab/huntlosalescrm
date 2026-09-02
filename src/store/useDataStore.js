@@ -1030,8 +1030,19 @@ const useDataStore = create((set, get) => ({
 
   updateDeal: async (id, updates) => {
     const oldDeal = get().deals.find(d => d.id === id);
+    const prevDeals = get().deals;
+
+    // Optimistic update
+    set(state => ({
+      deals: state.deals.map(d => d.id === id ? { ...d, ...updates } : d)
+    }));
+
     const { data, error } = await supabase.from('deals').update(updates).eq('id', id).select().single();
-    if (error) throw error;
+    if (error) {
+      set({ deals: prevDeals }); // Revert
+      throw error;
+    }
+    // Update with exact DB data
     set(state => ({ deals: state.deals.map(d => d.id === id ? data : d) }));
 
     if (updates.owner_id !== undefined && oldDeal) {
@@ -1042,16 +1053,25 @@ const useDataStore = create((set, get) => ({
   },
 
   updateDealStage: async (dealId, stage) => {
-    const { error } = await supabase
-      .from('deals')
-      .update({ stage, last_activity: new Date().toISOString() })
-      .eq('id', dealId);
-    if (error) throw error;
+    const prevDeals = get().deals;
+    const now = new Date().toISOString();
+
+    // Optimistic update
     set(state => ({
       deals: state.deals.map(d =>
-        d.id === dealId ? { ...d, stage, last_activity: new Date().toISOString() } : d
+        d.id === dealId ? { ...d, stage, last_activity: now } : d
       ),
     }));
+
+    const { error } = await supabase
+      .from('deals')
+      .update({ stage, last_activity: now })
+      .eq('id', dealId);
+      
+    if (error) {
+      set({ deals: prevDeals }); // Revert
+      throw error;
+    }
   },
 
   deleteDeal: async (id) => {
