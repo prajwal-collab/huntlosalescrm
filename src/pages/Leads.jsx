@@ -62,6 +62,8 @@ const VIEWS = [
   { id: 'stale',       label: '🕸️ Stale (>14d)',      dot: '#94a3b8',  filter: l => isLeadStale(l, 14) && l.stage !== 'Customer' && l.stage !== 'Lost' },
   { id: 'incomplete',  label: '⚠️ Incomplete',         dot: '#d97706',  filter: l => computeCompleteness(l) < 50 },
   { id: 'highMRR',     label: '💰 High MRR Potential',dot: '#16a34a', filter: l => (l.estimated_mrr || 0) >= 500 },
+  { id: 'linkedin',    label: '🔗 LinkedIn Outreach',  dot: '#0a66c2',
+    filter: l => (l.linkedin_status && l.linkedin_status !== 'Not Sent') || l.source === 'LinkedIn Outreach' || (l.linkedin_touches || 0) > 0 },
   { id: 'no_contact',  label: '📵 No Contact',         dot: '#f97316',
     filter: l => !l.phone && !l.email && !l.contact_name },
 ];

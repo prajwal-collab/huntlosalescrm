@@ -14,6 +14,7 @@ import { useDialog } from '../../context/DialogContext';
 import useAuthStore from '../../store/useAuthStore';
 import { computeSignalScore } from '../../utils/leadScoring';
 import { supabase } from '../../lib/supabase';
+import useDataStore from '../../store/useDataStore';
 
 const STAGES = [
   'New Lead', 'Researching', 'Ready for Outreach', 'Outreach Started',
@@ -46,6 +47,117 @@ function Field({ label, value, children }) {
           {value || 'Not set'}
         </span>
       )}
+    </div>
+  );
+}
+
+const LI_ACTIONS = [
+  { id: 'connection_request', label: '🤝 Connect' },
+  { id: 'message',            label: '💬 Message' },
+  { id: 'inmail',             label: '✉️ InMail' },
+  { id: 'accepted',           label: '✅ Accepted' },
+  { id: 'replied',            label: '🎯 Replied' },
+];
+
+function LinkedInQuickLogger({ lead, onUpdate }) {
+  const { logLinkedInOutreach } = useDataStore();
+  const [action, setAction] = useState('');
+  const [sentiment, setSentiment] = useState('');
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [done, setDone] = useState('');
+
+  const handleLog = async () => {
+    if (!action) return;
+    setSaving(true);
+    try {
+      await logLinkedInOutreach({
+        contact_name: lead.contact_name || '',
+        company_name: lead.company_name || '',
+        designation: lead.designation || '',
+        linkedin_url: lead.contact_linkedin || lead.linkedin_url || '',
+        action_type: action,
+        reply_sentiment: action === 'replied' ? (sentiment || 'neutral') : null,
+        notes: note,
+      });
+      setDone('✅ Logged!');
+      setAction('');
+      setSentiment('');
+      setNote('');
+      setTimeout(() => setDone(''), 2000);
+    } catch (err) {
+      setDone('❌ Error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="d-section">
+      <div className="d-section-label">🔗 Quick LinkedIn Logger {done && <span style={{ fontSize: 11, fontWeight: 500, color: done.startsWith('✅') ? '#16a34a' : '#dc2626' }}>{done}</span>}</div>
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
+        {LI_ACTIONS.map(a => (
+          <button
+            key={a.id}
+            onClick={() => setAction(a.id)}
+            style={{
+              padding: '4px 10px',
+              borderRadius: 14,
+              fontSize: 11,
+              fontWeight: 600,
+              border: `1.5px solid ${action === a.id ? '#0a66c2' : 'var(--bg-border)'}`,
+              background: action === a.id ? '#0a66c2' : 'var(--bg-base)',
+              color: action === a.id ? '#fff' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              transition: 'all 0.12s ease',
+            }}
+          >
+            {a.label}
+          </button>
+        ))}
+      </div>
+      {action === 'replied' && (
+        <select
+          value={sentiment}
+          onChange={e => setSentiment(e.target.value)}
+          style={{
+            width: '100%', marginBottom: 6, padding: '5px 8px', fontSize: 12,
+            background: 'var(--bg-base)', border: '1px solid var(--bg-border)',
+            borderRadius: 6, color: 'var(--text-primary)', outline: 'none',
+          }}
+        >
+          <option value="">Sentiment...</option>
+          <option value="interested">🟢 Interested</option>
+          <option value="demo_booked">🟣 Demo Booked</option>
+          <option value="neutral">🟡 Neutral</option>
+          <option value="not_interested">🔴 Not Interested</option>
+        </select>
+      )}
+      <div style={{ display: 'flex', gap: 6 }}>
+        <input
+          placeholder="Quick note..."
+          value={note}
+          onChange={e => setNote(e.target.value)}
+          style={{
+            flex: 1, padding: '5px 8px', fontSize: 12,
+            background: 'var(--bg-base)', border: '1px solid var(--bg-border)',
+            borderRadius: 6, color: 'var(--text-primary)', outline: 'none',
+          }}
+          onKeyDown={e => { if (e.key === 'Enter') handleLog(); }}
+        />
+        <button
+          onClick={handleLog}
+          disabled={!action || saving}
+          style={{
+            padding: '5px 12px', fontSize: 11, fontWeight: 700,
+            background: action ? '#0a66c2' : 'var(--bg-border)',
+            color: '#fff', border: 'none', borderRadius: 6,
+            cursor: action ? 'pointer' : 'default', opacity: action ? 1 : 0.5,
+          }}
+        >
+          {saving ? '...' : 'Log'}
+        </button>
+      </div>
     </div>
   );
 }
@@ -763,6 +875,11 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
                 ) : <span className={`d-field-value${!form.outreach_channel ? ' empty' : ''}`}>{form.outreach_channel || 'Not set'}</span>}
               </Field>
             </div>
+
+            {/* ── LinkedIn Quick Logger ──────────────── */}
+            {editMode && (
+              <LinkedInQuickLogger lead={form} onUpdate={onUpdate} />
+            )}
           </>
         )}
 

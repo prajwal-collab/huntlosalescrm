@@ -42,6 +42,7 @@ import ProposalViewer from './pages/ProposalViewer';
 import Webinars from './pages/Webinars';
 import WebinarDetail from './pages/WebinarDetail';
 import UTMGenerator from './pages/UTMGenerator';
+import LinkedInOutreach from './pages/LinkedInOutreach';
 import LinkRedirect from './pages/LinkRedirect';
 
 // Global listener to catch password recovery hashes from emails
@@ -112,6 +113,7 @@ export default function App() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/team" element={<Team />} />
               <Route path="/call-logs" element={<CallLogs />} />
+              <Route path="/linkedin-outreach" element={<LinkedInOutreach />} />
               <Route path="/webinars" element={<Webinars />} />
               <Route path="/webinars/:id" element={<WebinarDetail />} />
               <Route path="/utm" element={<UTMGenerator />} />

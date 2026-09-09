@@ -56,6 +56,7 @@ const useDataStore = create((set, get) => ({
   documents: [],
   sequences: [],
   leads: [],
+  linkedinLogs: [],
   teamMembers: [],
   proposals: [],
   webinars: [],
@@ -166,9 +167,10 @@ const useDataStore = create((set, get) => ({
         fetchAllRows('webinar_content_assets', 'created_at', false),
         fetchAllRows('webinar_follow_ups', 'day_offset', true),
         fetchAllRows('webinar_sops', 'created_at', false),
+        fetchAllRows('linkedin_outreach_logs', 'created_at', false),
       ]);
 
-      const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes, leadsRes, teamRes, proposalsRes, webinarsRes, funnelStagesRes, registrantsRes, assetsRes, followUpsRes, sopsRes] = results;
+      const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes, leadsRes, teamRes, proposalsRes, webinarsRes, funnelStagesRes, registrantsRes, assetsRes, followUpsRes, sopsRes, linkedinLogsRes] = results;
 
       // Helper to safely extract data from allSettled results
       const extract = (res, name) => {
@@ -212,6 +214,7 @@ const useDataStore = create((set, get) => ({
         webinar_content_assets: extract(assetsRes, 'webinar_content_assets'),
         webinar_follow_ups: extract(followUpsRes, 'webinar_follow_ups'),
         webinar_sops: extract(sopsRes, 'webinar_sops'),
+        linkedinLogs: extract(linkedinLogsRes, 'linkedin_outreach_logs'),
         loading: false,
         error: null
       });
@@ -221,6 +224,9 @@ const useDataStore = create((set, get) => ({
 
       // Auto-push missed call logs from previous days
       get().autoPushMissedCallLogs();
+
+      // Auto-push missed LinkedIn outreach logs
+      get().autoPushMissedLinkedInOutreach();
     } catch (error) {
       console.error('[DataStore] Fetch error:', error);
       set({ error: error.message, loading: false });
@@ -367,6 +373,9 @@ const useDataStore = create((set, get) => ({
       // L7 FIX: Realtime subscription for proposals
       .on('postgres_changes', { event: '*', schema: 'public', table: 'proposals' }, () => {
         get()._refreshTable('proposals');
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'linkedin_outreach_logs' }, () => {
+        get()._refreshLinkedInLogs();
       })
       .subscribe();
 
@@ -1892,6 +1901,383 @@ const useDataStore = create((set, get) => ({
     if (error) throw error;
     set(state => ({ webinar_sops: state.webinar_sops.map(s => s.id === id ? data : s) }));
     return data;
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
+  // LINKEDIN OUTREACH MODULE
+  // ═══════════════════════════════════════════════════════════════════
+
+  // Refresh LinkedIn logs (called by Realtime)
+  _refreshLinkedInLogs: async () => {
+    try {
+      const { data, error } = await fetchAllRows('linkedin_outreach_logs', 'created_at', false);
+      if (!error && data) {
+        set({ linkedinLogs: data });
+      }
+    } catch (err) {
+      console.warn('[DataStore] LinkedIn logs refresh failed:', err);
+    }
+  },
+
+  // Normalize LinkedIn URLs for dedup matching
+  _normalizeLinkedInUrl: (url) => {
+    if (!url) return '';
+    let u = url.trim().toLowerCase();
+    // Remove protocol and www
+    u = u.replace(/^https?:\/\/(www\.)?/, '');
+    // Remove query strings
+    u = u.split('?')[0];
+    // Remove trailing slash
+    u = u.replace(/\/+$/, '');
+    // Ensure it starts with linkedin.com
+    if (!u.startsWith('linkedin.com')) return u;
+    return u;
+  },
+
+  // Find an existing lead matching a LinkedIn outreach entry
+  _matchLeadForLinkedIn: (entry, orgId) => {
+    const { leads } = get();
+    const normalizeUrl = get()._normalizeLinkedInUrl;
+    const normalizedUrl = normalizeUrl(entry.linkedin_url);
+
+    // Priority 1: Match by normalized LinkedIn URL
+    if (normalizedUrl) {
+      const byLinkedIn = leads.find(l => {
+        if (orgId && l.organization_id !== orgId) return false;
+        const leadUrl = normalizeUrl(l.contact_linkedin) || normalizeUrl(l.linkedin_url);
+        return leadUrl && leadUrl === normalizedUrl;
+      });
+      if (byLinkedIn) return byLinkedIn;
+    }
+
+    // Priority 2: Match by contact_name + company_name
+    if (entry.contact_name && entry.company_name) {
+      const byNameCompany = leads.find(l => {
+        if (orgId && l.organization_id !== orgId) return false;
+        return (
+          l.contact_name?.toLowerCase().trim() === entry.contact_name.toLowerCase().trim() &&
+          l.company_name?.toLowerCase().trim() === entry.company_name.toLowerCase().trim()
+        );
+      });
+      if (byNameCompany) return byNameCompany;
+    }
+
+    // Priority 3: Match by email
+    if (entry.email) {
+      const byEmail = leads.find(l => {
+        if (orgId && l.organization_id !== orgId) return false;
+        return l.email?.toLowerCase().trim() === entry.email.toLowerCase().trim();
+      });
+      if (byEmail) return byEmail;
+    }
+
+    return null;
+  },
+
+  // Derive the lead stage from action_type + reply_sentiment
+  _linkedInActionToStage: (actionType, replySentiment, currentStage) => {
+    const stageOrder = [
+      'New Lead','Researching','Ready for Outreach','Outreach Started',
+      'Engaged','Qualified','Demo Scheduled','Demo Complete',
+      'Trial Started','Customer','Lost'
+    ];
+    const currentIdx = stageOrder.indexOf(currentStage || 'New Lead');
+    let targetStage = 'Outreach Started';
+
+    if (actionType === 'replied' || actionType === 'accepted') {
+      targetStage = 'Engaged';
+    }
+    if (replySentiment === 'demo_booked') {
+      targetStage = 'Demo Scheduled';
+    }
+    if (replySentiment === 'interested') {
+      targetStage = 'Qualified';
+    }
+
+    const targetIdx = stageOrder.indexOf(targetStage);
+    return targetIdx > currentIdx ? targetStage : currentStage;
+  },
+
+  // Log a single LinkedIn outreach entry and sync to leads
+  logLinkedInOutreach: async (entry) => {
+    const { user } = useAuthStore.getState();
+    await get().ensureProfile();
+    const orgId = await get()._getOrgId();
+
+    // 1. Find or create lead
+    let existingLead = get()._matchLeadForLinkedIn(entry, orgId);
+    let leadId = existingLead?.id || null;
+
+    const timestamp = new Date().toLocaleString('en-IN', {
+      day: 'numeric', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+
+    const ACTION_LABELS = {
+      connection_request: '🤝 Connection Request',
+      message: '💬 Message Sent',
+      inmail: '✉️ InMail Sent',
+      accepted: '✅ Connection Accepted',
+      replied: '🎯 Replied',
+    };
+    const actionLabel = ACTION_LABELS[entry.action_type] || entry.action_type;
+    const sentimentNote = entry.reply_sentiment ? ` — Sentiment: ${entry.reply_sentiment}` : '';
+    const noteText = `🔗 [${timestamp}] LinkedIn: ${actionLabel}${sentimentNote}${entry.notes ? ' — ' + entry.notes : ''}`;
+
+    if (existingLead) {
+      // Update existing lead
+      const newStage = get()._linkedInActionToStage(
+        entry.action_type, entry.reply_sentiment, existingLead.stage
+      );
+      const existingNotes = existingLead.notes || '';
+      const appendedNotes = existingNotes
+        ? `${existingNotes}\n\n---\n${noteText}`
+        : noteText;
+
+      // Determine linkedin_status from action_type
+      const LI_STATUS_MAP = {
+        connection_request: 'Requested',
+        accepted: 'Connected',
+        message: 'Messaged',
+        inmail: 'Messaged',
+        replied: 'Replied',
+      };
+
+      const updates = {
+        notes: appendedNotes,
+        stage: newStage,
+        linkedin_status: LI_STATUS_MAP[entry.action_type] || existingLead.linkedin_status,
+        outreach_sent: true,
+        linkedin_touches: (existingLead.linkedin_touches || 0) + 1,
+        signals: {
+          ...(existingLead.signals || {}),
+          linkedin_activity: true,
+        },
+        // Enrich contact_linkedin if missing
+        ...(!existingLead.contact_linkedin && entry.linkedin_url ? { contact_linkedin: entry.linkedin_url } : {}),
+        // Enrich contact_name if missing
+        ...(!existingLead.contact_name && entry.contact_name ? { contact_name: entry.contact_name } : {}),
+        // Set positive_interest for interested/demo_booked
+        ...(entry.reply_sentiment === 'interested' || entry.reply_sentiment === 'demo_booked'
+          ? { positive_interest: true } : {}),
+        ...(entry.reply_sentiment === 'demo_booked' ? { demo_requested: true } : {}),
+      };
+
+      const { data, error } = await supabase
+        .from('leads')
+        .update(updates)
+        .eq('id', existingLead.id)
+        .select()
+        .single();
+
+      if (!error && data) {
+        set(state => ({ leads: state.leads.map(l => l.id === data.id ? data : l) }));
+        leadId = data.id;
+      }
+    } else {
+      // Create new lead
+      const LI_STATUS_MAP = {
+        connection_request: 'Requested',
+        accepted: 'Connected',
+        message: 'Messaged',
+        inmail: 'Messaged',
+        replied: 'Replied',
+      };
+
+      const newStage = get()._linkedInActionToStage(entry.action_type, entry.reply_sentiment, 'New Lead');
+
+      const leadPayload = {
+        company_name: entry.company_name || `${entry.contact_name || 'Unknown'} (Individual)`,
+        contact_name: entry.contact_name || '',
+        designation: entry.designation || '',
+        contact_linkedin: entry.linkedin_url || '',
+        stage: newStage,
+        source: 'LinkedIn Outreach',
+        linkedin_status: LI_STATUS_MAP[entry.action_type] || 'Requested',
+        outreach_sent: true,
+        linkedin_touches: 1,
+        signals: {
+          hiring_activity: false,
+          recruiter_hiring: false,
+          funding_activity: false,
+          linkedin_activity: true,
+          job_posting_activity: false,
+          company_growth: false,
+        },
+        notes: noteText,
+        owner_id: user?.id,
+        ...(orgId ? { organization_id: orgId } : {}),
+        ...(entry.email ? { email: entry.email } : {}),
+        ...(entry.reply_sentiment === 'interested' || entry.reply_sentiment === 'demo_booked'
+          ? { positive_interest: true } : {}),
+        ...(entry.reply_sentiment === 'demo_booked' ? { demo_requested: true } : {}),
+      };
+
+      const { data: newLead, error: leadErr } = await supabase
+        .from('leads')
+        .insert(leadPayload)
+        .select()
+        .single();
+
+      if (!leadErr && newLead) {
+        set(state => ({ leads: [newLead, ...state.leads] }));
+        leadId = newLead.id;
+
+        // Auto-create company + contact (same pattern as createLead)
+        await get()._autoCreateCompanyContact(newLead, orgId);
+      }
+    }
+
+    // 2. Write to linkedin_outreach_logs
+    const logPayload = {
+      contact_name: entry.contact_name || '',
+      company_name: entry.company_name || '',
+      designation: entry.designation || '',
+      linkedin_url: entry.linkedin_url || '',
+      action_type: entry.action_type,
+      message_template: entry.message_template || null,
+      reply_sentiment: entry.reply_sentiment || null,
+      notes: entry.notes || null,
+      lead_id: leadId,
+      owner_id: user?.id,
+      pushed_to_lead: true,
+      ...(orgId ? { organization_id: orgId } : {}),
+    };
+
+    const { data: logData, error: logErr } = await supabase
+      .from('linkedin_outreach_logs')
+      .insert(logPayload)
+      .select()
+      .single();
+
+    if (!logErr && logData) {
+      set(state => ({ linkedinLogs: [logData, ...state.linkedinLogs] }));
+    }
+
+    return { log: logData, leadId };
+  },
+
+  // Bulk import LinkedIn outreach from CSV (Sales Navigator / Apollo)
+  bulkImportLinkedInOutreach: async (rows) => {
+    const { user } = useAuthStore.getState();
+    await get().ensureProfile();
+    const orgId = await get()._getOrgId();
+    let created = 0;
+    let merged = 0;
+
+    for (const row of rows) {
+      try {
+        const result = await get().logLinkedInOutreach({
+          contact_name: row.contact_name || row['First Name'] && row['Last Name']
+            ? `${row['First Name'] || ''} ${row['Last Name'] || ''}`.trim()
+            : row.name || '',
+          company_name: row.company_name || row['Company'] || row['Company Name'] || '',
+          designation: row.designation || row['Title'] || row['Job Title'] || '',
+          linkedin_url: row.linkedin_url || row['LinkedIn URL'] || row['Person Linkedin Url'] || row['Profile URL'] || '',
+          action_type: row.action_type || 'connection_request',
+          email: row.email || row['Email'] || '',
+          notes: row.notes || '',
+        });
+
+        if (result?.leadId) {
+          // Check if it was a new or existing lead
+          const wasExisting = get()._matchLeadForLinkedIn(row, orgId);
+          if (wasExisting) merged++;
+          else created++;
+        }
+      } catch (err) {
+        console.error('[LinkedIn Import] Error processing row:', err, row);
+      }
+    }
+
+    return { created, merged, total: rows.length };
+  },
+
+  // Auto-push fail-safe: push any un-pushed LinkedIn logs to leads on startup
+  autoPushMissedLinkedInOutreach: async () => {
+    try {
+      const { linkedinLogs } = get();
+      const missed = linkedinLogs.filter(l => !l.pushed_to_lead);
+      if (missed.length === 0) return;
+
+      console.log(`[DataStore] Found ${missed.length} un-pushed LinkedIn outreach log(s) — auto-syncing...`);
+
+      for (const log of missed) {
+        try {
+          const orgId = log.organization_id || (await get()._getOrgId());
+          let existingLead = get()._matchLeadForLinkedIn(log, orgId);
+
+          if (!existingLead) {
+            // Create a minimal lead
+            await get().logLinkedInOutreach(log);
+          } else {
+            // Just mark as pushed
+            await supabase
+              .from('linkedin_outreach_logs')
+              .update({ pushed_to_lead: true, lead_id: existingLead.id })
+              .eq('id', log.id);
+          }
+        } catch (err) {
+          console.error('[LinkedIn AutoPush] Error:', err);
+        }
+      }
+
+      // Refresh logs
+      await get()._refreshLinkedInLogs();
+    } catch (err) {
+      console.warn('[DataStore] LinkedIn auto-push failed:', err);
+    }
+  },
+
+  // Helper to auto-create company & contact from lead data
+  _autoCreateCompanyContact: async (lead, orgId) => {
+    const state = get();
+
+    // Find or create company
+    let company = state.companies.find(
+      c => c.name?.toLowerCase() === lead.company_name?.toLowerCase()
+    );
+    if (!company && lead.company_name) {
+      const { data: newComp, error: compErr } = await supabase
+        .from('companies')
+        .insert({
+          name: lead.company_name,
+          website: lead.website || null,
+          industry: lead.industry || null,
+          ...(orgId ? { organization_id: orgId } : {}),
+        })
+        .select()
+        .single();
+      if (!compErr && newComp) {
+        company = newComp;
+        set(state => ({ companies: [newComp, ...state.companies] }));
+      }
+    }
+
+    // Find or create contact
+    if (lead.contact_name || lead.email) {
+      const existingContact = state.contacts.find(
+        c => (lead.email && c.email?.toLowerCase() === lead.email?.toLowerCase()) ||
+             (lead.contact_name && c.name?.toLowerCase() === lead.contact_name?.toLowerCase() && c.company_id === company?.id)
+      );
+      if (!existingContact) {
+        const { data: newContact, error: contactErr } = await supabase
+          .from('contacts')
+          .insert({
+            name: lead.contact_name || null,
+            email: lead.email || null,
+            designation: lead.designation || null,
+            linkedin: lead.contact_linkedin || null,
+            company_id: company?.id || null,
+            ...(orgId ? { organization_id: orgId } : {}),
+          })
+          .select()
+          .single();
+        if (!contactErr && newContact) {
+          set(state => ({ contacts: [newContact, ...state.contacts] }));
+        }
+      }
+    }
   },
 
 }));

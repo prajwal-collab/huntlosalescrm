@@ -43,7 +43,7 @@ function matchesTimeframe(date, tf) {
 import { fmtINR } from '../utils/formatINR';
 
 export default function AdminDashboard() {
-  const { deals, tasks, leads, meetings } = useDataStore();
+  const { deals, tasks, leads, meetings, linkedinLogs } = useDataStore();
   const { user, team, fetchTeam } = useAuthStore();
   const [timeframe, setTimeframe] = useState('all'); // today, week, month, all
   const [activeTab, setActiveTab] = useState('overview'); // overview, activity, leaderboard, field-ops, ai-insights
@@ -217,9 +217,11 @@ export default function AdminDashboard() {
         tasksDone: memberTasksDone.length,
         recentCalls,
         recentLeads,
+        linkedInTouches: linkedinLogs.filter(l => l.owner_id === member.id && matchesTimeframe(safeDate(l.created_at), timeframe)).length,
+        linkedInReplies: linkedinLogs.filter(l => l.owner_id === member.id && l.action_type === 'replied' && matchesTimeframe(safeDate(l.created_at), timeframe)).length,
       };
     }).sort((a, b) => b.revenueClosed - a.revenueClosed || b.pipelineGenerated - a.pipelineGenerated);
-  }, [activeTeam, filteredDeals, filteredCalls, allDeals, leads, meetings, tasks, timeframe]);
+  }, [activeTeam, filteredDeals, filteredCalls, allDeals, leads, meetings, tasks, timeframe, linkedinLogs]);
 
   // ── Pipeline Health / Funnel ─────────────────────────────────────────
   const funnelStages = useMemo(() => {
@@ -439,6 +441,8 @@ export default function AdminDashboard() {
                 { label: 'Demos Set', value: sdrStats.reduce((s, m) => s + m.demosScheduled, 0), color: '#8b5cf6', icon: '📅' },
                 { label: 'Demos Attended', value: sdrStats.reduce((s, m) => s + m.demosAttended, 0), color: '#10b981', icon: '🎥' },
                 { label: 'Tasks Done', value: sdrStats.reduce((s, m) => s + m.tasksDone, 0), color: '#f59e0b', icon: '✔️' },
+                { label: 'LinkedIn Touches', value: sdrStats.reduce((s, m) => s + (m.linkedInTouches || 0), 0), color: '#0a66c2', icon: '🔗' },
+                { label: 'LinkedIn Replies', value: sdrStats.reduce((s, m) => s + (m.linkedInReplies || 0), 0), color: '#059669', icon: '🎯' },
               ].map(m => (
                 <div key={m.label} className="adm-metric-card" style={{ '--card-accent': m.color, '--icon-bg': m.color + '18', padding: '16px 20px' }}>
                   <div style={{ fontSize: 22, marginBottom: 4 }}>{m.icon}</div>

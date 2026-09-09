@@ -36,6 +36,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
       { to: '/call-logs', icon: Phone, label: 'Call Logs' },
+      { to: '/linkedin-outreach', icon: Link, label: 'LinkedIn' },
       { to: '/sequences', icon: Zap, label: 'Sequences' },
       { to: '/documents', icon: FileText, label: 'Documents' },
       { to: '/utm', icon: Link, label: 'LinkTrack' },

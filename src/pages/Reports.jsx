@@ -47,7 +47,7 @@ export default function Reports() {
   const [timeframe, setTimeframe] = useState('YTD');
   const [activeTab, setActiveTab] = useState('overview');
   const [showCustomizer, setShowCustomizer] = useState(false);
-  const { deals, meetings, tasks, companies, contacts, leads } = useDataStore();
+  const { deals, meetings, tasks, companies, contacts, leads, linkedinLogs } = useDataStore();
   const { team, fetchTeam } = useAuthStore();
   const [exportingType, setExportingType] = useState(null);
 
@@ -173,14 +173,18 @@ export default function Reports() {
         if (d.owner_id === member.id && d.stage === 'Closed Won') wonRevenue += Number(d.arr) || 0;
       });
 
+      const memberLiLogs = linkedinLogs.filter(l => l.owner_id === member.id && inRange(l.created_at, range));
+
       return {
         ...member,
         name: displayName,
         wonRevenue,
-        trialSignups, enrichmentDone, outreachSent, demosScheduled, demosAttended, coldCallsMade
+        trialSignups, enrichmentDone, outreachSent, demosScheduled, demosAttended, coldCallsMade,
+        linkedInTouches: memberLiLogs.length,
+        linkedInReplies: memberLiLogs.filter(l => l.action_type === 'replied').length,
       };
     }).sort((a, b) => b.wonRevenue - a.wonRevenue);
-  }, [team, companies, contacts, meetings, deals, leads, tasks, timeframe]);
+  }, [team, companies, contacts, meetings, deals, leads, tasks, timeframe, linkedinLogs]);
 
   const metrics = useMemo(() => {
     const range = getDateRange(timeframe);
@@ -498,6 +502,8 @@ export default function Reports() {
               { label: 'Demos Scheduled', icon: '📅', value: leaderboard.reduce((s,m)=>s+m.demosScheduled,0), color: '#f59e0b' },
               { label: 'Demos Showed Up', icon: '✅', value: leaderboard.reduce((s,m)=>s+m.demosAttended,0), color: '#10b981' },
               { label: 'Cold Calls Made', icon: '📞', value: leaderboard.reduce((s,m)=>s+m.coldCallsMade,0), color: '#ef4444' },
+              { label: 'LI Touches', icon: '🔗', value: leaderboard.reduce((s,m)=>s+(m.linkedInTouches||0),0), color: '#0a66c2' },
+              { label: 'LI Replies', icon: '🎯', value: leaderboard.reduce((s,m)=>s+(m.linkedInReplies||0),0), color: '#059669' },
             ].map(metric => (
               <div key={metric.label} className="rep-stat-card" style={{ textAlign: 'center', padding: '16px 12px' }}>
                 <div style={{ fontSize: 24, marginBottom: 4 }}>{metric.icon}</div>
@@ -524,6 +530,8 @@ export default function Reports() {
                     <th title="Demo meetings scheduled">📅 Demos Sched.</th>
                     <th title="Demos where prospect attended">✅ Showed Up</th>
                     <th title="Completed call/cold_call tasks">📞 Cold Calls</th>
+                    <th title="LinkedIn outreach touches">🔗 LI Touches</th>
+                    <th title="LinkedIn replies received">🎯 LI Replies</th>
                     <th title="Won revenue">Won Revenue</th>
                   </tr>
                 </thead>
@@ -579,6 +587,16 @@ export default function Reports() {
                       <td>
                         <span style={{ fontWeight: 700, color: member.coldCallsMade > 0 ? '#ef4444' : 'var(--text-tertiary)' }}>
                           {member.coldCallsMade}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 700, color: (member.linkedInTouches || 0) > 0 ? '#0a66c2' : 'var(--text-tertiary)' }}>
+                          {member.linkedInTouches || 0}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 700, color: (member.linkedInReplies || 0) > 0 ? '#059669' : 'var(--text-tertiary)' }}>
+                          {member.linkedInReplies || 0}
                         </span>
                       </td>
                       <td style={{ color: 'var(--success)', fontWeight: 600 }}>
