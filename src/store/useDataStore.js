@@ -609,16 +609,26 @@ const useDataStore = create((set, get) => ({
   },
 
   bulkDeleteLeads: async (ids) => {
-    const { error } = await supabase.from('leads').delete().in('id', ids);
-    if (error) throw error;
+    const chunkSize = 200;
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      const chunk = ids.slice(i, i + chunkSize);
+      const { error } = await supabase.from('leads').delete().in('id', chunk);
+      if (error) throw error;
+    }
     set(state => ({ leads: state.leads.filter(l => !ids.includes(l.id)) }));
   },
 
   bulkUpdateLeads: async (ids, updates) => {
-    const { data, error } = await supabase.from('leads').update(updates).in('id', ids).select();
-    if (error) throw error;
+    let allData = [];
+    const chunkSize = 200;
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      const chunk = ids.slice(i, i + chunkSize);
+      const { data, error } = await supabase.from('leads').update(updates).in('id', chunk).select();
+      if (error) throw error;
+      allData.push(...(data || []));
+    }
     set(state => ({ leads: state.leads.map(l => ids.includes(l.id) ? { ...l, ...updates } : l) }));
-    return data;
+    return allData;
   },
 
   bulkCreateLeads: async (leadsList) => {
@@ -886,16 +896,26 @@ const useDataStore = create((set, get) => ({
   },
 
   bulkDeleteCompanies: async (ids) => {
-    const { error } = await supabase.from('companies').delete().in('id', ids);
-    if (error) throw error;
+    const chunkSize = 200;
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      const chunk = ids.slice(i, i + chunkSize);
+      const { error } = await supabase.from('companies').delete().in('id', chunk);
+      if (error) throw error;
+    }
     set(state => ({ companies: state.companies.filter(c => !ids.includes(c.id)) }));
   },
 
   bulkUpdateCompanies: async (ids, updates) => {
-    const { data, error } = await supabase.from('companies').update(updates).in('id', ids).select();
-    if (error) throw error;
+    let allData = [];
+    const chunkSize = 200;
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      const chunk = ids.slice(i, i + chunkSize);
+      const { data, error } = await supabase.from('companies').update(updates).in('id', chunk).select();
+      if (error) throw error;
+      allData.push(...(data || []));
+    }
     set(state => ({ companies: state.companies.map(c => ids.includes(c.id) ? { ...c, ...updates } : c) }));
-    return data;
+    return allData;
   },
 
   bulkCreateCompanies: async (companiesList) => {
@@ -950,16 +970,26 @@ const useDataStore = create((set, get) => ({
   },
 
   bulkDeleteContacts: async (ids) => {
-    const { error } = await supabase.from('contacts').delete().in('id', ids);
-    if (error) throw error;
+    const chunkSize = 200;
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      const chunk = ids.slice(i, i + chunkSize);
+      const { error } = await supabase.from('contacts').delete().in('id', chunk);
+      if (error) throw error;
+    }
     set(state => ({ contacts: state.contacts.filter(c => !ids.includes(c.id)) }));
   },
 
   bulkUpdateContacts: async (ids, updates) => {
-    const { data, error } = await supabase.from('contacts').update(updates).in('id', ids).select();
-    if (error) throw error;
+    let allData = [];
+    const chunkSize = 200;
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      const chunk = ids.slice(i, i + chunkSize);
+      const { data, error } = await supabase.from('contacts').update(updates).in('id', chunk).select();
+      if (error) throw error;
+      allData.push(...(data || []));
+    }
     set(state => ({ contacts: state.contacts.map(c => ids.includes(c.id) ? { ...c, ...updates } : c) }));
-    return data;
+    return allData;
   },
 
   bulkCreateContacts: async (contactsList) => {
