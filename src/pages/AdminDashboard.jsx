@@ -200,6 +200,8 @@ export default function AdminDashboard() {
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
         .slice(0, 10);
 
+      const memberLiLogs = linkedinLogs.filter(l => l.owner_id === member.id && matchesTimeframe(safeDate(l.created_at), timeframe));
+
       return {
         ...member,
         dealsCreated,
@@ -217,8 +219,12 @@ export default function AdminDashboard() {
         tasksDone: memberTasksDone.length,
         recentCalls,
         recentLeads,
-        linkedInTouches: linkedinLogs.filter(l => l.owner_id === member.id && matchesTimeframe(safeDate(l.created_at), timeframe)).length,
-        linkedInReplies: linkedinLogs.filter(l => l.owner_id === member.id && l.action_type === 'replied' && matchesTimeframe(safeDate(l.created_at), timeframe)).length,
+        linkedInTouches: memberLiLogs.length,
+        liRequests: memberLiLogs.filter(l => l.action_type === 'connection_request').length,
+        liAccepted: memberLiLogs.filter(l => l.action_type === 'accepted').length,
+        liMessages: memberLiLogs.filter(l => l.action_type === 'message' || l.action_type === 'inmail').length,
+        linkedInReplies: memberLiLogs.filter(l => l.action_type === 'replied').length,
+        liDemos: memberLiLogs.filter(l => l.reply_sentiment === 'demo_booked').length,
       };
     }).sort((a, b) => b.revenueClosed - a.revenueClosed || b.pipelineGenerated - a.pipelineGenerated);
   }, [activeTeam, filteredDeals, filteredCalls, allDeals, leads, meetings, tasks, timeframe, linkedinLogs]);
@@ -323,6 +329,7 @@ export default function AdminDashboard() {
             { id: 'overview',     label: '📊 Overview' },
             { id: 'sdr-activity', label: '👤 SDR Activity' },
             { id: 'leaderboard',  label: '🏆 Team Performance' },
+            { id: 'linkedin',     label: '🔗 LinkedIn Analytics' },
             { id: 'field-ops',    label: '📍 Field Ops' },
             { id: 'ai-insights',  label: '🧠 Founder Insights' },
           ].map(t => (
@@ -652,6 +659,141 @@ export default function AdminDashboard() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* ── LINKEDIN ANALYTICS TAB ── */}
+        {activeTab === 'linkedin' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {/* KPI Summary */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+              {[
+                { label: 'Total Uploaded/Touched', value: sdrStats.reduce((s, m) => s + (m.linkedInTouches || 0), 0), color: '#3b82f6', icon: '🔗' },
+                { label: 'Connection Requests', value: sdrStats.reduce((s, m) => s + (m.liRequests || 0), 0), color: '#8b5cf6', icon: '🤝' },
+                { label: 'Connections Accepted', value: sdrStats.reduce((s, m) => s + (m.liAccepted || 0), 0), color: '#16a34a', icon: '✅' },
+                { label: 'Messages / InMails', value: sdrStats.reduce((s, m) => s + (m.liMessages || 0), 0), color: '#f59e0b', icon: '💬' },
+                { label: 'Replies Received', value: sdrStats.reduce((s, m) => s + (m.linkedInReplies || 0), 0), color: '#ec4899', icon: '🎯' },
+                { label: 'Demos Booked', value: sdrStats.reduce((s, m) => s + (m.liDemos || 0), 0), color: '#10b981', icon: '📅' },
+              ].map(m => (
+                <div key={m.label} className="adm-metric-card" style={{ '--card-accent': m.color, '--icon-bg': m.color + '18', padding: '16px 20px' }}>
+                  <div style={{ fontSize: 22, marginBottom: 4 }}>{m.icon}</div>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: m.color, lineHeight: 1 }}>{m.value}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Team Breakdown Table */}
+            <div className="adm-card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div className="adm-card-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--bg-border)' }}>
+                <h3 className="adm-card-title">Team Performance Breakdown</h3>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="huntlo-table">
+                  <thead>
+                    <tr>
+                      <th style={{ paddingLeft: 24 }}>SDR Name</th>
+                      <th>Total Touches</th>
+                      <th>Requests Sent</th>
+                      <th>Accepted</th>
+                      <th>Accept Rate</th>
+                      <th>Messages</th>
+                      <th>Replies</th>
+                      <th>Reply Rate</th>
+                      <th>Demos Booked</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sdrStats.map(s => {
+                      const acceptRate = s.liRequests > 0 ? Math.round((s.liAccepted / s.liRequests) * 100) : 0;
+                      const replyRate = (s.liRequests + s.liMessages) > 0 ? Math.round((s.linkedInReplies / (s.liRequests + s.liMessages)) * 100) : 0;
+                      return (
+                        <tr key={s.id}>
+                          <td style={{ paddingLeft: 24, fontWeight: 500 }}>{s.full_name || s.name || s.email}</td>
+                          <td style={{ fontWeight: 700, color: '#3b82f6' }}>{s.linkedInTouches || 0}</td>
+                          <td>{s.liRequests || 0}</td>
+                          <td style={{ color: s.liAccepted > 0 ? '#16a34a' : 'inherit', fontWeight: s.liAccepted > 0 ? 600 : 400 }}>{s.liAccepted || 0}</td>
+                          <td style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{acceptRate}%</td>
+                          <td>{s.liMessages || 0}</td>
+                          <td style={{ color: s.linkedInReplies > 0 ? '#ec4899' : 'inherit', fontWeight: s.linkedInReplies > 0 ? 600 : 400 }}>{s.linkedInReplies || 0}</td>
+                          <td style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{replyRate}%</td>
+                          <td style={{ color: s.liDemos > 0 ? '#10b981' : 'inherit', fontWeight: s.liDemos > 0 ? 700 : 400 }}>{s.liDemos || 0}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Raw Upload Data Feed */}
+            <div className="adm-card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div className="adm-card-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--bg-border)' }}>
+                <h3 className="adm-card-title">Recent LinkedIn Uploads & Activity</h3>
+                <span className="badge badge-gray" style={{ fontSize: 11 }}>Raw Feed</span>
+              </div>
+              <div style={{ overflowX: 'auto', maxHeight: 400 }}>
+                <table className="huntlo-table">
+                  <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-elevated)', zIndex: 1 }}>
+                    <tr>
+                      <th style={{ paddingLeft: 24 }}>Date</th>
+                      <th>SDR</th>
+                      <th>Prospect Name</th>
+                      <th>Company</th>
+                      <th>Action</th>
+                      <th>Sentiment</th>
+                      <th>Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {linkedinLogs
+                      .filter(l => matchesTimeframe(safeDate(l.created_at), timeframe))
+                      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                      .slice(0, 50)
+                      .map(log => {
+                        const sdr = activeTeam.find(m => m.id === log.owner_id);
+                        const sdrName = sdr?.full_name || sdr?.name || sdr?.email || 'Unknown';
+                        return (
+                          <tr key={log.id}>
+                            <td style={{ paddingLeft: 24, fontSize: 12, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
+                              {new Date(log.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                            </td>
+                            <td style={{ fontSize: 13, fontWeight: 500 }}>{sdrName}</td>
+                            <td style={{ fontSize: 13 }}>
+                              {log.linkedin_url ? (
+                                <a href={log.linkedin_url.startsWith('http') ? log.linkedin_url : `https://${log.linkedin_url}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0a66c2', textDecoration: 'none' }}>
+                                  {log.contact_name || '—'}
+                                </a>
+                              ) : (log.contact_name || '—')}
+                            </td>
+                            <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{log.company_name || '—'}</td>
+                            <td>
+                              <span className={`badge badge-gray`} style={{ fontSize: 10, textTransform: 'uppercase' }}>
+                                {log.action_type?.replace('_', ' ')}
+                              </span>
+                            </td>
+                            <td>
+                              {log.reply_sentiment ? (
+                                <span className={`badge ${log.reply_sentiment === 'interested' || log.reply_sentiment === 'demo_booked' ? 'badge-green' : log.reply_sentiment === 'not_interested' ? 'badge-red' : 'badge-blue'}`} style={{ fontSize: 10, textTransform: 'uppercase' }}>
+                                  {log.reply_sentiment.replace('_', ' ')}
+                                </span>
+                              ) : <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>—</span>}
+                            </td>
+                            <td style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {log.notes || '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+                {linkedinLogs.filter(l => matchesTimeframe(safeDate(l.created_at), timeframe)).length === 0 && (
+                  <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-tertiary)' }}>
+                    No LinkedIn activity found for this timeframe.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
