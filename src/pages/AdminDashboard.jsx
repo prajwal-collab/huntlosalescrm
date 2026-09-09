@@ -346,43 +346,6 @@ export default function AdminDashboard() {
 
       <main className="adm-main">
 
-        {/* ── KPI cards (always visible) ── */}
-        <div className="adm-metrics-row">
-          <div className="adm-metric-card" style={{ '--card-accent': '#3b82f6', '--icon-bg': 'rgba(59,130,246,0.12)' }}>
-            <div className="adm-metric-top">
-              <span className="adm-metric-label">Pipeline Generated</span>
-              <span className="adm-metric-icon"><Target size={15} /></span>
-            </div>
-            <div className="adm-metric-value">{fmtINR(kpis.pipelineMRR)}</div>
-            <div className="adm-metric-sub">{kpis.pipelineDealsCount} open deals</div>
-          </div>
-
-          <div className="adm-metric-card" style={{ '--card-accent': '#16a34a', '--icon-bg': 'rgba(22,163,74,0.12)' }}>
-            <div className="adm-metric-top">
-              <span className="adm-metric-label">Revenue Closed</span>
-              <span className="adm-metric-icon"><DollarSign size={15} /></span>
-            </div>
-            <div className="adm-metric-value" style={{ color: '#16a34a' }}>{fmtINR(kpis.wonMRR)}</div>
-            <div className="adm-metric-sub up"><ArrowUpRight size={12} />{kpis.wonCount} won deals</div>
-          </div>
-
-          <div className="adm-metric-card" style={{ '--card-accent': '#8b5cf6', '--icon-bg': 'rgba(139,92,246,0.12)' }}>
-            <div className="adm-metric-top">
-              <span className="adm-metric-label">Win Rate</span>
-              <span className="adm-metric-icon"><TrendingUp size={15} /></span>
-            </div>
-            <div className="adm-metric-value">{kpis.winRate}%</div>
-            <div className="adm-metric-sub">Closed Won / Total Closed</div>
-          </div>
-
-          <div className="adm-metric-card" style={{ '--card-accent': '#f59e0b', '--icon-bg': 'rgba(245,158,11,0.12)' }}>
-            <div className="adm-metric-top">
-              <span className="adm-metric-label">Avg Deal Size</span>
-              <span className="adm-metric-icon"><Briefcase size={15} /></span>
-            </div>
-            <div className="adm-metric-value">{fmtINR(kpis.avgDealSize)}</div>
-            <div className="adm-metric-sub">Based on won deals</div>
-          </div>
 
           <div className="adm-metric-card" style={{ '--card-accent': '#0ea5e9', '--icon-bg': 'rgba(14,165,233,0.12)' }}>
             <div className="adm-metric-top">
@@ -685,12 +648,12 @@ export default function AdminDashboard() {
             </div>
 
             {/* Team Breakdown Table */}
-            <div className="adm-card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div className="adm-card-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--bg-border)' }}>
-                <h3 className="adm-card-title">Team Performance Breakdown</h3>
+            <div className="adm-table-card">
+              <div className="adm-table-header">
+                <h3 className="adm-table-title">Team Performance Breakdown</h3>
               </div>
               <div style={{ overflowX: 'auto' }}>
-                <table className="huntlo-table">
+                <table className="adm-user-table">
                   <thead>
                     <tr>
                       <th style={{ paddingLeft: 24 }}>SDR Name</th>
@@ -710,8 +673,18 @@ export default function AdminDashboard() {
                       const replyRate = (s.liRequests + s.liMessages) > 0 ? Math.round((s.linkedInReplies / (s.liRequests + s.liMessages)) * 100) : 0;
                       return (
                         <tr key={s.id}>
-                          <td style={{ paddingLeft: 24, fontWeight: 500 }}>{s.full_name || s.name || s.email}</td>
-                          <td style={{ fontWeight: 700, color: '#3b82f6' }}>{s.linkedInTouches || 0}</td>
+                          <td style={{ paddingLeft: 24 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <div className="avatar avatar-sm" style={{ backgroundColor: s.color || '#3b82f6', flexShrink: 0 }}>
+                                {s.initials || s.name?.slice(0, 2).toUpperCase() || 'SR'}
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 13 }}>{s.full_name || s.name || s.email}</span>
+                                {s.role && <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{s.role}</span>}
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ fontWeight: 700, color: '#3b82f6', fontSize: 14 }}>{s.linkedInTouches || 0}</td>
                           <td>{s.liRequests || 0}</td>
                           <td style={{ color: s.liAccepted > 0 ? '#16a34a' : 'inherit', fontWeight: s.liAccepted > 0 ? 600 : 400 }}>{s.liAccepted || 0}</td>
                           <td style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{acceptRate}%</td>
@@ -728,14 +701,14 @@ export default function AdminDashboard() {
             </div>
 
             {/* Raw Upload Data Feed */}
-            <div className="adm-card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div className="adm-card-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--bg-border)' }}>
-                <h3 className="adm-card-title">Recent LinkedIn Uploads & Activity</h3>
-                <span className="badge badge-gray" style={{ fontSize: 11 }}>Raw Feed</span>
+            <div className="adm-table-card">
+              <div className="adm-table-header">
+                <h3 className="adm-table-title">Recent LinkedIn Uploads & Activity</h3>
+                <span className="badge badge-gray" style={{ fontSize: 11, marginLeft: 'auto' }}>Raw Feed</span>
               </div>
               <div style={{ overflowX: 'auto', maxHeight: 400 }}>
-                <table className="huntlo-table">
-                  <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-elevated)', zIndex: 1 }}>
+                <table className="adm-user-table">
+                  <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-elevated)', zIndex: 1, boxShadow: '0 1px 0 var(--bg-border)' }}>
                     <tr>
                       <th style={{ paddingLeft: 24 }}>Date</th>
                       <th>SDR</th>
@@ -756,31 +729,31 @@ export default function AdminDashboard() {
                         const sdrName = sdr?.full_name || sdr?.name || sdr?.email || 'Unknown';
                         return (
                           <tr key={log.id}>
-                            <td style={{ paddingLeft: 24, fontSize: 12, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
+                            <td style={{ paddingLeft: 24, fontSize: 11, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
                               {new Date(log.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                             </td>
-                            <td style={{ fontSize: 13, fontWeight: 500 }}>{sdrName}</td>
-                            <td style={{ fontSize: 13 }}>
+                            <td style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{sdrName}</td>
+                            <td style={{ fontSize: 13, fontWeight: 500 }}>
                               {log.linkedin_url ? (
                                 <a href={log.linkedin_url.startsWith('http') ? log.linkedin_url : `https://${log.linkedin_url}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0a66c2', textDecoration: 'none' }}>
                                   {log.contact_name || '—'}
                                 </a>
                               ) : (log.contact_name || '—')}
                             </td>
-                            <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{log.company_name || '—'}</td>
+                            <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{log.company_name || '—'}</td>
                             <td>
-                              <span className={`badge badge-gray`} style={{ fontSize: 10, textTransform: 'uppercase' }}>
+                              <span className="badge badge-gray" style={{ fontSize: 10, textTransform: 'uppercase', padding: '2px 6px' }}>
                                 {log.action_type?.replace('_', ' ')}
                               </span>
                             </td>
                             <td>
                               {log.reply_sentiment ? (
-                                <span className={`badge ${log.reply_sentiment === 'interested' || log.reply_sentiment === 'demo_booked' ? 'badge-green' : log.reply_sentiment === 'not_interested' ? 'badge-red' : 'badge-blue'}`} style={{ fontSize: 10, textTransform: 'uppercase' }}>
+                                <span className={`badge ${log.reply_sentiment === 'interested' || log.reply_sentiment === 'demo_booked' ? 'badge-green' : log.reply_sentiment === 'not_interested' ? 'badge-red' : 'badge-blue'}`} style={{ fontSize: 10, textTransform: 'uppercase', padding: '2px 6px' }}>
                                   {log.reply_sentiment.replace('_', ' ')}
                                 </span>
                               ) : <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>—</span>}
                             </td>
-                            <td style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <td style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {log.notes || '—'}
                             </td>
                           </tr>
@@ -789,7 +762,7 @@ export default function AdminDashboard() {
                   </tbody>
                 </table>
                 {linkedinLogs.filter(l => matchesTimeframe(safeDate(l.created_at), timeframe)).length === 0 && (
-                  <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-tertiary)' }}>
+                  <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>
                     No LinkedIn activity found for this timeframe.
                   </div>
                 )}
