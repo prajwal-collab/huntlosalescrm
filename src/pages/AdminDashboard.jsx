@@ -8,7 +8,7 @@ import {
   PieChart, Pie, Cell, LineChart, Line, CartesianGrid
 } from 'recharts';
 import {
-  TrendingUp, Clock, Target, ArrowUpRight, BarChart2,
+  Clock, Target, BarChart2,
   DollarSign, Briefcase, Star, Sparkles, Users, Phone,
   UserPlus, Activity, CheckCircle, Calendar, MapPin
 } from 'lucide-react';
@@ -346,16 +346,55 @@ export default function AdminDashboard() {
 
       <main className="adm-main">
 
-
-          <div className="adm-metric-card" style={{ '--card-accent': '#0ea5e9', '--icon-bg': 'rgba(14,165,233,0.12)' }}>
-            <div className="adm-metric-top">
-              <span className="adm-metric-label">Team Daily Leads</span>
-              <span className="adm-metric-icon"><UserPlus size={15} /></span>
+        {/* ── KPI cards (only on overview) ── */}
+        {activeTab === 'overview' && (
+          <div className="adm-metrics-row">
+            <div className="adm-metric-card" style={{ '--card-accent': '#3b82f6', '--icon-bg': 'rgba(59,130,246,0.12)' }}>
+              <div className="adm-metric-top">
+                <span className="adm-metric-label">Pipeline Generated</span>
+                <span className="adm-metric-icon"><Target size={15} /></span>
+              </div>
+              <div className="adm-metric-value">{fmtINR(kpis.pipelineMRR)}</div>
+              <div className="adm-metric-sub">{kpis.pipelineDealsCount} open deals</div>
             </div>
-            <div className="adm-metric-value">{kpis.dailyLeadsCount}</div>
-            <div className="adm-metric-sub">Added today</div>
+
+            <div className="adm-metric-card" style={{ '--card-accent': '#10b981', '--icon-bg': 'rgba(16,185,129,0.12)' }}>
+              <div className="adm-metric-top">
+                <span className="adm-metric-label">Revenue Closed</span>
+                <span className="adm-metric-icon"><DollarSign size={15} /></span>
+              </div>
+              <div className="adm-metric-value" style={{ color: '#10b981' }}>{fmtINR(kpis.wonMRR)}</div>
+              <div className="adm-metric-sub" style={{ color: '#10b981' }}>↗ {kpis.wonCount} won deals</div>
+            </div>
+
+            <div className="adm-metric-card" style={{ '--card-accent': '#f59e0b', '--icon-bg': 'rgba(245,158,11,0.12)' }}>
+              <div className="adm-metric-top">
+                <span className="adm-metric-label">Win Rate</span>
+                <span className="adm-metric-icon"><Activity size={15} /></span>
+              </div>
+              <div className="adm-metric-value">{kpis.winRate}%</div>
+              <div className="adm-metric-sub">Closed Won / Total Closed</div>
+            </div>
+
+            <div className="adm-metric-card" style={{ '--card-accent': '#8b5cf6', '--icon-bg': 'rgba(139,92,246,0.12)' }}>
+              <div className="adm-metric-top">
+                <span className="adm-metric-label">Avg Deal Size</span>
+                <span className="adm-metric-icon"><Briefcase size={15} /></span>
+              </div>
+              <div className="adm-metric-value">{fmtINR(kpis.avgDealSize)}</div>
+              <div className="adm-metric-sub">Based on won deals</div>
+            </div>
+
+            <div className="adm-metric-card" style={{ '--card-accent': '#ec4899', '--icon-bg': 'rgba(236,72,153,0.12)' }}>
+              <div className="adm-metric-top">
+                <span className="adm-metric-label">Team Daily Leads</span>
+                <span className="adm-metric-icon"><UserPlus size={15} /></span>
+              </div>
+              <div className="adm-metric-value">{kpis.dailyLeadsCount}</div>
+              <div className="adm-metric-sub">Added today</div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ── Overview tab ── */}
         {activeTab === 'overview' && (
