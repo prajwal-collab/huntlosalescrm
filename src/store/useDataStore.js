@@ -1983,16 +1983,13 @@ const useDataStore = create((set, get) => ({
       if (byLinkedIn) return byLinkedIn;
     }
 
-    // Priority 2: Match by contact_name + company_name
-    if (entry.contact_name && entry.company_name) {
-      const byNameCompany = leads.find(l => {
+    // Priority 2: Match by company_name
+    if (entry.company_name) {
+      const byCompany = leads.find(l => {
         if (orgId && l.organization_id !== orgId) return false;
-        return (
-          l.contact_name?.toLowerCase().trim() === entry.contact_name.toLowerCase().trim() &&
-          l.company_name?.toLowerCase().trim() === entry.company_name.toLowerCase().trim()
-        );
+        return l.company_name?.toLowerCase().trim() === entry.company_name.toLowerCase().trim();
       });
-      if (byNameCompany) return byNameCompany;
+      if (byCompany) return byCompany;
     }
 
     // Priority 3: Match by email
@@ -2055,7 +2052,8 @@ const useDataStore = create((set, get) => ({
     };
     const actionLabel = ACTION_LABELS[entry.action_type] || entry.action_type;
     const sentimentNote = entry.reply_sentiment ? ` — Sentiment: ${entry.reply_sentiment}` : '';
-    const noteText = `🔗 [${timestamp}] LinkedIn: ${actionLabel}${sentimentNote}${entry.notes ? ' — ' + entry.notes : ''}`;
+    const contactInfo = entry.contact_name ? ` to ${entry.contact_name}` : '';
+    const noteText = `🔗 [${timestamp}] LinkedIn: ${actionLabel}${contactInfo}${sentimentNote}${entry.notes ? ' — ' + entry.notes : ''}`;
 
     if (existingLead) {
       // Update existing lead
@@ -2094,6 +2092,7 @@ const useDataStore = create((set, get) => ({
         ...(entry.reply_sentiment === 'interested' || entry.reply_sentiment === 'demo_booked'
           ? { positive_interest: true } : {}),
         ...(entry.reply_sentiment === 'demo_booked' ? { demo_requested: true } : {}),
+        last_contacted_at: new Date().toISOString(),
       };
 
       const { data, error } = await supabase
@@ -2106,6 +2105,15 @@ const useDataStore = create((set, get) => ({
       if (!error && data) {
         set(state => ({ leads: state.leads.map(l => l.id === data.id ? data : l) }));
         leadId = data.id;
+        
+        // Auto-create/sync the contact even for existing leads so all connections are tracked
+        await get()._autoCreateCompanyContact({
+          company_name: existingLead.company_name || entry.company_name,
+          contact_name: entry.contact_name,
+          designation: entry.designation,
+          contact_linkedin: entry.linkedin_url,
+          email: entry.email
+        }, orgId);
       }
     } else {
       // Create new lead
@@ -2144,6 +2152,7 @@ const useDataStore = create((set, get) => ({
         ...(entry.reply_sentiment === 'interested' || entry.reply_sentiment === 'demo_booked'
           ? { positive_interest: true } : {}),
         ...(entry.reply_sentiment === 'demo_booked' ? { demo_requested: true } : {}),
+        last_contacted_at: new Date().toISOString(),
       };
 
       const { data: newLead, error: leadErr } = await supabase
