@@ -455,6 +455,7 @@ export default function CallLogs() {
           stage: 'New Lead',
           source: 'Power Dialer',
           notes: 'Pushed from Power Dialer calling list.',
+          last_contacted_at: new Date().toISOString(),
         };
       });
       
@@ -521,16 +522,9 @@ export default function CallLogs() {
         stage: savedForm.outcome === 'connected' ? 'Engaged' : 'New Lead',
         source: 'Power Dialer',
         notes: callNote,
+        last_contacted_at: new Date().toISOString(),
       };
       await useDataStore.getState().bulkCreateLeadsFromDialer([leadData]);
-          phone: curr.phone || '',
-          ...(curr.email ? { email: curr.email } : {}),
-          stage: savedForm.outcome === 'connected' ? 'Engaged' : 'New Lead',
-          source: 'Power Dialer',
-          notes: callNote,
-        };
-        await useDataStore.getState().bulkCreateLeadsFromDialer([leadData]);
-      }
 
       // ── Auto Follow-up Task ──────────────────────────────────────────
       if (savedForm.outcome === 'connected') {
@@ -801,6 +795,7 @@ export default function CallLogs() {
           stage: call.outcome === 'connected' ? 'Engaged' : 'New Lead',
           source: 'Bulk Push from History',
           notes: callNote,
+          last_contacted_at: new Date().toISOString(),
         };
       });
       if (leadsToCreate.length > 0) {
@@ -850,6 +845,7 @@ export default function CallLogs() {
         stage: call.outcome === 'connected' ? 'Engaged' : 'New Lead',
         source: 'Manual Push from History',
         notes: callNote,
+        last_contacted_at: new Date().toISOString(),
       }]);
 
       // Use getState().tasks (not the stale closure) to get the latest task record

@@ -788,6 +788,7 @@ const useDataStore = create((set, get) => ({
         const updates = {
           notes: appendedNotes,
           stage: updatedStage,
+          last_contacted_at: new Date().toISOString(),
           // Enrich phone/contact_name if missing on existing lead
           ...(lead.phone && !existingLead.phone ? { phone: lead.phone } : {}),
           ...(lead.contact_name && !existingLead.contact_name ? { contact_name: lead.contact_name } : {}),
