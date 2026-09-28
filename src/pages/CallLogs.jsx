@@ -583,32 +583,20 @@ export default function CallLogs() {
 
       const callNote = `⏭️ [${new Date().toLocaleDateString()}] Skipped from Power Dialer`;
 
-      const currentLeads = useDataStore.getState().leads;
-      const existingLead = currentLeads.find(l => {
-        if (curr.phone && l.phone && l.phone.replace(/\s+/g, '') === curr.phone.replace(/\s+/g, '')) return true;
-        if (curr.email && l.email && l.email.toLowerCase() === curr.email.toLowerCase()) return true;
-        if (curr.contact_name && l.contact_name && l.contact_name.toLowerCase() === curr.contact_name.toLowerCase()) return true;
-        if (curr.company_name && l.company_name && l.company_name.toLowerCase() === curr.company_name.toLowerCase()) return true;
-        return false;
-      });
-
-      if (existingLead) {
-        await useDataStore.getState().appendLeadNotes(existingLead.id, callNote, null);
-      } else {
-        const uniqueCompany = curr.company_name
-          || (curr.contact_name ? `${curr.contact_name} (Individual)` : null)
-          || `Dialer-${curr.id}`;
-        const leadData = {
-          company_name: uniqueCompany,
-          contact_name: curr.contact_name || '',
-          phone: curr.phone || '',
-          ...(curr.email ? { email: curr.email } : {}),
-          stage: 'New Lead',
-          source: 'Power Dialer',
-          notes: callNote,
-        };
-        await useDataStore.getState().bulkCreateLeadsFromDialer([leadData]);
-      }
+      const uniqueCompany = curr.company_name
+        || (curr.contact_name ? `${curr.contact_name} (Individual)` : null)
+        || `Dialer-${curr.id}`;
+      const leadData = {
+        company_name: uniqueCompany,
+        contact_name: curr.contact_name || '',
+        phone: curr.phone || '',
+        ...(curr.email ? { email: curr.email } : {}),
+        stage: 'New Lead',
+        source: 'Power Dialer',
+        notes: callNote,
+        last_contacted_at: new Date().toISOString(),
+      };
+      await useDataStore.getState().bulkCreateLeadsFromDialer([leadData]);
 
       const due = new Date();
       due.setDate(due.getDate() + 1);
