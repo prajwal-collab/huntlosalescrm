@@ -803,6 +803,7 @@ const useDataStore = create((set, get) => ({
 
         if (error) {
           console.error('[Dialer] Lead update error:', error.message, lead.company_name);
+          throw error;
         } else if (data) {
           mergedLeads.push(data);
           set(state => ({
@@ -822,6 +823,7 @@ const useDataStore = create((set, get) => ({
 
         if (error) {
           console.error('[Dialer] Lead upsert error:', error.message, lead.company_name);
+          throw error;
         } else if (data) {
           // Double-check: was it actually new or did it merge at DB level?
           const existsBefore = get().leads.some(l => l.id === data.id);
