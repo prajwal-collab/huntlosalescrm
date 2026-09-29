@@ -277,6 +277,16 @@ export default function LinkedInOutreach() {
     }
   };
 
+  const handleEditKeyDown = (e, id) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleUpdateLog(id);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setEditingId(null);
+    }
+  };
+
   const canSubmit = form.linkedin_url.trim() && form.action_type && form.contact_name.trim() && form.company_name.trim();
 
   return (
@@ -533,6 +543,7 @@ export default function LinkedInOutreach() {
                               type="text" 
                               value={editValues.contact_name} 
                               onChange={e => setEditValues({...editValues, contact_name: e.target.value})}
+                              onKeyDown={e => handleEditKeyDown(e, log.id)}
                               className="input input-sm"
                               style={{ width: '120px' }}
                             />
@@ -550,6 +561,7 @@ export default function LinkedInOutreach() {
                             type="text" 
                             value={editValues.designation} 
                             onChange={e => setEditValues({...editValues, designation: e.target.value})}
+                            onKeyDown={e => handleEditKeyDown(e, log.id)}
                             className="input input-sm mt-1"
                             placeholder="Designation"
                             style={{ width: '120px', fontSize: 11 }}
@@ -565,6 +577,7 @@ export default function LinkedInOutreach() {
                           type="text" 
                           value={editValues.company_name} 
                           onChange={e => setEditValues({...editValues, company_name: e.target.value})}
+                          onKeyDown={e => handleEditKeyDown(e, log.id)}
                           className="input input-sm"
                           style={{ width: '100px' }}
                         />
@@ -577,6 +590,7 @@ export default function LinkedInOutreach() {
                         <select
                           value={editValues.action_type}
                           onChange={e => setEditValues({...editValues, action_type: e.target.value})}
+                          onKeyDown={e => handleEditKeyDown(e, log.id)}
                           className="input input-sm"
                           style={{ width: '110px', padding: '0 4px' }}
                         >
@@ -596,6 +610,7 @@ export default function LinkedInOutreach() {
                         <select
                           value={editValues.reply_sentiment}
                           onChange={e => setEditValues({...editValues, reply_sentiment: e.target.value})}
+                          onKeyDown={e => handleEditKeyDown(e, log.id)}
                           className="input input-sm"
                           style={{ width: '120px', padding: '0 4px' }}
                         >
@@ -618,6 +633,7 @@ export default function LinkedInOutreach() {
                           type="text" 
                           value={editValues.linkedin_url} 
                           onChange={e => setEditValues({...editValues, linkedin_url: e.target.value})}
+                          onKeyDown={e => handleEditKeyDown(e, log.id)}
                           className="input input-sm"
                           placeholder="URL"
                           style={{ width: '90px' }}
@@ -641,6 +657,7 @@ export default function LinkedInOutreach() {
                           type="text" 
                           value={editValues.notes} 
                           onChange={e => setEditValues({...editValues, notes: e.target.value})}
+                          onKeyDown={e => handleEditKeyDown(e, log.id)}
                           className="input input-sm"
                           style={{ width: '100%' }}
                         />
