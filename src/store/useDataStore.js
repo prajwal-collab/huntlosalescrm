@@ -2115,7 +2115,6 @@ const useDataStore = create((set, get) => ({
           email: entry.email
         }, orgId);
       }
-      }
     } else if (!entry.skip_sync) {
       // Create new lead
       const LI_STATUS_MAP = {
