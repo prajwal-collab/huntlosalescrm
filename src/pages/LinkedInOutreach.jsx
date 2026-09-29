@@ -257,6 +257,8 @@ export default function LinkedInOutreach() {
       company_name: log.company_name || '',
       designation: log.designation || '',
       linkedin_url: log.linkedin_url || '',
+      action_type: log.action_type || '',
+      reply_sentiment: log.reply_sentiment || '',
       notes: log.notes || ''
     });
   };
@@ -571,16 +573,44 @@ export default function LinkedInOutreach() {
                       )}
                     </td>
                     <td>
-                      <span className={`li-action-badge ${log.action_type}`}>
-                        {ACTION_BADGE_LABELS[log.action_type] || log.action_type}
-                      </span>
+                      {editingId === log.id ? (
+                        <select
+                          value={editValues.action_type}
+                          onChange={e => setEditValues({...editValues, action_type: e.target.value})}
+                          className="input input-sm"
+                          style={{ width: '110px', padding: '0 4px' }}
+                        >
+                          <option value="">Select Action</option>
+                          {ACTION_TYPES.map(a => (
+                            <option key={a.id} value={a.id}>{a.label}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className={`li-action-badge ${log.action_type}`}>
+                          {ACTION_BADGE_LABELS[log.action_type] || log.action_type}
+                        </span>
+                      )}
                     </td>
                     <td>
-                      {log.reply_sentiment ? (
-                        <span className={`li-sentiment-badge ${log.reply_sentiment}`}>
-                          {log.reply_sentiment.replace('_', ' ')}
-                        </span>
-                      ) : '—'}
+                      {editingId === log.id ? (
+                        <select
+                          value={editValues.reply_sentiment}
+                          onChange={e => setEditValues({...editValues, reply_sentiment: e.target.value})}
+                          className="input input-sm"
+                          style={{ width: '120px', padding: '0 4px' }}
+                        >
+                          <option value="">No Sentiment</option>
+                          {SENTIMENTS.map(s => (
+                            <option key={s.id} value={s.id}>{s.label}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        log.reply_sentiment ? (
+                          <span className={`li-sentiment-badge ${log.reply_sentiment}`}>
+                            {log.reply_sentiment.replace('_', ' ')}
+                          </span>
+                        ) : '—'
+                      )}
                     </td>
                     <td>
                       {editingId === log.id ? (
