@@ -61,6 +61,7 @@ export default function LinkedInOutreach() {
     reply_sentiment: '',
     notes: '',
   });
+  const [syncToCRM, setSyncToCRM] = useState(true);
 
   const urlInputRef = useRef(null);
   const csvInputRef = useRef(null);
@@ -175,10 +176,15 @@ export default function LinkedInOutreach() {
       const result = await logLinkedInOutreach({
         ...form,
         reply_sentiment: form.action_type === 'replied' ? (form.reply_sentiment || 'neutral') : null,
+        skip_sync: !syncToCRM,
       });
 
-      const wasNew = !leads.find(l => l.id === result?.leadId && l.created_at !== l.updated_at);
-      setSuccessMsg(wasNew ? '✅ Logged & new lead created in CRM!' : '✅ Logged & synced to existing lead!');
+      if (!syncToCRM) {
+        setSuccessMsg('✅ Logged to LinkedIn Activity Only');
+      } else {
+        const wasNew = !leads.find(l => l.id === result?.leadId && l.created_at !== l.updated_at);
+        setSuccessMsg(wasNew ? '✅ Logged & new lead created in CRM!' : '✅ Logged & synced to existing lead!');
+      }
 
       // Reset form
       setForm({
@@ -401,10 +407,21 @@ export default function LinkedInOutreach() {
             )}
 
             <div className="li-submit-row">
-              <span className="li-submit-hint">⌘+Enter to submit</span>
-              <button className="li-submit-btn" onClick={handleSubmit} disabled={!canSubmit || saving}>
-                <Link2 size={14} /> {saving ? 'Saving...' : 'Log & Sync to CRM'}
-              </button>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                <input 
+                  type="checkbox" 
+                  checked={syncToCRM} 
+                  onChange={e => setSyncToCRM(e.target.checked)}
+                  style={{ accentColor: '#0a66c2', cursor: 'pointer' }}
+                />
+                Sync as Lead to CRM
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span className="li-submit-hint">⌘+Enter to submit</span>
+                <button className="li-submit-btn" onClick={handleSubmit} disabled={!canSubmit || saving}>
+                  <Link2 size={14} /> {saving ? 'Saving...' : (syncToCRM ? 'Log & Sync to CRM' : 'Log Activity Only')}
+                </button>
+              </div>
             </div>
           </>
         )}
@@ -480,7 +497,14 @@ export default function LinkedInOutreach() {
                   <tr key={log.id}>
                     <td>
                       <div className="li-contact-cell">
-                        <span className="li-contact-name">{log.contact_name || '—'}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span className="li-contact-name">{log.contact_name || '—'}</span>
+                          {log.pushed_to_lead && (
+                            <span title="Synced to CRM" style={{ fontSize: 10, background: '#dcfce7', color: '#166534', padding: '2px 4px', borderRadius: 4, fontWeight: 600 }}>
+                              CRM
+                            </span>
+                          )}
+                        </div>
                         {log.designation && <span className="li-contact-title">{log.designation}</span>}
                       </div>
                     </td>

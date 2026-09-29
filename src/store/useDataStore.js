@@ -2034,8 +2034,8 @@ const useDataStore = create((set, get) => ({
     await get().ensureProfile();
     const orgId = await get()._getOrgId();
 
-    // 1. Find or create lead
-    let existingLead = get()._matchLeadForLinkedIn(entry, orgId);
+    // 1. Find or create lead (if not skipping sync)
+    let existingLead = entry.skip_sync ? null : get()._matchLeadForLinkedIn(entry, orgId);
     let leadId = existingLead?.id || null;
 
     const timestamp = new Date().toLocaleString('en-IN', {
@@ -2115,7 +2115,8 @@ const useDataStore = create((set, get) => ({
           email: entry.email
         }, orgId);
       }
-    } else {
+      }
+    } else if (!entry.skip_sync) {
       // Create new lead
       const LI_STATUS_MAP = {
         connection_request: 'Requested',
@@ -2182,7 +2183,7 @@ const useDataStore = create((set, get) => ({
       notes: entry.notes || null,
       lead_id: leadId,
       owner_id: user?.id,
-      pushed_to_lead: true,
+      pushed_to_lead: !entry.skip_sync,
       ...(orgId ? { organization_id: orgId } : {}),
     };
 
