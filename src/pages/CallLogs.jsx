@@ -50,7 +50,7 @@ export default function CallLogs() {
   // History Tab State
   const [search, setSearch] = useState('');
   const [filterOutcome, setFilterOutcome] = useState('all');
-  const [filterDate, setFilterDate] = useState('today');
+  const [filterDate, setFilterDate] = useState('all');
   const [selectedCall, setSelectedCall] = useState(null);
 
   // Dialer & Call Logger State
