@@ -2,7 +2,7 @@
 // HUNTLO SALES OS — PIPELINE PAGE (INR)
 // ============================================
 import { useState } from 'react';
-import { Search, Plus, GripVertical, X, IndianRupee, Trash2, Edit2 } from 'lucide-react';
+import { Search, Plus, GripVertical, X, IndianRupee, Trash2, Edit2, Download } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import usePipelineStore from '../store/usePipelineStore';
 import useDataStore from '../store/useDataStore';
@@ -178,6 +178,40 @@ export default function Pipeline() {
 
   const filtered = getFilteredDeals();
 
+  const handleExport = () => {
+    if (!filtered || filtered.length === 0) {
+      showAlert('No Data', 'There are no deals to export matching your current filters.');
+      return;
+    }
+
+    const headers = ['Deal ID', 'Title', 'Company Name', 'Stage', 'ARR (INR)', 'Urgency', 'Engagement Score', 'Owner ID', 'Created At'];
+    
+    const rows = filtered.map(deal => {
+      const company = companies?.find(c => c.id === deal.company_id);
+      return [
+        deal.id,
+        `"${(deal.title || '').replace(/"/g, '""')}"`,
+        `"${(company?.name || '').replace(/"/g, '""')}"`,
+        deal.stage || '',
+        deal.arr || 0,
+        deal.urgency || '',
+        deal.engagement_score || 0,
+        deal.owner_id || '',
+        deal.created_at ? new Date(deal.created_at).toLocaleString() : ''
+      ].join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `pipeline_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleDeleteDeal = async (dealId) => {
     const confirmed = await showConfirm(
       'Delete Deal',
@@ -270,7 +304,10 @@ export default function Pipeline() {
           <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 500 }}>
             {filtered.length} deal{filtered.length !== 1 ? 's' : ''}
           </span>
-          <div className="page-header-right">
+          <div className="page-header-right" style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-ghost" onClick={handleExport} title="Export pipeline to CSV">
+              <Download size={14} /> Export
+            </button>
             <button className="btn btn-primary" onClick={() => { setAddingStage('Discovery'); setIsAdding(true); }}>
               <Plus size={14} /> Add Deal
             </button>
