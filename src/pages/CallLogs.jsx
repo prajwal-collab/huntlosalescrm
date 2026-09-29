@@ -90,7 +90,7 @@ export default function CallLogs() {
           title: t.title,
           owner_id: t.owner_id,
           ownerName: ownerProfile?.full_name || ownerProfile?.name || ownerProfile?.email || 'Unknown',
-          createdAt: t.created_at || callData.timestamp,
+          createdAt: callData.timestamp || t.created_at,
           contactName: callData.contactName || t.title || '',
           company: callData.company || callData.company_name || '',
           phone: callData.phone || '',

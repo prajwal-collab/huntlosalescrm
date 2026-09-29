@@ -2199,6 +2199,13 @@ const useDataStore = create((set, get) => ({
     return { log: logData, leadId };
   },
 
+  updateLinkedInOutreach: async (id, updates) => {
+    const { data, error } = await supabase.from('linkedin_outreach_logs').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    set(state => ({ linkedinLogs: state.linkedinLogs.map(l => l.id === id ? data : l) }));
+    return data;
+  },
+
   // Bulk import LinkedIn outreach from CSV (Sales Navigator / Apollo)
   bulkImportLinkedInOutreach: async (rows) => {
     const { user } = useAuthStore.getState();

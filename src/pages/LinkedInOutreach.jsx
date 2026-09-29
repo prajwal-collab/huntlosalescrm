@@ -50,6 +50,8 @@ export default function LinkedInOutreach() {
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [csvImporting, setCsvImporting] = useState(false);
   const [csvResult, setCsvResult] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editValues, setEditValues] = useState({});
 
   // Logger form state
   const [form, setForm] = useState({
@@ -245,6 +247,31 @@ export default function LinkedInOutreach() {
     } catch (err) {
       setCsvResult({ error: err.message });
       setCsvImporting(false);
+    }
+  };
+
+  const startEditing = (log) => {
+    setEditingId(log.id);
+    setEditValues({
+      contact_name: log.contact_name || '',
+      company_name: log.company_name || '',
+      designation: log.designation || '',
+      linkedin_url: log.linkedin_url || '',
+      notes: log.notes || ''
+    });
+  };
+
+  const handleUpdateLog = async (id) => {
+    try {
+      setSaving(true);
+      await useDataStore.getState().updateLinkedInOutreach(id, editValues);
+      setEditingId(null);
+      setSuccessMsg('Details updated successfully!');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch(e) {
+      alert("Error updating: " + e.message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -487,6 +514,7 @@ export default function LinkedInOutreach() {
                 <th>Notes</th>
                 {isAdmin && <th>SDR</th>}
                 <th>Date</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -498,17 +526,50 @@ export default function LinkedInOutreach() {
                     <td>
                       <div className="li-contact-cell">
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span className="li-contact-name">{log.contact_name || '—'}</span>
+                          {editingId === log.id ? (
+                            <input 
+                              type="text" 
+                              value={editValues.contact_name} 
+                              onChange={e => setEditValues({...editValues, contact_name: e.target.value})}
+                              className="input input-sm"
+                              style={{ width: '120px' }}
+                            />
+                          ) : (
+                            <span className="li-contact-name">{log.contact_name || '—'}</span>
+                          )}
                           {log.pushed_to_lead && (
                             <span title="Synced to CRM" style={{ fontSize: 10, background: '#dcfce7', color: '#166534', padding: '2px 4px', borderRadius: 4, fontWeight: 600 }}>
                               CRM
                             </span>
                           )}
                         </div>
-                        {log.designation && <span className="li-contact-title">{log.designation}</span>}
+                        {editingId === log.id ? (
+                          <input 
+                            type="text" 
+                            value={editValues.designation} 
+                            onChange={e => setEditValues({...editValues, designation: e.target.value})}
+                            className="input input-sm mt-1"
+                            placeholder="Designation"
+                            style={{ width: '120px', fontSize: 11 }}
+                          />
+                        ) : (
+                          log.designation && <span className="li-contact-title">{log.designation}</span>
+                        )}
                       </div>
                     </td>
-                    <td>{log.company_name || '—'}</td>
+                    <td>
+                      {editingId === log.id ? (
+                        <input 
+                          type="text" 
+                          value={editValues.company_name} 
+                          onChange={e => setEditValues({...editValues, company_name: e.target.value})}
+                          className="input input-sm"
+                          style={{ width: '100px' }}
+                        />
+                      ) : (
+                        log.company_name || '—'
+                      )}
+                    </td>
                     <td>
                       <span className={`li-action-badge ${log.action_type}`}>
                         {ACTION_BADGE_LABELS[log.action_type] || log.action_type}
@@ -522,23 +583,54 @@ export default function LinkedInOutreach() {
                       ) : '—'}
                     </td>
                     <td>
-                      {log.linkedin_url ? (
-                        <a
-                          href={log.linkedin_url.startsWith('http') ? log.linkedin_url : `https://${log.linkedin_url}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="li-profile-link"
-                        >
-                          <ExternalLink size={11} /> Open
-                        </a>
-                      ) : '—'}
+                      {editingId === log.id ? (
+                        <input 
+                          type="text" 
+                          value={editValues.linkedin_url} 
+                          onChange={e => setEditValues({...editValues, linkedin_url: e.target.value})}
+                          className="input input-sm"
+                          placeholder="URL"
+                          style={{ width: '90px' }}
+                        />
+                      ) : (
+                        log.linkedin_url ? (
+                          <a
+                            href={log.linkedin_url.startsWith('http') ? log.linkedin_url : `https://${log.linkedin_url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="li-profile-link"
+                          >
+                            <ExternalLink size={11} /> Open
+                          </a>
+                        ) : '—'
+                      )}
                     </td>
-                    <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {log.notes || '—'}
+                    <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: editingId === log.id ? 'normal' : 'nowrap' }}>
+                      {editingId === log.id ? (
+                        <input 
+                          type="text" 
+                          value={editValues.notes} 
+                          onChange={e => setEditValues({...editValues, notes: e.target.value})}
+                          className="input input-sm"
+                          style={{ width: '100%' }}
+                        />
+                      ) : (
+                        log.notes || '—'
+                      )}
                     </td>
                     {isAdmin && <td style={{ fontSize: 12 }}>{sdrName}</td>}
                     <td style={{ fontSize: 12, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
                       {log.created_at ? new Date(log.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}
+                    </td>
+                    <td>
+                      {editingId === log.id ? (
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button className="btn btn-primary btn-sm" onClick={() => handleUpdateLog(log.id)} disabled={saving} style={{ padding: '2px 6px', fontSize: 11 }}>Save</button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => setEditingId(null)} disabled={saving} style={{ padding: '2px 6px', fontSize: 11 }}>Cancel</button>
+                        </div>
+                      ) : (
+                        <button className="btn btn-ghost btn-sm" onClick={() => startEditing(log)} style={{ padding: '4px', color: 'var(--text-secondary)' }}>✏️</button>
+                      )}
                     </td>
                   </tr>
                 );
