@@ -83,7 +83,7 @@ export default function CallLogs() {
       })
       .map(t => {
         let callData = {};
-        try { callData = JSON.parse(t.notes); } catch (e) {}
+        try { callData = JSON.parse(t.notes) || {}; } catch (e) { callData = {}; }
         const ownerProfile = team?.find(m => m.id === t.owner_id);
         return {
           id: t.id,
@@ -102,7 +102,13 @@ export default function CallLogs() {
           isDialerCall: t.type === 'calling_list_item'
         };
       })
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      .sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        const validA = isNaN(timeA) ? 0 : timeA;
+        const validB = isNaN(timeB) ? 0 : timeB;
+        return validB - validA;
+      });
   }, [tasks, isAdmin, user?.id, team]);
 
   const filteredLogs = useMemo(() => {
