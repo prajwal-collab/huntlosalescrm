@@ -184,10 +184,15 @@ export default function Pipeline() {
       return;
     }
 
-    const headers = ['Deal ID', 'Title', 'Company Name', 'Stage', 'ARR (INR)', 'Urgency', 'Engagement Score', 'Owner ID', 'Created At'];
+    const headers = ['Deal ID', 'Title', 'Company Name', 'Stage', 'ARR (INR)', 'Urgency', 'Engagement Score', 'Owner Name', 'Owner ID', 'Created At', 'Notes'];
     
     const rows = filtered.map(deal => {
       const company = companies?.find(c => c.id === deal.company_id);
+      const owner = team?.find(m => m.id === deal.owner_id);
+      const ownerName = owner?.full_name || owner?.name || owner?.email?.split('@')[0] || '';
+      
+      const cleanNotes = (deal.notes || '').replace(/"/g, '""');
+      
       return [
         deal.id,
         `"${(deal.title || '').replace(/"/g, '""')}"`,
@@ -196,8 +201,10 @@ export default function Pipeline() {
         deal.arr || 0,
         deal.urgency || '',
         deal.engagement_score || 0,
+        `"${ownerName.replace(/"/g, '""')}"`,
         deal.owner_id || '',
-        deal.created_at ? new Date(deal.created_at).toLocaleString() : ''
+        deal.created_at ? new Date(deal.created_at).toLocaleString() : '',
+        `"${cleanNotes}"`
       ].join(',');
     });
 
