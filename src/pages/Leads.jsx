@@ -66,6 +66,8 @@ const VIEWS = [
     filter: l => (l.linkedin_status && l.linkedin_status !== 'Not Sent') || l.source === 'LinkedIn Outreach' || (l.linkedin_touches || 0) > 0 },
   { id: 'no_contact',  label: '📵 No Contact',         dot: '#f97316',
     filter: l => !l.phone && !l.email && !l.contact_name },
+  { id: 'enriched',    label: '✨ Enriched',          dot: '#8b5cf6',
+    filter: l => l.enrichment_done },
 ];
 
 // ── Lead Row ────────────────────────────────────────────
@@ -123,10 +125,10 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user, 
           <span className="lead-company-name">{lead.company_name || '—'}</span>
           <span className="lead-contact-name">{lead.contact_name || lead.designation || 'No contact'}</span>
           <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-            {lead.email && <Mail size={12} color="var(--text-tertiary)" title={lead.email} />}
-            {lead.phone && <Phone size={12} color="var(--text-tertiary)" title={lead.phone} />}
-            {lead.linkedin_url && <Link2 size={12} color="var(--text-tertiary)" title="LinkedIn" />}
-            {lead.website && <Globe size={12} color="var(--text-tertiary)" title={lead.website} />}
+            <Mail size={12} color={lead.email ? "var(--accent-blue)" : "var(--text-tertiary)"} style={{ opacity: lead.email ? 1 : 0.3 }} title={lead.email || "No Email"} />
+            <Phone size={12} color={lead.phone ? "var(--accent-blue)" : "var(--text-tertiary)"} style={{ opacity: lead.phone ? 1 : 0.3 }} title={lead.phone || "No Phone"} />
+            <Link2 size={12} color={lead.linkedin_url ? "var(--accent-blue)" : "var(--text-tertiary)"} style={{ opacity: lead.linkedin_url ? 1 : 0.3 }} title={lead.linkedin_url || "No LinkedIn"} />
+            <Globe size={12} color={lead.website ? "var(--accent-blue)" : "var(--text-tertiary)"} style={{ opacity: lead.website ? 1 : 0.3 }} title={lead.website || "No Website"} />
           </div>
         </div>
       </div>
