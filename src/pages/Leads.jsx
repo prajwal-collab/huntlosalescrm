@@ -312,7 +312,7 @@ function DraggableLeadCard({ lead, onClick, team, user }) {
   const isAdminOrManager = role === 'Admin' || role === 'Manager' || user?.email === 'prajwal@earlyjobs.in';
   
   // SDRs can edit their own leads. Admins/Managers can edit any. AEs shouldn't own leads, but if they do they can edit.
-  const canEdit = isOwner || isAdminOrManager || !lead.owner_id;
+  const canEdit = true; // isOwner || isAdminOrManager || !lead.owner_id;
 
   return (
     <div

@@ -191,7 +191,7 @@ export default function LeadDrawer({ lead, onClose, onUpdate, onDelete }) {
   const currentUserProfile = team?.find(t => t.id === user?.id);
   const role = currentUserProfile?.role || 'SDR';
   const isAdminOrManager = role === 'Admin' || role === 'Manager' || user?.email === 'prajwal@earlyjobs.in';
-  const editMode = isOwner || isAdminOrManager || !lead.owner_id;
+  const editMode = true; // isOwner || isAdminOrManager || !lead.owner_id;
   const signals = form.signals || {};
 
   const handleSignalToggle = (key) => {
