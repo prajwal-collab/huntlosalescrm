@@ -69,6 +69,28 @@ export default function Calculator() {
     }
   }, [recommendedPlan, commercialModel]);
 
+  const calculatePlanPrice = (plan) => {
+    let voiceRate = activeProfile.voice.tier1Price;
+    if (usage.voiceMins > activeProfile.voice.tier2Max) {
+      voiceRate = customVoiceRate;
+    } else if (usage.voiceMins > activeProfile.voice.tier1Max) {
+      voiceRate = activeProfile.voice.tier2Price;
+    }
+
+    const overageSearches = Math.max(0, usage.searches - plan.capacity.search);
+    const overageMobile = Math.max(0, usage.mobile - plan.capacity.mobile);
+    const overageWhatsapp = Math.max(0, usage.whatsapp - plan.capacity.whatsapp);
+    const overageVoice = Math.max(0, usage.voiceMins - plan.capacity.voice);
+
+    const monthlyOverageCost = 
+      (overageSearches * activeProfile.search) + 
+      (overageMobile * activeProfile.mobile) + 
+      (overageWhatsapp * activeProfile.whatsapp) + 
+      (overageVoice * voiceRate);
+    
+    return plan.price + (monthlyOverageCost * plan.duration);
+  };
+
   const pricing = useMemo(() => {
     let basePrice = 0;
     let includedUsage = { searches: 0, mobile: 0, whatsapp: 0, voice: 0, seats: 0 };
@@ -269,8 +291,18 @@ export default function Calculator() {
               </div>
               {commercialModel !== 'STANDARD' && (
                 <div className="calc-form-group">
-                  <label>Contract Duration (Months)</label>
-                  <input type="number" value={customer.contractDuration} onChange={e => setCustomer({...customer, contractDuration: Number(e.target.value)})} />
+                  <label>Contract Duration</label>
+                  <select 
+                    value={customer.contractDuration} 
+                    onChange={e => setCustomer({...customer, contractDuration: Number(e.target.value)})}
+                  >
+                    <option value={1}>1 Month</option>
+                    <option value={3}>3 Months</option>
+                    <option value={6}>6 Months</option>
+                    <option value={12}>12 Months</option>
+                    <option value={24}>24 Months</option>
+                    <option value={36}>36 Months</option>
+                  </select>
                 </div>
               )}
             </div>
@@ -345,7 +377,7 @@ export default function Calculator() {
                     >
                       {isRecommended && <div className="plan-badge">RECOMMENDED</div>}
                       <div className="plan-name">{plan.name}</div>
-                      <div className="plan-price">{formatCur(plan.price)}</div>
+                      <div className="plan-price">{formatCur(calculatePlanPrice(plan))}</div>
                       <div className="plan-dur">{plan.duration} Month{plan.duration > 1 ? 's' : ''}</div>
                     </div>
                   );
