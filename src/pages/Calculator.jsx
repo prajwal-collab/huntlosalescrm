@@ -1,126 +1,220 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Calculator as CalcIcon, Plus, Info, Check, Copy, Download, Share2 } from 'lucide-react';
+import { Settings, Calculator as CalcIcon, Plus, Info, Check, Copy, Download, Share2, AlertTriangle, FileText, ChevronRight, CheckCircle2, ShieldAlert, AlertCircle } from 'lucide-react';
 import useCalculatorStore from '../store/useCalculatorStore';
 import './Calculator.css';
 
 export default function Calculator() {
-  const { config, updateConfig, updateRegionalConfig } = useCalculatorStore();
+  const { config, saveQuote, updateControls, updateCogs } = useCalculatorStore();
   const navigate = useNavigate();
-  
-  // Local state for UI
+
   const [showSettings, setShowSettings] = useState(false);
   
-  // Customer Details State
-  const [companyName, setCompanyName] = useState('');
-  const [region, setRegion] = useState('India');
-  const [industry, setIndustry] = useState('');
-  const [proposalName, setProposalName] = useState('');
-  const [salesOwner, setSalesOwner] = useState('');
+  const [customer, setCustomer] = useState({
+    companyName: '',
+    contactPerson: '',
+    designation: '',
+    industry: '',
+    location: '',
+    salesOwner: '',
+    dealType: 'New Business',
+    expectedStartDate: '',
+    contractDuration: 1,
+  });
 
-  // Requirements State
-  const [searches, setSearches] = useState(0);
-  const [unlocks, setUnlocks] = useState(0); // Optional input, doesn't seem to have a base cost in the rules? Wait, unlocks might be same as search cost? I will not add cost for unlock right now unless specified, or maybe unlocks are free / included. The prompt doesn't list unlock cost. Let's keep it as 0 cost for now.
-  const [emailReveals, setEmailReveals] = useState(0);
-  const [mobileReveals, setMobileReveals] = useState(0);
-  const [emailOutreach, setEmailOutreach] = useState(0);
-  const [whatsappOutreach, setWhatsappOutreach] = useState(0);
-  const [aiCallsMins, setAiCallsMins] = useState(0);
-  const [customDiscount, setCustomDiscount] = useState(0);
+  const [commercialModel, setCommercialModel] = useState('STANDARD'); // STANDARD, CUSTOM, ENTERPRISE
+  const [pricingProfileId, setPricingProfileId] = useState('standard');
 
-  // Pricing Logic
-  const pricingRegion = region === 'India' ? 'india' : 'international';
-  const regionalConfig = config[pricingRegion];
+  const [usage, setUsage] = useState({
+    searches: 0,
+    mobile: 0,
+    whatsapp: 0,
+    voiceMins: 0,
+    seats: 2
+  });
 
-  const internalCost = useMemo(() => {
-    return (
-      (searches * regionalConfig.searchCost) +
-      (emailReveals * regionalConfig.emailRevealCost) +
-      (mobileReveals * regionalConfig.mobileRevealCost) +
-      (emailOutreach * regionalConfig.emailOutreachCost) +
-      (whatsappOutreach * regionalConfig.whatsappCost) +
-      (aiCallsMins * regionalConfig.aiVoiceCost)
+  const [customFees, setCustomFees] = useState({
+    setup: 0,
+    integration: 0
+  });
+
+  const [discount, setDiscount] = useState({
+    type: 'absolute',
+    value: 0
+  });
+
+  const [selectedPlanId, setSelectedPlanId] = useState('monthly');
+  
+  // Custom Override for Voice
+  const [customVoiceRate, setCustomVoiceRate] = useState(0);
+
+  const activeProfile = config.pricingProfiles.find(p => p.id === pricingProfileId) || config.pricingProfiles[0];
+
+  const recommendedPlan = useMemo(() => {
+    if (commercialModel !== 'STANDARD') return null;
+    const suitablePlans = config.standardPlans.filter(p => 
+      p.capacity.search >= usage.searches &&
+      p.capacity.mobile >= usage.mobile &&
+      p.capacity.whatsapp >= usage.whatsapp &&
+      p.capacity.voice >= usage.voiceMins &&
+      p.capacity.seats >= usage.seats
     );
-  }, [searches, emailReveals, mobileReveals, emailOutreach, whatsappOutreach, aiCallsMins, regionalConfig]);
+    if (suitablePlans.length === 0) return null;
+    return suitablePlans.sort((a, b) => a.price - b.price)[0];
+  }, [commercialModel, usage, config.standardPlans]);
 
-  // Formula: Selling Price = Internal Cost / (1 - Margin)
-  const exactMonthlyPrice = useMemo(() => {
-    if (config.margin >= 100) return internalCost * 2; // Fallback
-    const marginDec = config.margin / 100;
-    return internalCost / (1 - marginDec);
-  }, [internalCost, config.margin]);
-
-  // Round to nearest 999 after applying custom quote discount
-  const roundedMonthlyPrice = useMemo(() => {
-    if (exactMonthlyPrice <= 0) return 0;
-    let base = exactMonthlyPrice;
-    if (customDiscount > 0) {
-      base = base * (1 - (customDiscount / 100));
+  useEffect(() => {
+    if (recommendedPlan && commercialModel === 'STANDARD') {
+      setSelectedPlanId(recommendedPlan.id);
     }
-    const roundedThousand = Math.round(base / 1000) * 1000;
-    return roundedThousand > 0 ? roundedThousand - 1 : 0;
-  }, [exactMonthlyPrice, customDiscount]);
+  }, [recommendedPlan, commercialModel]);
 
-  const quarterlyPrice = useMemo(() => {
-    const base = roundedMonthlyPrice * 3;
-    const discount = (config.quarterlyDiscount / 100) * base;
-    return base - discount;
-  }, [roundedMonthlyPrice, config.quarterlyDiscount]);
+  const pricing = useMemo(() => {
+    let basePrice = 0;
+    let includedUsage = { searches: 0, mobile: 0, whatsapp: 0, voice: 0, seats: 0 };
+    
+    let isVoiceCustom = false;
+    let voiceRate = activeProfile.voice.tier1Price;
+    
+    if (usage.voiceMins > activeProfile.voice.tier2Max) {
+      isVoiceCustom = true;
+      voiceRate = customVoiceRate;
+    } else if (usage.voiceMins > activeProfile.voice.tier1Max) {
+      voiceRate = activeProfile.voice.tier2Price;
+    }
 
-  const annualPrice = useMemo(() => {
-    const base = roundedMonthlyPrice * 12;
-    const discount = (config.annualDiscount / 100) * base;
-    return base - discount;
-  }, [roundedMonthlyPrice, config.annualDiscount]);
+    let contractDuration = commercialModel === 'STANDARD' ? 1 : customer.contractDuration;
 
-  const estimatedArr = roundedMonthlyPrice * 12;
-
-  const handleGenerateProposal = () => {
-    navigate('/proposal/preview', {
-      state: {
-        companyName,
-        region,
-        industry,
-        proposalName,
-        salesOwner,
-        searches,
-        unlocks,
-        emailReveals,
-        mobileReveals,
-        emailOutreach,
-        whatsappOutreach,
-        aiCallsMins,
-        roundedMonthlyPrice,
-        quarterlyPrice,
-        annualPrice,
-        regionalConfig
+    if (commercialModel === 'STANDARD') {
+      const plan = config.standardPlans.find(p => p.id === selectedPlanId);
+      if (plan) {
+        basePrice = plan.price;
+        includedUsage = plan.capacity;
+        contractDuration = plan.duration;
       }
-    });
+    } else {
+      basePrice = customFees.setup + customFees.integration; 
+    }
+
+    const overageSearches = Math.max(0, usage.searches - includedUsage.searches);
+    const overageMobile = Math.max(0, usage.mobile - includedUsage.mobile);
+    const overageWhatsapp = Math.max(0, usage.whatsapp - includedUsage.whatsapp);
+    const overageVoice = Math.max(0, usage.voiceMins - includedUsage.voice);
+    
+    let grossValue = 0;
+    let additionalUsageCost = 0;
+
+    if (commercialModel === 'STANDARD') {
+      const monthlyOverageCost = 
+        (overageSearches * activeProfile.search) + 
+        (overageMobile * activeProfile.mobile) + 
+        (overageWhatsapp * activeProfile.whatsapp) + 
+        (overageVoice * voiceRate);
+      additionalUsageCost = monthlyOverageCost * contractDuration;
+      grossValue = basePrice + additionalUsageCost;
+    } else {
+      const monthlyUsageCost = 
+        (usage.searches * activeProfile.search) + 
+        (usage.mobile * activeProfile.mobile) + 
+        (usage.whatsapp * activeProfile.whatsapp) + 
+        (usage.voiceMins * voiceRate);
+      grossValue = basePrice + (monthlyUsageCost * contractDuration);
+    }
+    
+    let discountAmount = 0;
+    if (discount.type === 'percentage') {
+      discountAmount = grossValue * (discount.value / 100);
+    } else {
+      discountAmount = discount.value;
+    }
+
+    const netPrice = grossValue - discountAmount;
+    const gst = netPrice * (config.controls.gstRate / 100);
+    const totalPayable = netPrice + gst;
+    const effectiveMonthly = contractDuration > 0 ? netPrice / contractDuration : netPrice;
+
+    // COGS
+    const monthlyCogs = 
+      (usage.searches * config.cogs.search) + 
+      (usage.mobile * config.cogs.mobile) + 
+      (usage.whatsapp * config.cogs.whatsapp) + 
+      (usage.voiceMins * config.cogs.voice);
+    
+    const totalCogs = (monthlyCogs * contractDuration) + config.cogs.setup + config.cogs.integration + config.cogs.support;
+    
+    const grossProfit = netPrice - totalCogs;
+    const grossMarginPercent = netPrice > 0 ? (grossProfit / netPrice) * 100 : 0;
+    const discountPercent = grossValue > 0 ? (discountAmount / grossValue) * 100 : 0;
+
+    let approvalRequired = false;
+    let approvalReasons = [];
+    
+    if (grossMarginPercent < config.controls.minimumMargin) {
+      approvalRequired = true;
+      approvalReasons.push(`Gross margin (${grossMarginPercent.toFixed(1)}%) is below minimum threshold (${config.controls.minimumMargin}%).`);
+    }
+    if (discountPercent > config.controls.maxSalesDiscount) {
+      approvalRequired = true;
+      approvalReasons.push(`Discount (${discountPercent.toFixed(1)}%) exceeds sales authority (${config.controls.maxSalesDiscount}%).`);
+    }
+    if (netPrice < config.controls.minimumSellingPrice) {
+      approvalRequired = true;
+      approvalReasons.push(`Net price (₹${netPrice.toLocaleString()}) is below minimum selling price (₹${config.controls.minimumSellingPrice.toLocaleString()}).`);
+    }
+    if (isVoiceCustom && customVoiceRate === 0) {
+      approvalRequired = true;
+      approvalReasons.push(`Voice usage exceeds standard tiers. Custom voice pricing required.`);
+    }
+    if (commercialModel === 'ENTERPRISE') {
+      approvalRequired = true;
+      approvalReasons.push(`Enterprise commercial model selected.`);
+    }
+
+    return {
+      basePrice,
+      grossValue,
+      discountAmount,
+      netPrice,
+      gst,
+      totalPayable,
+      effectiveMonthly,
+      totalCogs,
+      grossProfit,
+      grossMarginPercent,
+      discountPercent,
+      approvalRequired,
+      approvalReasons,
+      isVoiceCustom,
+      contractDuration,
+      includedUsage,
+      additionalUsageCost
+    };
+  }, [customer, commercialModel, pricingProfileId, usage, customFees, discount, selectedPlanId, config, customVoiceRate, activeProfile]);
+
+  const handleGenerateQuote = () => {
+    const quote = {
+      customer,
+      commercialModel,
+      usage,
+      pricing,
+      status: pricing.approvalRequired ? 'Pending Approval' : 'Draft',
+    };
+    saveQuote(quote);
+    alert('Quote Generated Successfully!');
   };
 
-  // Format currency
-  const formatCurrency = (val) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(val || 0);
-  };
+  const formatCur = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val || 0);
 
   return (
     <div className="calc-page">
-      {/* Header */}
       <div className="page-header-row">
         <div>
-          <h1 className="page-big-title">Enterprise Pricing Calculator</h1>
-          <p className="page-big-sub">Instantly generate accurate enterprise quotations.</p>
+          <h1 className="page-big-title">Internal Commercial Engine</h1>
+          <p className="page-big-sub">Pricing, margin control, and quote generator.</p>
         </div>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '10px' }}>
           <button className="btn btn-ghost" onClick={() => setShowSettings(!showSettings)}>
-            <Settings size={14} /> {showSettings ? 'Hide Settings' : 'Config Settings'}
-          </button>
-          <button className="btn btn-primary" onClick={handleGenerateProposal}>
-            <Download size={14} /> Generate PDF
+            <Settings size={14} /> Admin Controls
           </button>
         </div>
       </div>
@@ -128,40 +222,28 @@ export default function Calculator() {
       {showSettings && (
         <div className="calc-settings-panel">
           <div className="calc-settings-header">
-            <h3>Admin Pricing Configuration</h3>
-            <p>Changes apply immediately to all active calculations.</p>
+            <h3>Admin Configuration</h3>
           </div>
           <div className="calc-settings-grid">
             <div className="calc-setting-group">
-              <h4>Margin & Discounts</h4>
-              <label>Target Gross Margin (%)</label>
-              <input type="number" value={config.margin} onChange={e => updateConfig({ margin: Number(e.target.value) })} />
-              
-              <label>Quarterly Discount (%)</label>
-              <input type="number" value={config.quarterlyDiscount} onChange={e => updateConfig({ quarterlyDiscount: Number(e.target.value) })} />
-              
-              <label>Annual Discount (%)</label>
-              <input type="number" value={config.annualDiscount} onChange={e => updateConfig({ annualDiscount: Number(e.target.value) })} />
+              <h4>Margin Controls</h4>
+              <label>Target Margin (%)</label>
+              <input type="number" value={config.controls.targetMargin} onChange={e => updateControls({targetMargin: Number(e.target.value)})} />
+              <label>Minimum Margin (%)</label>
+              <input type="number" value={config.controls.minimumMargin} onChange={e => updateControls({minimumMargin: Number(e.target.value)})} />
+              <label>Max Sales Discount (%)</label>
+              <input type="number" value={config.controls.maxSalesDiscount} onChange={e => updateControls({maxSalesDiscount: Number(e.target.value)})} />
             </div>
-
             <div className="calc-setting-group">
-              <h4>India Region Costs (₹)</h4>
-              <label>Search Cost</label>
-              <input type="number" value={config.india.searchCost} onChange={e => updateRegionalConfig('india', { searchCost: Number(e.target.value) })} />
-              <label>WhatsApp Cost</label>
-              <input type="number" value={config.india.whatsappCost} onChange={e => updateRegionalConfig('india', { whatsappCost: Number(e.target.value) })} />
-              <label>AI Voice Cost (/min)</label>
-              <input type="number" value={config.india.aiVoiceCost} onChange={e => updateRegionalConfig('india', { aiVoiceCost: Number(e.target.value) })} />
-            </div>
-
-            <div className="calc-setting-group">
-              <h4>International (USA/UAE) Costs (₹)</h4>
-              <label>Search Cost</label>
-              <input type="number" value={config.international.searchCost} onChange={e => updateRegionalConfig('international', { searchCost: Number(e.target.value) })} />
-              <label>WhatsApp Cost</label>
-              <input type="number" value={config.international.whatsappCost} onChange={e => updateRegionalConfig('international', { whatsappCost: Number(e.target.value) })} />
-              <label>AI Voice Cost (/min)</label>
-              <input type="number" value={config.international.aiVoiceCost} onChange={e => updateRegionalConfig('international', { aiVoiceCost: Number(e.target.value) })} />
+              <h4>Internal COGS (₹)</h4>
+              <label>Search COGS</label>
+              <input type="number" step="0.1" value={config.cogs.search} onChange={e => updateCogs({search: Number(e.target.value)})} />
+              <label>Mobile COGS</label>
+              <input type="number" step="0.1" value={config.cogs.mobile} onChange={e => updateCogs({mobile: Number(e.target.value)})} />
+              <label>WhatsApp COGS</label>
+              <input type="number" step="0.1" value={config.cogs.whatsapp} onChange={e => updateCogs({whatsapp: Number(e.target.value)})} />
+              <label>Voice COGS / min</label>
+              <input type="number" step="0.1" value={config.cogs.voice} onChange={e => updateCogs({voice: Number(e.target.value)})} />
             </div>
           </div>
         </div>
@@ -169,139 +251,196 @@ export default function Calculator() {
 
       <div className="calc-main-grid">
         <div className="calc-left-column">
-          {/* Left Panel: Customer Details */}
+          
           <div className="calc-panel">
-            <div className="calc-panel-header">Customer Details</div>
-          <div className="calc-form-group">
-            <label>Company Name</label>
-            <input type="text" placeholder="e.g. Acme Corp" value={companyName} onChange={e => setCompanyName(e.target.value)} />
+            <div className="calc-panel-header">1. Customer Details</div>
+            <div className="calc-form-grid">
+              <div className="calc-form-group">
+                <label>Company Name</label>
+                <input type="text" value={customer.companyName} onChange={e => setCustomer({...customer, companyName: e.target.value})} />
+              </div>
+              <div className="calc-form-group">
+                <label>Industry</label>
+                <input type="text" value={customer.industry} onChange={e => setCustomer({...customer, industry: e.target.value})} />
+              </div>
+              <div className="calc-form-group">
+                <label>Sales Owner</label>
+                <input type="text" value={customer.salesOwner} onChange={e => setCustomer({...customer, salesOwner: e.target.value})} />
+              </div>
+              {commercialModel !== 'STANDARD' && (
+                <div className="calc-form-group">
+                  <label>Contract Duration (Months)</label>
+                  <input type="number" value={customer.contractDuration} onChange={e => setCustomer({...customer, contractDuration: Number(e.target.value)})} />
+                </div>
+              )}
+            </div>
           </div>
-          <div className="calc-form-group">
-            <label>Country / Region</label>
-            <select value={region} onChange={e => setRegion(e.target.value)}>
-              <option value="India">India</option>
-              <option value="USA">USA</option>
-              <option value="UAE">UAE</option>
-            </select>
-          </div>
-          <div className="calc-form-group">
-            <label>Industry</label>
-            <input type="text" placeholder="e.g. Technology" value={industry} onChange={e => setIndustry(e.target.value)} />
-          </div>
-          <div className="calc-form-group">
-            <label>Proposal Name</label>
-            <input type="text" placeholder="e.g. Enterprise Q3" value={proposalName} onChange={e => setProposalName(e.target.value)} />
-          </div>
-          <div className="calc-form-group">
-            <label>Sales Owner</label>
-            <input type="text" placeholder="Owner Name" value={salesOwner} onChange={e => setSalesOwner(e.target.value)} />
-          </div>
-        </div>
 
-        {/* Center Panel: Requirements */}
-        <div className="calc-panel">
-          <div className="calc-panel-header">Customer Requirements (Monthly)</div>
-          
-          <div className="calc-req-row">
-            <label>Candidate Searches</label>
-            <input type="number" value={searches} onChange={e => setSearches(Number(e.target.value))} />
+          <div className="calc-panel">
+            <div className="calc-panel-header">2. Commercial Model</div>
+            <div className="calc-model-selector">
+              <button className={`model-btn ${commercialModel === 'STANDARD' ? 'active' : ''}`} onClick={() => setCommercialModel('STANDARD')}>
+                Standard Plan
+              </button>
+              <button className={`model-btn ${commercialModel === 'CUSTOM' ? 'active' : ''}`} onClick={() => setCommercialModel('CUSTOM')}>
+                Custom / High-Volume
+              </button>
+              <button className={`model-btn ${commercialModel === 'ENTERPRISE' ? 'active' : ''}`} onClick={() => setCommercialModel('ENTERPRISE')}>
+                Enterprise
+              </button>
+            </div>
+            {(commercialModel === 'CUSTOM' || commercialModel === 'ENTERPRISE') && (
+              <div className="calc-form-group" style={{marginTop: 16}}>
+                <label>Pricing Profile</label>
+                <select value={pricingProfileId} onChange={e => setPricingProfileId(e.target.value)}>
+                  {config.pricingProfiles.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
-          <div className="calc-req-row">
-            <label>Candidate Unlocks</label>
-            <input type="number" value={unlocks} onChange={e => setUnlocks(Number(e.target.value))} />
-          </div>
-          <div className="calc-req-row">
-            <label>Verified Email Reveals</label>
-            <input type="number" value={emailReveals} onChange={e => setEmailReveals(Number(e.target.value))} />
-          </div>
-          <div className="calc-req-row">
-            <label>Verified Mobile Reveals</label>
-            <input type="number" value={mobileReveals} onChange={e => setMobileReveals(Number(e.target.value))} />
-          </div>
-          <div className="calc-req-row">
-            <label>Email Outreach</label>
-            <input type="number" value={emailOutreach} onChange={e => setEmailOutreach(Number(e.target.value))} />
-          </div>
-          <div className="calc-req-row">
-            <label>WhatsApp Outreach</label>
-            <input type="number" value={whatsappOutreach} onChange={e => setWhatsappOutreach(Number(e.target.value))} />
-          </div>
+
+          <div className="calc-panel">
+            <div className="calc-panel-header">3. Customer Usage Requirement (Monthly)</div>
             <div className="calc-req-row">
-              <label>AI Voice Calling (Mins)</label>
-              <input type="number" value={aiCallsMins} onChange={e => setAiCallsMins(Number(e.target.value))} />
+              <label>AI Candidate Searches</label>
+              <input type="number" value={usage.searches} onChange={e => setUsage({...usage, searches: Number(e.target.value)})} />
+            </div>
+            <div className="calc-req-row">
+              <label>Verified Mobile Contacts</label>
+              <input type="number" value={usage.mobile} onChange={e => setUsage({...usage, mobile: Number(e.target.value)})} />
+            </div>
+            <div className="calc-req-row">
+              <label>WhatsApp Conversations</label>
+              <input type="number" value={usage.whatsapp} onChange={e => setUsage({...usage, whatsapp: Number(e.target.value)})} />
+            </div>
+            <div className="calc-req-row">
+              <label>AI Voice Minutes</label>
+              <input type="number" value={usage.voiceMins} onChange={e => setUsage({...usage, voiceMins: Number(e.target.value)})} />
+            </div>
+            <div className="calc-req-row">
+              <label>Team Seats</label>
+              <input type="number" value={usage.seats} onChange={e => setUsage({...usage, seats: Number(e.target.value)})} />
+            </div>
+            {pricing.isVoiceCustom && (
+              <div className="calc-alert warning">
+                <AlertTriangle size={16} /> Custom Voice Pricing Required. Enter approved rate:
+                <input type="number" step="0.1" value={customVoiceRate} onChange={e => setCustomVoiceRate(Number(e.target.value))} style={{width: 80, marginLeft: 12}} />
+              </div>
+            )}
+          </div>
+
+          {commercialModel === 'STANDARD' && (
+            <div className="calc-panel">
+              <div className="calc-panel-header">4. Select Standard Plan</div>
+              <div className="calc-plans-grid">
+                {config.standardPlans.map(plan => {
+                  const isRecommended = recommendedPlan && recommendedPlan.id === plan.id;
+                  return (
+                    <div 
+                      key={plan.id} 
+                      className={`calc-plan-card ${selectedPlanId === plan.id ? 'selected' : ''} ${isRecommended ? 'recommended' : ''}`}
+                      onClick={() => setSelectedPlanId(plan.id)}
+                    >
+                      {isRecommended && <div className="plan-badge">RECOMMENDED</div>}
+                      <div className="plan-name">{plan.name}</div>
+                      <div className="plan-price">{formatCur(plan.price)}</div>
+                      <div className="plan-dur">{plan.duration} Month{plan.duration > 1 ? 's' : ''}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="calc-panel">
+            <div className="calc-panel-header">5. Discount</div>
+            <div className="calc-discount-controls">
+              <select value={discount.type} onChange={e => setDiscount({...discount, type: e.target.value})}>
+                <option value="absolute">Absolute Discount (₹)</option>
+                <option value="percentage">Percentage Discount (%)</option>
+              </select>
+              <input type="number" value={discount.value} onChange={e => setDiscount({...discount, value: Number(e.target.value)})} />
             </div>
           </div>
+
         </div>
 
-        {/* Right Panel: Live Summary */}
-        <div className="calc-panel calc-summary-panel">
-          <div className="calc-panel-header">Live Quote Summary</div>
-          
-          <div className="calc-summary-metrics">
-            <div className="calc-metric">
-              <span>Internal Variable Cost</span>
-              <strong>{formatCurrency(internalCost)}</strong>
-            </div>
-            <div className="calc-metric">
-              <span>Gross Margin</span>
-              <strong>{config.margin}%</strong>
-            </div>
-            <div className="calc-metric highlight-metric">
-              <span>Estimated ARR</span>
-              <strong>{formatCurrency(estimatedArr)}</strong>
-            </div>
-          </div>
-
-          <div className="calc-req-row" style={{ marginTop: -16, marginBottom: 24, padding: '16px', background: 'rgba(59, 130, 246, 0.05)', borderRadius: 10, border: '1px solid rgba(59, 130, 246, 0.1)' }}>
-            <label style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>Apply Additional Quote Discount (%)</label>
-            <input type="number" value={customDiscount} onChange={e => setCustomDiscount(Number(e.target.value))} style={{ borderColor: 'var(--accent-blue)' }} />
-          </div>
-
-          <div className="calc-pricing-cards">
-            {/* Monthly */}
-            <div className="calc-price-card">
-              <div className="cpc-left">
-                <div className="cpc-header">Monthly Plan</div>
-                <div className="cpc-footer">Billed Monthly</div>
+        <div className="calc-right-column">
+          <div className="calc-summary-panel">
+            <div className="calc-panel-header" style={{marginBottom: 16}}>Commercial Summary</div>
+            
+            <div className="summary-list">
+              <div className="summary-item">
+                <span>Contract Duration</span>
+                <strong>{pricing.contractDuration} Month{pricing.contractDuration > 1 ? 's' : ''}</strong>
               </div>
-              <div className="cpc-right">
-                <div className="cpc-price">{formatCurrency(roundedMonthlyPrice)}<span>/mo</span></div>
+              <div className="summary-item">
+                <span>Gross Value</span>
+                <strong>{formatCur(pricing.grossValue)}</strong>
+              </div>
+              <div className="summary-item text-success">
+                <span>Discount</span>
+                <strong>- {formatCur(pricing.discountAmount)}</strong>
+              </div>
+              <div className="summary-item text-primary" style={{fontSize: 16, fontWeight: 700, borderTop: '1px solid var(--bg-border)', paddingTop: 12}}>
+                <span>Net Price (excl. GST)</span>
+                <strong>{formatCur(pricing.netPrice)}</strong>
+              </div>
+              <div className="summary-item text-muted">
+                <span>GST ({config.controls.gstRate}%)</span>
+                <strong>{formatCur(pricing.gst)}</strong>
+              </div>
+              <div className="summary-item highlight">
+                <span>Final Customer Payable</span>
+                <strong>{formatCur(pricing.totalPayable)}</strong>
               </div>
             </div>
 
-            {/* Quarterly */}
-            <div className="calc-price-card recommended">
-              <div className="cpc-badge">Recommended</div>
-              <div className="cpc-left">
-                <div className="cpc-header">Quarterly Plan</div>
-                <div className="cpc-footer">
-                  <span className="discount-tag">Save {config.quarterlyDiscount}%</span> 
-                </div>
+            <div className="internal-margin-box">
+              <div className="internal-title"><ShieldAlert size={14}/> INTERNAL COMMERCIALS (HIDDEN)</div>
+              <div className="summary-item">
+                <span>Estimated COGS</span>
+                <strong>{formatCur(pricing.totalCogs)}</strong>
               </div>
-              <div className="cpc-right">
-                <div className="cpc-price">{formatCurrency(quarterlyPrice)}<span>/qtr</span></div>
-                <div className="cpc-footer" style={{ alignItems: 'flex-end' }}>(Avg {formatCurrency(quarterlyPrice / 3)}/mo)</div>
+              <div className="summary-item">
+                <span>Gross Margin</span>
+                <strong className={pricing.grossMarginPercent >= config.controls.targetMargin ? 'text-success' : pricing.grossMarginPercent >= config.controls.minimumMargin ? 'text-warning' : 'text-danger'}>
+                  {pricing.grossMarginPercent.toFixed(1)}%
+                </strong>
               </div>
             </div>
 
-            {/* Annual */}
-            <div className="calc-price-card">
-              <div className="cpc-left">
-                <div className="cpc-header">Annual Plan</div>
-                <div className="cpc-footer">
-                  <span className="discount-tag">Save {config.annualDiscount}%</span> 
-                </div>
+            {pricing.approvalRequired ? (
+              <div className="approval-box required">
+                <div className="appr-title"><AlertCircle size={16}/> APPROVAL REQUIRED</div>
+                <ul>
+                  {pricing.approvalReasons.map((reason, i) => (
+                    <li key={i}>{reason}</li>
+                  ))}
+                </ul>
               </div>
-              <div className="cpc-right">
-                <div className="cpc-price">{formatCurrency(annualPrice)}<span>/yr</span></div>
-                <div className="cpc-footer" style={{ alignItems: 'flex-end' }}>(Avg {formatCurrency(annualPrice / 12)}/mo)</div>
+            ) : (
+              <div className="approval-box approved">
+                <div className="appr-title"><CheckCircle2 size={16}/> APPROVED TO QUOTE</div>
+                <p>Margin and discount within authority.</p>
               </div>
-            </div>
-          </div>
+            )}
 
-          <div className="calc-actions">
-            <button className="btn btn-outline" style={{ flex: 1 }}><Copy size={14} /> Copy Pricing</button>
-            <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleGenerateProposal}><Share2 size={14} /> Send to Proposal</button>
+            <button 
+              className="btn btn-primary" 
+              style={{width: '100%', marginTop: 24, padding: '16px', fontSize: 16, fontWeight: 700}}
+              onClick={handleGenerateQuote}
+            >
+              GENERATE QUOTE
+            </button>
+            
+            <div className="calc-actions-secondary">
+              <button className="btn btn-ghost"><FileText size={14} /> Save Draft</button>
+              <button className="btn btn-ghost"><Copy size={14} /> Duplicate</button>
+            </div>
+
           </div>
         </div>
       </div>
