@@ -44,6 +44,7 @@ export default function Calculator() {
   });
 
   const [selectedPlanId, setSelectedPlanId] = useState('monthly');
+  const [quoteGenerated, setQuoteGenerated] = useState(false);
   
   // Custom Override for Voice
   const [customVoiceRate, setCustomVoiceRate] = useState(0);
@@ -68,6 +69,11 @@ export default function Calculator() {
       setSelectedPlanId(recommendedPlan.id);
     }
   }, [recommendedPlan, commercialModel]);
+
+  // Reset quote generated state when inputs change
+  useEffect(() => {
+    setQuoteGenerated(false);
+  }, [customer, commercialModel, pricingProfileId, usage, customFees, discount, selectedPlanId, customVoiceRate]);
 
   const calculatePlanPrice = (plan) => {
     let voiceRate = activeProfile.voice.tier1Price;
@@ -222,7 +228,18 @@ export default function Calculator() {
       status: pricing.approvalRequired ? 'Pending Approval' : 'Draft',
     };
     saveQuote(quote);
-    alert('Quote Generated Successfully!');
+    setQuoteGenerated(true);
+  };
+
+  const handleDownloadQuote = () => {
+    window.print(); // Simple fallback for downloading/printing PDF
+  };
+
+  const handleCopyWhatsApp = () => {
+    const planName = commercialModel === 'STANDARD' ? config.standardPlans.find(p => p.id === selectedPlanId)?.name : 'Custom Package';
+    const msg = `*Huntlo Commercial Proposal*\n\nHi ${customer.companyName || 'Team'},\n\nHere is the proposed commercial plan for your requirements:\n\n*Plan:* ${planName}\n*Duration:* ${pricing.contractDuration} Month(s)\n*Included Usage:*\n- ${usage.searches} Searches\n- ${usage.mobile} Mobile Contacts\n- ${usage.whatsapp} WhatsApp Convos\n- ${usage.voiceMins} Voice Mins\n- ${usage.seats} Seats\n\n*Total Value:* ${formatCur(pricing.grossValue)}\n*Discount:* ${formatCur(pricing.discountAmount)}\n*Net Price (excl. GST):* ${formatCur(pricing.netPrice)}\n\n*Final Payable (incl. 18% GST):* ${formatCur(pricing.totalPayable)}\n\nLet me know if you have any questions!\n\nBest,\n${customer.salesOwner || 'Huntlo Team'}`;
+    navigator.clipboard.writeText(msg);
+    alert('WhatsApp message copied to clipboard!');
   };
 
   const formatCur = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val || 0);
@@ -460,13 +477,30 @@ export default function Calculator() {
               </div>
             )}
 
-            <button 
-              className="btn btn-primary" 
-              style={{width: '100%', marginTop: 24, padding: '16px', fontSize: 16, fontWeight: 700}}
-              onClick={handleGenerateQuote}
-            >
-              GENERATE QUOTE
-            </button>
+            {quoteGenerated ? (
+              <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div className="calc-alert" style={{ background: 'var(--bg-success)', color: 'var(--text-success)', borderColor: 'rgba(34, 197, 94, 0.2)', marginBottom: '8px' }}>
+                   <CheckCircle2 size={16} /> Quote Generated Successfully!
+                </div>
+                <button className="btn btn-primary" onClick={handleDownloadQuote}>
+                  <Download size={16} /> Download Quote (PDF)
+                </button>
+                <button className="btn btn-ghost" style={{border: '1px solid var(--bg-border)'}} onClick={handleCopyWhatsApp}>
+                  <Share2 size={16} /> Copy WhatsApp Message
+                </button>
+                <button className="btn btn-ghost" onClick={() => setQuoteGenerated(false)}>
+                  Edit Quote
+                </button>
+              </div>
+            ) : (
+              <button 
+                className="btn btn-primary" 
+                style={{width: '100%', marginTop: 24, padding: '16px', fontSize: 16, fontWeight: 700}}
+                onClick={handleGenerateQuote}
+              >
+                GENERATE QUOTE
+              </button>
+            )}
             
             <div className="calc-actions-secondary">
               <button className="btn btn-ghost"><FileText size={14} /> Save Draft</button>

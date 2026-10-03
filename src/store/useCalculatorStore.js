@@ -40,8 +40,8 @@ const useCalculatorStore = create(
           support: 0
         },
         controls: {
-          targetMargin: 60,
-          minimumMargin: 40,
+          targetMargin: 50,
+          minimumMargin: 50,
           maxSalesDiscount: 10,
           maxSalesHeadDiscount: 20,
           minimumSellingPrice: 5000,
