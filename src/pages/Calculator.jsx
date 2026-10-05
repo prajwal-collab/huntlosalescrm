@@ -246,13 +246,15 @@ export default function Calculator() {
     const isStandard = commercialModel === 'STANDARD';
     const planName = isStandard ? config.standardPlans.find(p => p.id === selectedPlanId)?.name : 'Custom Package';
     
-    const includedSearches = isStandard ? (pricing.includedUsage.search || pricing.includedUsage.searches || 0) : usage.searches;
-    const includedMobile = pricing.includedUsage.mobile || 0;
-    const includedWhatsapp = pricing.includedUsage.whatsapp || 0;
-    const includedVoice = pricing.includedUsage.voice || 0;
+    const multiplier = isStandard ? pricing.contractDuration : 1;
+    
+    const includedSearches = isStandard ? (pricing.includedUsage.search || pricing.includedUsage.searches || 0) * multiplier : usage.searches;
+    const includedMobile = isStandard ? (pricing.includedUsage.mobile || 0) * multiplier : usage.mobile;
+    const includedWhatsapp = isStandard ? (pricing.includedUsage.whatsapp || 0) * multiplier : usage.whatsapp;
+    const includedVoice = isStandard ? (pricing.includedUsage.voice || 0) * multiplier : usage.voiceMins;
     const includedSeats = pricing.includedUsage.seats || 0;
 
-    const msg = `*Huntlo Commercial Proposal*\n\nHi ${customer.companyName || 'Team'},\n\nHere is the proposed commercial plan for your requirements:\n\n*Plan:* ${planName}\n*Duration:* ${pricing.contractDuration} Month(s)\n*Included Usage:*\n- ${includedSearches} Searches\n- ${includedMobile} Mobile Contacts\n- ${includedWhatsapp} WhatsApp Convos\n- ${includedVoice} Voice Mins\n- ${includedSeats} Seats\n\n*Total Value:* ${formatCur(pricing.grossValue)}\n*Discount:* ${formatCur(pricing.discountAmount)}\n*Net Price (excl. GST):* ${formatCur(pricing.netPrice)}\n\n*Final Payable (incl. 18% GST):* ${formatCur(pricing.totalPayable)}\n\nLet me know if you have any questions!\n\nBest,\n${customer.salesOwner || 'Huntlo Team'}`;
+    const msg = `*Huntlo Commercial Proposal*\n\nHi ${customer.companyName || 'Team'},\n\nHere is the proposed commercial plan for your requirements:\n\n*Plan:* ${planName}\n*Duration:* ${pricing.contractDuration} Month(s)\n*Total Included Credits:*\n- ${includedSearches} Searches\n- ${includedMobile} Mobile Contacts\n- ${includedWhatsapp} WhatsApp Convos\n- ${includedVoice} Voice Mins\n- ${includedSeats} Seats\n\n*Total Value:* ${formatCur(pricing.grossValue)}\n*Discount:* ${formatCur(pricing.discountAmount)}\n*Net Price (excl. GST):* ${formatCur(pricing.netPrice)}\n\n*Final Payable (incl. 18% GST):* ${formatCur(pricing.totalPayable)}\n\nLet me know if you have any questions!\n\nBest,\n${customer.salesOwner || 'Huntlo Team'}`;
     navigator.clipboard.writeText(msg);
     alert('WhatsApp message copied to clipboard!');
   };
