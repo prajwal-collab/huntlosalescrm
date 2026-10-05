@@ -30,10 +30,10 @@ const LEAD_FIELDS = [
   { key: 'location', label: 'Location' },
   { key: 'employee_size', label: 'Employee Size' },
   { key: 'recruiter_team_size', label: 'Recruiter Team Size' },
-  { key: 'contact_name', label: 'Contact Name', required: true },
+  { key: 'contact_name', label: 'Contact Name' },
   { key: 'designation', label: 'Designation' },
   { key: 'email', label: 'Email' },
-  { key: 'phone', label: 'Phone / WhatsApp', required: true },
+  { key: 'phone', label: 'Phone / WhatsApp' },
   { key: 'contact_linkedin', label: 'Contact LinkedIn' },
   { key: 'hiring_activity', label: 'Hiring Activity' },
   { key: 'recruiter_hiring', label: 'Recruiter Hiring' },
@@ -84,6 +84,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
   const [mapping, setMapping] = useState({});
   const [error, setError] = useState(null);
   const [results, setResults] = useState({ success: 0, failed: 0, updated: 0, notFound: 0 });
+  const [skipInvalidLeads, setSkipInvalidLeads] = useState(false);
   const fileInputRef = useRef(null);
 
   const [importType, setImportType] = useState(type);
@@ -105,6 +106,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
       setRows([]);
       setMapping({});
       setError(null);
+      setSkipInvalidLeads(false);
       setResults({ success: 0, failed: 0, updated: 0, notFound: 0 });
     }
   }, [isOpen, type]);
@@ -260,7 +262,12 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
       return obj;
     }).filter(obj => {
       if (importType === 'leads') {
-        return obj.company_name && obj.company_name.trim() !== '';
+        const hasCompany = obj.company_name && obj.company_name.trim() !== '';
+        if (!hasCompany) return false;
+        if (skipInvalidLeads && (!obj.contact_name || obj.contact_name.trim() === '' || !obj.phone || obj.phone.trim() === '')) {
+          return false;
+        }
+        return true;
       }
       if (importType === 'contacts') {
         return obj.name && obj.name.trim() !== '';
@@ -486,15 +493,27 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
                 ))}
               </div>
 
-              <div className="csv-actions">
-                <button className="btn btn-ghost" onClick={() => setStep('upload')}>Back</button>
-                <button className="btn btn-primary" onClick={executeImport}>
-                  {importType === 'leads_update' ? (
-                    <><RefreshCw size={14} /> Update {rows.length} Records</>
-                  ) : (
-                    <>Import {rows.length} Records <ArrowRight size={16} /></>
-                  )}
-                </button>
+              <div className="csv-actions" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '16px' }}>
+                {importType === 'leads' && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={skipInvalidLeads} 
+                      onChange={(e) => setSkipInvalidLeads(e.target.checked)} 
+                    />
+                    Skip invalid leads (missing Contact Name or Phone)
+                  </label>
+                )}
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button className="btn btn-ghost" onClick={() => setStep('upload')}>Back</button>
+                  <button className="btn btn-primary" onClick={executeImport}>
+                    {importType === 'leads_update' ? (
+                      <><RefreshCw size={14} /> Update {rows.length} Records</>
+                    ) : (
+                      <>Import {rows.length} Records <ArrowRight size={16} /></>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           )}
