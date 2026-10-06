@@ -516,3 +516,38 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
 }
+
+@media print {
+  @page { margin: 1cm; }
+  .calc-page {
+    background: white;
+    padding: 0;
+  }
+  .page-header-row {
+    box-shadow: none;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 16px;
+    padding: 0 0 16px 0;
+  }
+  .page-header-row button, 
+  .calc-actions-secondary, 
+  .internal-margins-toggle,
+  .internal-margin-box,
+  button.btn-primary,
+  .calc-settings-panel,
+  .calc-model-selector {
+    display: none !important;
+  }
+  .calc-panel, .calc-summary-panel {
+    box-shadow: none;
+    border: 1px solid #e2e8f0;
+    break-inside: avoid;
+  }
+  .calc-main-grid {
+    display: block;
+  }
+  .calc-right-column {
+    position: static;
+    margin-top: 24px;
+  }
+}

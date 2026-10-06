@@ -248,20 +248,20 @@
     margin: 0; /* Let the component handle margins */
   }
 
-  body * {
+  body:has(.proposal-document) * {
     visibility: hidden;
   }
 
   /* Reset backgrounds to ensure print accuracy */
-  body {
+  body:has(.proposal-document) {
     background: #fff;
   }
   
-  .proposal-document, .proposal-document * {
+  body:has(.proposal-document) .proposal-document, body:has(.proposal-document) .proposal-document * {
     visibility: visible;
   }
   
-  .proposal-document {
+  body:has(.proposal-document) .proposal-document {
     position: absolute;
     left: 0;
     top: 0;
