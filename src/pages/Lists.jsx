@@ -258,7 +258,6 @@ export default function Lists() {
                 <span className="count-badge">{selectedRows.length}</span> leads selected
               </div>
               <div className="bulk-actions">
-                <button className="btn btn-outline btn-sm"><Zap size={14} /> Add to Sequence</button>
                 <button className="btn btn-outline btn-sm" onClick={handlePushToLeads}>
                   {isPushing ? <Activity size={14} className="enriching-spinner" /> : <Target size={14} />} 
                   {pushSuccess ? 'Pushed!' : 'Push to Leads'}
@@ -353,9 +352,6 @@ export default function Lists() {
                           </button>
                           <button className="icon-btn tooltip-trigger" data-tooltip="Email">
                             <Mail size={15} />
-                          </button>
-                          <button className="icon-btn tooltip-trigger" data-tooltip="Sequence">
-                            <Zap size={15} />
                           </button>
                         </div>
                       </td>

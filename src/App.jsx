@@ -27,7 +27,6 @@ import Companies from './pages/Companies';
 import Contacts from './pages/Contacts';
 import Tasks from './pages/Tasks';
 import Meetings from './pages/Meetings';
-import Sequences from './pages/Sequences';
 import Documents from './pages/Documents';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
@@ -35,13 +34,10 @@ import Team from './pages/Team';
 import CallLogs from './pages/CallLogs';
 import AdminDashboard from './pages/AdminDashboard';
 import FieldOps from './pages/FieldOps';
-import InvoiceGenerator from './pages/InvoiceGenerator';
 import Lists from './pages/Lists';
 
 import Calculator from './pages/Calculator';
 import ProposalViewer from './pages/ProposalViewer';
-import Webinars from './pages/Webinars';
-import WebinarDetail from './pages/WebinarDetail';
 import UTMGenerator from './pages/UTMGenerator';
 import LinkedInOutreach from './pages/LinkedInOutreach';
 import LinkRedirect from './pages/LinkRedirect';
@@ -106,18 +102,14 @@ export default function App() {
               <Route path="/contacts" element={<Contacts />} />
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/meetings" element={<Meetings />} />
-              <Route path="/sequences" element={<Sequences />} />
               <Route path="/field-ops" element={<FieldOps />} />
               <Route path="/documents" element={<Documents />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/calculator" element={<Calculator />} />
-              <Route path="/invoice-generator" element={<InvoiceGenerator />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/team" element={<Team />} />
               <Route path="/call-logs" element={<CallLogs />} />
               <Route path="/linkedin-outreach" element={<LinkedInOutreach />} />
-              <Route path="/webinars" element={<Webinars />} />
-              <Route path="/webinars/:id" element={<WebinarDetail />} />
               <Route path="/utm" element={<UTMGenerator />} />
             </Route>
             <Route path="/proposal/preview" element={<ProposalViewer />} />

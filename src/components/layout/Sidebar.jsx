@@ -19,7 +19,6 @@ const NAV_GROUPS = [
       { to: '/leads', icon: Target, label: 'Leads' },
       { to: '/lists', icon: Database, label: 'Smart Lists' },
       { to: '/pipeline', icon: BarChart3, label: 'Pipeline' },
-      { to: '/webinars', icon: Video, label: 'Webinars' },
     ]
   },
   {
@@ -29,7 +28,6 @@ const NAV_GROUPS = [
       { to: '/contacts', icon: Users, label: 'Contacts' },
       { to: '/meetings', icon: Calendar, label: 'Meetings' },
       { to: '/calculator', icon: Calculator, label: 'Calculator' },
-      { to: '/invoice-generator', icon: Receipt, label: 'Invoices' },
     ]
   },
   {
@@ -38,7 +36,6 @@ const NAV_GROUPS = [
       { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
       { to: '/call-logs', icon: Phone, label: 'Call Logs' },
       { to: '/linkedin-outreach', icon: Link, label: 'LinkedIn' },
-      { to: '/sequences', icon: Zap, label: 'Sequences' },
       { to: '/documents', icon: FileText, label: 'Documents' },
       { to: '/utm', icon: Link, label: 'LinkTrack' },
       { to: '/field-ops', icon: MapPin, label: 'FieldOps' },
