@@ -89,9 +89,9 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
 
   const [importType, setImportType] = useState(type);
 
-  const { bulkCreateContacts, bulkCreateCompanies, bulkCreateLeads, bulkUpdateLeadsFromCsv, contacts, companies, leads } = useDataStore();
+  const { bulkCreateContacts, bulkCreateCompanies, bulkCreateLeads, bulkCreateListLeads, bulkUpdateLeadsFromCsv, contacts, companies, leads, list_leads } = useDataStore();
   const crmFields = importType === 'contacts' ? CONTACT_FIELDS
-    : importType === 'leads' ? LEAD_FIELDS
+    : importType === 'leads' || importType === 'list_leads' ? LEAD_FIELDS
     : importType === 'leads_update' ? LEAD_UPDATE_FIELDS
     : importType === 'calling_list' ? CALLING_LIST_FIELDS
     : COMPANY_FIELDS;
@@ -162,9 +162,9 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
       return;
     }
 
-    if (importType === 'leads') {
+    if (importType === 'leads' || importType === 'list_leads') {
       if (!mapping['company_name']) {
-        setError('Company Name is required for Leads.');
+        setError('Company Name is required for Leads/List Leads.');
         return;
       }
     }
@@ -258,10 +258,9 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
           }
         }
       }
-      
       return obj;
     }).filter(obj => {
-      if (importType === 'leads') {
+      if (importType === 'leads' || importType === 'list_leads') {
         const hasCompany = obj.company_name && obj.company_name.trim() !== '';
         if (!hasCompany) return false;
         if (skipInvalidLeads && (!obj.contact_name || obj.contact_name.trim() === '' || !obj.phone || obj.phone.trim() === '')) {
@@ -340,6 +339,15 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
         }
         return true;
       });
+    } else if (importType === 'list_leads') {
+      const existingListLeadNames = new Set(list_leads.map(l => (l.company_name || '').toLowerCase()));
+      dedupedData = mappedData.filter(row => {
+        if (row.company_name && existingListLeadNames.has(row.company_name.toLowerCase())) {
+          skippedCount++;
+          return false;
+        }
+        return true;
+      });
     }
 
     if (dedupedData.length === 0) {
@@ -354,6 +362,8 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
         await bulkCreateContacts(dedupedData);
       } else if (importType === 'leads') {
         await bulkCreateLeads(dedupedData);
+      } else if (importType === 'list_leads') {
+        await bulkCreateListLeads(dedupedData);
       } else {
         await bulkCreateCompanies(dedupedData);
       }
@@ -494,7 +504,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
               </div>
 
               <div className="csv-actions" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '16px' }}>
-                {importType === 'leads' && (
+                {(importType === 'leads' || importType === 'list_leads') && (
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                     <input 
                       type="checkbox" 
@@ -555,7 +565,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
                 </>
               )}
               <button className="btn btn-primary mt-4" onClick={onClose}>
-                {importType === 'leads_update' ? 'Back to Leads' : type === 'calling_list' ? 'View Calling List' : `View My ${importType === 'contacts' ? 'Contacts' : importType === 'leads' ? 'Leads' : 'Accounts'}`}
+                {importType === 'leads_update' ? 'Back to Leads' : type === 'calling_list' ? 'View Calling List' : `View My ${importType === 'contacts' ? 'Contacts' : importType === 'leads' ? 'Leads' : importType === 'list_leads' ? 'List Leads' : 'Accounts'}`}
               </button>
             </div>
           )}

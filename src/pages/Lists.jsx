@@ -154,7 +154,7 @@ function ListLeadRow({ lead, isSelected, onSelect, onClick, team, user, onCall, 
 
 // ── Main Lists Component ───────────────────────────────────
 export default function Lists() {
-  const { leads, updateLead, createLead, bulkCreateLeads, bulkUpdateLeads, bulkDeleteLeads, appendLeadNotes } = useDataStore();
+  const { list_leads, updateListLead, bulkCreateListLeads, bulkUpdateListLeads, bulkDeleteListLeads, appendListLeadNotes, pushListLeadsToLeads } = useDataStore();
   const { team, user } = useAuthStore();
   const { showConfirm, showPrompt } = useDialog();
 
@@ -189,7 +189,7 @@ export default function Lists() {
   const segmentDef = SEGMENT_DEFS.find(s => s.id === activeSegment) || SEGMENT_DEFS[0];
 
   const filtered = useMemo(() => {
-    let result = leads.filter(segmentDef.filter);
+    let result = list_leads.filter(segmentDef.filter);
 
     if (filterStage) result = result.filter(l => l.stage === filterStage);
     if (filterSource) result = result.filter(l => (l.source || '').toLowerCase().includes(filterSource.toLowerCase()));
@@ -206,11 +206,11 @@ export default function Lists() {
     }
 
     return result;
-  }, [leads, segmentDef, searchQuery, filterStage, filterSource]);
+  }, [list_leads, segmentDef, searchQuery, filterStage, filterSource]);
 
   const segmentCounts = useMemo(() =>
-    Object.fromEntries(SEGMENT_DEFS.map(s => [s.id, leads.filter(s.filter).length])),
-    [leads]
+    Object.fromEntries(SEGMENT_DEFS.map(s => [s.id, list_leads.filter(s.filter).length])),
+    [list_leads]
   );
 
   // Reset page when filters change
@@ -248,7 +248,7 @@ export default function Lists() {
 
   const handleLeadUpdate = async (id, updates) => {
     try {
-      const updated = await updateLead(id, updates);
+      const updated = await updateListLead(id, updates);
       if (updated) setSelectedLead(updated);
     } catch (err) {
       console.error('Lead update failed:', err);
@@ -270,7 +270,7 @@ export default function Lists() {
         updateObj.notes = lead.notes ? `${lead.notes}\n[Lost Reason]: ${reason}` : `[Lost Reason]: ${reason}`;
       } else return;
     }
-    await updateLead(lead.id, updateObj);
+    await updateListLead(lead.id, updateObj);
   };
 
   const handleBulkDelete = async () => {
@@ -279,14 +279,14 @@ export default function Lists() {
       `Are you sure you want to permanently delete ${selectedIds.length} leads? This cannot be undone.`
     );
     if (!confirmed) return;
-    await bulkDeleteLeads(selectedIds);
+    await bulkDeleteListLeads(selectedIds);
     setSelectedIds([]);
     if (selectedLead && selectedIds.includes(selectedLead.id)) setSelectedLead(null);
   };
 
   const handleBulkStageChange = async (newStage) => {
     try {
-      await bulkUpdateLeads(selectedIds, { stage: newStage });
+      await bulkUpdateListLeads(selectedIds, { stage: newStage });
       setSelectedIds([]);
     } catch (err) {
       console.error('Bulk stage update failed:', err);
@@ -295,7 +295,7 @@ export default function Lists() {
 
   const handleBulkOwnerChange = async (newOwnerId) => {
     try {
-      await bulkUpdateLeads(selectedIds, { owner_id: newOwnerId });
+      await bulkUpdateListLeads(selectedIds, { owner_id: newOwnerId });
       setSelectedIds([]);
     } catch (err) {
       console.error('Bulk owner update failed:', err);
@@ -304,7 +304,7 @@ export default function Lists() {
 
   const handleOwnerChange = async (lead, newOwnerId) => {
     try {
-      await updateLead(lead.id, { owner_id: newOwnerId });
+      await updateListLead(lead.id, { owner_id: newOwnerId });
     } catch (err) {
       console.error('Owner update failed:', err);
     }
@@ -335,7 +335,7 @@ export default function Lists() {
       };
       const noteText = `Call: ${outcomeLabels[callOutcome] || callOutcome}${callNotes ? ` — ${callNotes}` : ''}`;
       const stageUpdate = callOutcome === 'connected' ? 'Engaged' : callOutcome === 'not_interested' ? 'Lost' : undefined;
-      await appendLeadNotes(callingLead.id, noteText, stageUpdate);
+      await appendListLeadNotes(callingLead.id, noteText, stageUpdate);
       setCallingLead(null);
       setCallNotes('');
     } catch (err) {
@@ -347,9 +347,24 @@ export default function Lists() {
 
   // ── Unique sources for filter dropdown ──
   const uniqueSources = useMemo(() => {
-    const sources = [...new Set(leads.map(l => l.source).filter(Boolean))];
+    const sources = [...new Set(list_leads.map(l => l.source).filter(Boolean))];
     return sources.sort();
-  }, [leads]);
+  }, [list_leads]);
+
+  const handlePushToLeads = async () => {
+    setPushingIds(selectedIds);
+    try {
+      await pushListLeadsToLeads(selectedIds);
+      setPushSuccess(true);
+      setTimeout(() => setPushSuccess(false), 3000);
+      setSelectedIds([]);
+    } catch (e) {
+      console.error('Failed to push leads', e);
+      alert('Failed to push to Leads CRM');
+    } finally {
+      setPushingIds([]);
+    }
+  };
 
   return (
     <div className="lists-page-container">
@@ -485,6 +500,10 @@ export default function Lists() {
             <span className="count-badge">{selectedIds.length}</span> leads selected
           </div>
           <div className="bulk-actions">
+            <button className="btn btn-primary btn-sm" onClick={handlePushToLeads} disabled={pushingIds.length > 0}>
+              {pushingIds.length > 0 ? <RefreshCw size={14} className="spinning" /> : <ArrowUpRight size={14} />}
+              Push to CRM
+            </button>
             <button className="btn btn-outline btn-sm" onClick={() => setIsBulkEditOpen(true)}>
               <Edit2 size={14} /> Bulk Edit
             </button>
@@ -606,7 +625,7 @@ export default function Lists() {
           onClose={() => setSelectedLead(null)}
           onUpdate={handleLeadUpdate}
           onDelete={async (id) => {
-            await useDataStore.getState().deleteLead(id);
+            await useDataStore.getState().deleteListLead(id);
             setSelectedLead(null);
           }}
         />
@@ -684,7 +703,7 @@ export default function Lists() {
       <CsvImporterModal
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
-        type="leads"
+        type="list_leads"
       />
 
       {/* ── Bulk Edit Modal ───────────────────────────────── */}

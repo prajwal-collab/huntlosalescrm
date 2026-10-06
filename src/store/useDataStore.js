@@ -56,6 +56,7 @@ const useDataStore = create((set, get) => ({
   documents: [],
   sequences: [],
   leads: [],
+  list_leads: [],
   linkedinLogs: [],
   teamMembers: [],
   proposals: [],
@@ -159,6 +160,7 @@ const useDataStore = create((set, get) => ({
         fetchAllRows('documents', 'created_at', false),
         fetchAllRows('sequences', 'created_at', false),
         fetchAllRows('leads', 'created_at', false),
+        fetchAllRows('list_leads', 'created_at', false),
         fetchAllRows('profiles', 'id', true), // Profiles usually doesn't have created_at
         fetchAllRows('proposals', 'created_at', false),
         fetchAllRows('webinars', 'date_time', true),
@@ -170,7 +172,7 @@ const useDataStore = create((set, get) => ({
         fetchAllRows('linkedin_outreach_logs', 'created_at', false),
       ]);
 
-      const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes, leadsRes, teamRes, proposalsRes, webinarsRes, funnelStagesRes, registrantsRes, assetsRes, followUpsRes, sopsRes, linkedinLogsRes] = results;
+      const [companiesRes, contactsRes, dealsRes, tasksRes, meetingsRes, docsRes, seqRes, leadsRes, listLeadsRes, teamRes, proposalsRes, webinarsRes, funnelStagesRes, registrantsRes, assetsRes, followUpsRes, sopsRes, linkedinLogsRes] = results;
 
       // Helper to safely extract data from allSettled results
       const extract = (res, name) => {
@@ -206,6 +208,7 @@ const useDataStore = create((set, get) => ({
         documents: extract(docsRes, 'documents'),
         sequences: extract(seqRes, 'sequences'),
         leads: extract(leadsRes, 'leads'),
+        list_leads: extract(listLeadsRes, 'list_leads'),
         teamMembers: extract(teamRes, 'teamMembers'),
         proposals: extract(proposalsRes, 'proposals'),
         webinars: extract(webinarsRes, 'webinars'),
@@ -263,6 +266,9 @@ const useDataStore = create((set, get) => ({
           }
         }
         get()._refreshTable('leads');
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'list_leads' }, (payload) => {
+        get()._refreshTable('list_leads');
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deals' }, (payload) => {
         const { user } = useAuthStore.getState();
@@ -641,6 +647,100 @@ const useDataStore = create((set, get) => ({
     if (error) throw error;
     set(state => ({ leads: [...data, ...state.leads] }));
     return data;
+  },
+
+  // ── List Leads ─────────────────────────────
+  createListLead: async (lead) => {
+    const { user } = useAuthStore.getState();
+    const orgId = await get()._getOrgId();
+    const newLead = { ...lead, owner_id: user?.id, ...(orgId ? { organization_id: orgId } : {}) };
+    const { data, error } = await supabase.from('list_leads').insert(newLead).select().single();
+    if (error) throw error;
+    set(state => ({ list_leads: [data, ...state.list_leads] }));
+    return data;
+  },
+
+  updateListLead: async (id, updates) => {
+    const { data, error } = await supabase.from('list_leads').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    set(state => ({ list_leads: state.list_leads.map(l => l.id === id ? data : l) }));
+    return data;
+  },
+
+  appendListLeadNotes: async (id, newNote, stageUpdate) => {
+    const lead = get().list_leads.find(l => l.id === id);
+    if (!lead) return null;
+    const timestamp = new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const existingNotes = lead.notes || '';
+    const appendedNotes = existingNotes
+      ? `${existingNotes}\n\n---\n📞 [${timestamp}] ${newNote}`
+      : `📞 [${timestamp}] ${newNote}`;
+    const updates = { notes: appendedNotes };
+    if (stageUpdate) updates.stage = stageUpdate;
+    const { data, error } = await supabase.from('list_leads').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    set(state => ({ list_leads: state.list_leads.map(l => l.id === id ? data : l) }));
+    return data;
+  },
+
+  deleteListLead: async (id) => {
+    const { error } = await supabase.from('list_leads').delete().eq('id', id);
+    if (error) throw error;
+    set(state => ({ list_leads: state.list_leads.filter(l => l.id !== id) }));
+  },
+
+  bulkDeleteListLeads: async (ids) => {
+    const chunkSize = 200;
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      const chunk = ids.slice(i, i + chunkSize);
+      const { error } = await supabase.from('list_leads').delete().in('id', chunk);
+      if (error) throw error;
+    }
+    set(state => ({ list_leads: state.list_leads.filter(l => !ids.includes(l.id)) }));
+  },
+
+  bulkUpdateListLeads: async (ids, updates) => {
+    let allData = [];
+    const chunkSize = 200;
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      const chunk = ids.slice(i, i + chunkSize);
+      const { data, error } = await supabase.from('list_leads').update(updates).in('id', chunk).select();
+      if (error) throw error;
+      allData.push(...(data || []));
+    }
+    set(state => ({ list_leads: state.list_leads.map(l => ids.includes(l.id) ? { ...l, ...updates } : l) }));
+    return allData;
+  },
+
+  bulkCreateListLeads: async (leadsList) => {
+    const { user } = useAuthStore.getState();
+    await get().ensureProfile();
+    const orgId = await get()._getOrgId();
+    const records = leadsList.map(l => ({ 
+      ...l, 
+      owner_id: user?.id,
+      ...(orgId ? { organization_id: orgId } : {})
+    }));
+    const { data, error } = await supabase.from('list_leads').upsert(records, { onConflict: 'organization_id,company_name', ignoreDuplicates: true }).select();
+    if (error) throw error;
+    set(state => ({ list_leads: [...data, ...state.list_leads] }));
+    return data;
+  },
+
+  pushListLeadsToLeads: async (ids) => {
+    const state = get();
+    const leadsToPush = state.list_leads.filter(l => ids.includes(l.id)).map(l => {
+      const { id, created_at, updated_at, ...rest } = l; // strip ids so they become new leads
+      return rest;
+    });
+    if (leadsToPush.length === 0) return;
+
+    // Create in leads
+    const createdLeads = await get().bulkCreateLeads(leadsToPush);
+    // Delete from list_leads
+    await get().bulkDeleteListLeads(ids);
+    
+    return createdLeads;
   },
 
   // Used by the "Import & Update" flow — enriches existing leads with contact
