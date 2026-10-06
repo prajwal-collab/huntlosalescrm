@@ -721,7 +721,7 @@ const useDataStore = create((set, get) => ({
       owner_id: user?.id,
       ...(orgId ? { organization_id: orgId } : {})
     }));
-    const { data, error } = await supabase.from('list_leads').upsert(records, { onConflict: 'organization_id,company_name', ignoreDuplicates: true }).select();
+    const { data, error } = await supabase.from('list_leads').insert(records).select();
     if (error) throw error;
     set(state => ({ list_leads: [...data, ...state.list_leads] }));
     return data;

@@ -355,12 +355,20 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
         return true;
       });
     } else if (importType === 'list_leads') {
-      const existingListLeadNames = new Set(list_leads.map(l => (l.company_name || '').toLowerCase()));
+      const existingEmails = new Set(list_leads.map(l => (l.email || '').toLowerCase()).filter(Boolean));
+      const existingPhones = new Set(list_leads.map(l => (l.phone || '')).filter(Boolean));
       dedupedData = mappedData.filter(row => {
-        if (row.company_name && existingListLeadNames.has(row.company_name.toLowerCase())) {
+        if (row.email && existingEmails.has(row.email.toLowerCase())) {
           skippedCount++;
           return false;
         }
+        if (row.phone && existingPhones.has(row.phone)) {
+          skippedCount++;
+          return false;
+        }
+        // Also update the JS Sets so duplicates within the SAME CSV are skipped
+        if (row.email) existingEmails.add(row.email.toLowerCase());
+        if (row.phone) existingPhones.add(row.phone);
         return true;
       });
     }
