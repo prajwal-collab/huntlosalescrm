@@ -524,6 +524,19 @@
   color: var(--text-primary);
 }
 
+.llr-owner-select {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 4px;
+}
+
 .llr-owner-badge.unassigned {
   background: transparent;
   border-style: dashed;

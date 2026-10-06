@@ -55,7 +55,7 @@ const SEGMENT_DEFS = [
 
 
 // ── Lead Row Component ─────────────────────────────────────
-function ListLeadRow({ lead, isSelected, onSelect, onClick, team, user, onCall, onStageChange }) {
+function ListLeadRow({ lead, isSelected, onSelect, onClick, team, user, onCall, onStageChange, onOwnerChange }) {
   const score = useMemo(() => computeSignalScore(lead), [lead]);
   const completeness = useMemo(() => computeCompleteness(lead), [lead]);
   const completenessColor = getCompletenessColor(completeness);
@@ -93,10 +93,19 @@ function ListLeadRow({ lead, isSelected, onSelect, onClick, team, user, onCall, 
       </div>
 
       {/* Owner */}
-      <div className="llr-cell llr-owner">
+      <div className="llr-cell llr-owner" onClick={e => e.stopPropagation()}>
         <div className={`llr-owner-badge ${!lead.owner_id ? 'unassigned' : ''}`}>
           {lead.owner_id && <div className="llr-owner-avatar">{ownerName.charAt(0)}</div>}
-          <span>{ownerName}</span>
+          <select
+            className="llr-owner-select"
+            value={lead.owner_id || ''}
+            onChange={(e) => onOwnerChange(lead, e.target.value)}
+          >
+            <option value="">Unassigned</option>
+            {team?.map(member => (
+              <option key={member.id} value={member.id}>{member.name || member.full_name}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -281,6 +290,23 @@ export default function Lists() {
       setSelectedIds([]);
     } catch (err) {
       console.error('Bulk stage update failed:', err);
+    }
+  };
+
+  const handleBulkOwnerChange = async (newOwnerId) => {
+    try {
+      await bulkUpdateLeads(selectedIds, { owner_id: newOwnerId });
+      setSelectedIds([]);
+    } catch (err) {
+      console.error('Bulk owner update failed:', err);
+    }
+  };
+
+  const handleOwnerChange = async (lead, newOwnerId) => {
+    try {
+      await updateLead(lead.id, { owner_id: newOwnerId });
+    } catch (err) {
+      console.error('Owner update failed:', err);
     }
   };
 
@@ -472,6 +498,16 @@ export default function Lists() {
                 {Object.keys(STAGE_COLORS).map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
+            <div className="bulk-stage-dropdown" style={{ position: 'relative' }}>
+              <select
+                className="btn btn-outline btn-sm bulk-stage-select"
+                value=""
+                onChange={(e) => { if (e.target.value) handleBulkOwnerChange(e.target.value); }}
+              >
+                <option value="">Assign Owner...</option>
+                {team?.map(member => <option key={member.id} value={member.id}>{member.name || member.full_name}</option>)}
+              </select>
+            </div>
             <button className="btn btn-outline btn-sm btn-danger" onClick={handleBulkDelete}>
               <Trash2 size={14} /> Delete
             </button>
@@ -517,6 +553,7 @@ export default function Lists() {
                 user={user}
                 onCall={handleStartCall}
                 onStageChange={handleStageChange}
+                onOwnerChange={handleOwnerChange}
               />
             ))
           ) : (
