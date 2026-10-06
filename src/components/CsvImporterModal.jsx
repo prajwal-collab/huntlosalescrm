@@ -203,6 +203,16 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
           // Provide a fallback company name so it doesn't fail import if users only have contacts
           obj.company_name = obj.contact_name || obj.email || obj.phone || `Imported Lead ${index + 1}`;
         }
+        
+        // Clean up constrained fields to avoid DB check constraint errors
+        if (obj.company_type) {
+          const validTypes = ['Recruitment Agency','Staffing Firm','Startup','Enterprise','Other'];
+          if (!validTypes.includes(obj.company_type)) obj.company_type = 'Other';
+        }
+        if (obj.priority) {
+          const validPriority = ['Hot','Warm','Cold'];
+          if (!validPriority.includes(obj.priority)) obj.priority = 'Cold';
+        }
       }
 
       if (importType === 'leads') {
