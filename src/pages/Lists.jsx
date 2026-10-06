@@ -3,8 +3,10 @@ import {
   Database, Plus, Sparkles, Filter, Download, MoreVertical, 
   Search, CheckCircle, ArrowLeft, Users, Calendar, 
   Activity, Mail, Phone, Zap, UserPlus, TrendingUp, BarChart2,
-  Clock, CheckSquare
+  Clock, CheckSquare, Target, Upload, X, Edit2
 } from 'lucide-react';
+import CsvImporterModal from '../components/CsvImporterModal';
+import BulkEditModal from '../components/BulkEditModal';
 import './Lists.css';
 
 const INITIAL_LISTS = [
@@ -56,6 +58,45 @@ export default function Lists() {
   const [enrichingId, setEnrichingId] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // New States for Import, Call & Push
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [callingRecord, setCallingRecord] = useState(null);
+  const [callNotes, setCallNotes] = useState('');
+  const [isPushing, setIsPushing] = useState(false);
+  const [pushSuccess, setPushSuccess] = useState(false);
+  const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
+
+  const handlePushToLeads = (e) => {
+    e?.stopPropagation();
+    setIsPushing(true);
+    setTimeout(() => {
+      setIsPushing(false);
+      setPushSuccess(true);
+      setTimeout(() => setPushSuccess(false), 3000);
+      setSelectedRows([]);
+    }, 1500);
+  };
+
+  const handleEndCall = () => {
+    if (!callingRecord) return;
+    setLists(prev => prev.map(list => ({
+      ...list,
+      records: list.records.map(r => 
+        r.id === callingRecord.id ? { ...r, lastActivity: 'Just now', score: Math.min(100, r.score + 5) } : r
+      )
+    })));
+    if (selectedList) {
+      setSelectedList(prev => ({
+        ...prev,
+        records: prev.records.map(r => 
+          r.id === callingRecord.id ? { ...r, lastActivity: 'Just now', score: Math.min(100, r.score + 5) } : r
+        )
+      }));
+    }
+    setCallingRecord(null);
+    setCallNotes('');
+  };
 
   const handleEnrich = (e, listId) => {
     e.stopPropagation();
@@ -168,6 +209,7 @@ export default function Lists() {
                 />
               </div>
               <button className="btn btn-ghost"><Filter size={16} /> Filters</button>
+              <button className="btn btn-ghost" onClick={() => setIsImportOpen(true)}><Upload size={16} /> Import Leads</button>
               
               {selectedList.status !== 'Enriched' && (
                 <button 
@@ -217,9 +259,13 @@ export default function Lists() {
               </div>
               <div className="bulk-actions">
                 <button className="btn btn-outline btn-sm"><Zap size={14} /> Add to Sequence</button>
+                <button className="btn btn-outline btn-sm" onClick={handlePushToLeads}>
+                  {isPushing ? <Activity size={14} className="enriching-spinner" /> : <Target size={14} />} 
+                  {pushSuccess ? 'Pushed!' : 'Push to Leads'}
+                </button>
+                <button className="btn btn-outline btn-sm" onClick={() => setIsBulkEditOpen(true)}><Edit2 size={14} /> Bulk Edit</button>
                 <button className="btn btn-outline btn-sm"><UserPlus size={14} /> Assign Owner</button>
                 <button className="btn btn-outline btn-sm"><Mail size={14} /> Bulk Email</button>
-                <button className="btn btn-outline btn-sm"><MoreVertical size={14} /></button>
               </div>
             </div>
           )}
@@ -299,8 +345,11 @@ export default function Lists() {
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <div className="row-actions">
-                          <button className="icon-btn tooltip-trigger" data-tooltip="Call">
+                          <button className="icon-btn tooltip-trigger" data-tooltip="Call" onClick={() => setCallingRecord(record)}>
                             <Phone size={15} />
+                          </button>
+                          <button className="icon-btn tooltip-trigger" data-tooltip="Push to Leads" onClick={(e) => handlePushToLeads(e)}>
+                            <Target size={15} />
                           </button>
                           <button className="icon-btn tooltip-trigger" data-tooltip="Email">
                             <Mail size={15} />
@@ -323,6 +372,57 @@ export default function Lists() {
               </table>
             </div>
           </div>
+
+          {/* Calling Modal */}
+          {callingRecord && (
+            <div className="modal-backdrop">
+              <div className="modal-content" style={{ width: 400 }}>
+                <div className="modal-header">
+                  <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Phone size={18} color="var(--accent-blue)" /> Calling {callingRecord.contact}...
+                  </h3>
+                  <button className="icon-btn" onClick={() => setCallingRecord(null)}><X size={16} /></button>
+                </div>
+                <div className="modal-body" style={{ padding: 20 }}>
+                  <div style={{ marginBottom: 16, fontSize: 14 }}>
+                    <strong>Company:</strong> {callingRecord.company}<br/>
+                    <strong>Phone:</strong> {callingRecord.phone}
+                  </div>
+                  <textarea 
+                    style={{ width: '100%', height: 100, padding: 12, borderRadius: 8, border: '1px solid var(--bg-border)', background: 'var(--bg-page)', color: 'var(--text-primary)' }}
+                    placeholder="Call notes..."
+                    value={callNotes}
+                    onChange={(e) => setCallNotes(e.target.value)}
+                  />
+                  <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+                    <button className="btn btn-outline" onClick={() => setCallingRecord(null)}>Cancel</button>
+                    <button className="btn btn-primary" onClick={handleEndCall}>End Call & Update</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Import Modal */}
+          {isImportOpen && (
+            <CsvImporterModal 
+              onClose={() => setIsImportOpen(false)} 
+              onImport={(data) => {
+                 console.log("Imported:", data);
+                 setIsImportOpen(false);
+              }} 
+            />
+          )}
+
+          {/* Bulk Edit Modal */}
+          <BulkEditModal 
+            isOpen={isBulkEditOpen}
+            onClose={() => setIsBulkEditOpen(false)}
+            entityType="leads"
+            selectedIds={selectedRows}
+            onClearSelection={() => setSelectedRows([])}
+          />
+
         </div>
       </div>
     );
