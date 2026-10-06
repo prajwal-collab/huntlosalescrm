@@ -22,7 +22,7 @@ const COMPANY_FIELDS = [
 ];
 
 const LEAD_FIELDS = [
-  { key: 'company_name', label: 'Company Name', required: true },
+  { key: 'company_name', label: 'Company Name' },
   { key: 'company_type', label: 'Company Type' },
   { key: 'website', label: 'Website' },
   { key: 'linkedin_url', label: 'Company LinkedIn' },
@@ -163,8 +163,8 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
     }
 
     if (importType === 'leads' || importType === 'list_leads') {
-      if (!mapping['company_name']) {
-        setError('Company Name is required for Leads/List Leads.');
+      if (!mapping['company_name'] && !mapping['contact_name'] && !mapping['email'] && !mapping['phone']) {
+        setError('Please map at least one of Company Name, Contact Name, Email, or Phone for Leads.');
         return;
       }
     }
@@ -187,7 +187,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
     setError(null);
 
     // Transform CSV rows to CRM objects
-    const mappedData = rows.map(row => {
+    const mappedData = rows.map((row, index) => {
       const obj = {};
       
       // Basic flat fields
@@ -198,6 +198,13 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
         }
       });
       
+      if (importType === 'leads' || importType === 'list_leads') {
+        if (!obj.company_name || obj.company_name.trim() === '') {
+          // Provide a fallback company name so it doesn't fail import if users only have contacts
+          obj.company_name = obj.contact_name || obj.email || obj.phone || `Imported Lead ${index + 1}`;
+        }
+      }
+
       if (importType === 'leads') {
         // Group signals into JSONB
         obj.signals = {
@@ -261,8 +268,6 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
       return obj;
     }).filter(obj => {
       if (importType === 'leads' || importType === 'list_leads') {
-        const hasCompany = obj.company_name && obj.company_name.trim() !== '';
-        if (!hasCompany) return false;
         if (skipInvalidLeads && (!obj.contact_name || obj.contact_name.trim() === '' || !obj.phone || obj.phone.trim() === '')) {
           return false;
         }
