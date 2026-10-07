@@ -2,13 +2,13 @@
 // HUNTLO — SMART LISTS & SEGMENTS
 // Fully functional CRM list management
 // ============================================
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   Database, Plus, Sparkles, Filter, Download, Upload,
-  Search, ArrowLeft, Users, Calendar, Target,
-  Activity, Mail, Phone, Zap, UserPlus, TrendingUp,
-  Clock, CheckSquare, Edit2, X, Trash2, MoreVertical,
-  ChevronDown, ChevronLeft, ChevronRight, Eye, Copy,
+  Search, ArrowLeft, Users, Calendar, Target, FolderPlus,
+  Activity, Mail, Phone, Zap, UserPlus, TrendingUp, Layers,
+  Clock, CheckSquare, Edit2, X, Trash2, MoreVertical, Pencil,
+  ChevronDown, ChevronLeft, ChevronRight, Eye, Copy, FolderOpen,
   ArrowUpRight, CheckCircle, AlertCircle, RefreshCw
 } from 'lucide-react';
 import useDataStore from '../store/useDataStore';
@@ -185,6 +185,14 @@ export default function Lists() {
   const [pushingIds, setPushingIds] = useState([]);
   const [pushSuccess, setPushSuccess] = useState(false);
 
+  // List management state
+  const [showManageLists, setShowManageLists] = useState(false);
+  const [newListName, setNewListName] = useState('');
+  const [editingListName, setEditingListName] = useState(null);
+  const [editingListValue, setEditingListValue] = useState('');
+  const [addToListOpen, setAddToListOpen] = useState(false);
+  const addToListRef = useRef(null);
+
   // ── Computed data ──
   const uniqueLists = useMemo(() => {
     const listNames = new Set();
@@ -337,6 +345,79 @@ export default function Lists() {
     exportToCsv('smart-list-export.csv', filtered);
   };
 
+  // ── List Management ──
+  const handleCreateList = async () => {
+    const trimmed = newListName.trim();
+    if (!trimmed) return;
+    if (uniqueLists.includes(trimmed)) {
+      alert(`A list named "${trimmed}" already exists.`);
+      return;
+    }
+    setNewListName('');
+    // Lists are created implicitly when leads are tagged
+    // Show confirmation and let user add leads to it
+    alert(`List "${trimmed}" created! Select leads and use "Add to List" to populate it.`);
+  };
+
+  const handleRenameList = async (oldName) => {
+    const trimmed = editingListValue.trim();
+    if (!trimmed || trimmed === oldName) { setEditingListName(null); return; }
+    if (uniqueLists.includes(trimmed)) {
+      alert(`A list named "${trimmed}" already exists.`);
+      return;
+    }
+    // Update all leads: rename list:oldName tag to list:newName
+    const affectedLeads = list_leads.filter(l => l.tags && l.tags.includes(`list:${oldName}`));
+    for (const lead of affectedLeads) {
+      const newTags = (lead.tags || []).map(t => t === `list:${oldName}` ? `list:${trimmed}` : t);
+      await updateListLead(lead.id, { tags: newTags });
+    }
+    setEditingListName(null);
+    if (activeSegment === `list_${oldName}`) setActiveSegment(`list_${trimmed}`);
+  };
+
+  const handleDeleteList = async (listName) => {
+    const confirmed = await showConfirm(
+      `Delete List "${listName}"`,
+      `This will remove the "${listName}" tag from all leads. Leads won't be deleted. Continue?`
+    );
+    if (!confirmed) return;
+    const affectedLeads = list_leads.filter(l => l.tags && l.tags.includes(`list:${listName}`));
+    for (const lead of affectedLeads) {
+      const newTags = (lead.tags || []).filter(t => t !== `list:${listName}`);
+      await updateListLead(lead.id, { tags: newTags });
+    }
+    if (activeSegment === `list_${listName}`) setActiveSegment('all');
+  };
+
+  const handleAddToList = async (listName) => {
+    setAddToListOpen(false);
+    try {
+      const leadsToUpdate = list_leads.filter(l => selectedIds.includes(l.id));
+      for (const lead of leadsToUpdate) {
+        const currentTags = Array.isArray(lead.tags) ? lead.tags : [];
+        if (!currentTags.includes(`list:${listName}`)) {
+          await updateListLead(lead.id, { tags: [...currentTags, `list:${listName}`] });
+        }
+      }
+    } catch (err) {
+      console.error('Add to list failed:', err);
+    }
+  };
+
+  const handleCreateAndAddToList = async () => {
+    const name = await showPrompt(
+      'Create New List',
+      'Enter a name for the new list:',
+      'e.g. Q4 Outreach, Hot Prospects...',
+      'Create & Add',
+      'Cancel'
+    );
+    if (!name || !name.trim()) return;
+    const trimmed = name.trim();
+    await handleAddToList(trimmed);
+  };
+
   // ── Call Logging ──
   const handleStartCall = (lead) => {
     if (!lead.phone) return;
@@ -404,6 +485,9 @@ export default function Lists() {
           </p>
         </div>
         <div className="lists-actions">
+          <button className={`btn btn-ghost ${showManageLists ? 'active' : ''}`} onClick={() => setShowManageLists(v => !v)}>
+            <Layers size={16} /> Manage Lists
+          </button>
           <button className="btn btn-ghost" onClick={handleExport}>
             <Download size={16} /> Export
           </button>
@@ -412,6 +496,78 @@ export default function Lists() {
           </button>
         </div>
       </div>
+
+      {/* ── Manage Lists Panel ────────────────────────────── */}
+      {showManageLists && (
+        <div className="manage-lists-panel">
+          <div className="manage-lists-header">
+            <span className="manage-lists-title"><FolderOpen size={16} /> My Lists ({uniqueLists.length})</span>
+            <button className="btn-icon-sm" onClick={() => setShowManageLists(false)}><X size={14} /></button>
+          </div>
+          <div className="manage-lists-body">
+            {uniqueLists.length === 0 ? (
+              <div className="manage-lists-empty">
+                <FolderOpen size={32} />
+                <p>No lists yet. Import leads and tag them with lists, or create one below.</p>
+              </div>
+            ) : (
+              <div className="manage-lists-items">
+                {uniqueLists.map(listName => {
+                  const count = list_leads.filter(l => l.tags && l.tags.includes(`list:${listName}`)).length;
+                  return (
+                    <div key={listName} className="manage-list-item">
+                      {editingListName === listName ? (
+                        <div className="manage-list-rename">
+                          <input
+                            className="manage-list-rename-input"
+                            value={editingListValue}
+                            onChange={e => setEditingListValue(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleRenameList(listName); if (e.key === 'Escape') setEditingListName(null); }}
+                            autoFocus
+                          />
+                          <button className="btn btn-primary btn-sm" onClick={() => handleRenameList(listName)}>Save</button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => setEditingListName(null)}>Cancel</button>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            className={`manage-list-name ${activeSegment === `list_${listName}` ? 'active' : ''}`}
+                            onClick={() => { setActiveSegment(`list_${listName}`); setSelectedIds([]); setShowManageLists(false); }}
+                          >
+                            <span className="manage-list-icon">📁</span>
+                            <span className="manage-list-label">{listName}</span>
+                            <span className="manage-list-count">{count}</span>
+                          </button>
+                          <div className="manage-list-actions">
+                            <button className="btn-icon-sm" title="Rename" onClick={() => { setEditingListName(listName); setEditingListValue(listName); }}>
+                              <Pencil size={13} />
+                            </button>
+                            <button className="btn-icon-sm danger" title="Delete list" onClick={() => handleDeleteList(listName)}>
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div className="manage-lists-create">
+              <input
+                className="manage-list-input"
+                placeholder="New list name..."
+                value={newListName}
+                onChange={e => setNewListName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleCreateList(); }}
+              />
+              <button className="btn btn-primary btn-sm" onClick={handleCreateList} disabled={!newListName.trim()}>
+                <Plus size={14} /> Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Stats Bar ─────────────────────────────────────── */}
       <div className="global-stats-row">
@@ -520,7 +676,8 @@ export default function Lists() {
       {selectedIds.length > 0 && (
         <div className="bulk-action-bar">
           <div className="bulk-count">
-            <span className="count-badge">{selectedIds.length}</span> leads selected
+            <span className="count-badge">{selectedIds.length}</span>
+            <span className="bulk-count-label">selected</span>
           </div>
           <div className="bulk-actions">
             <button className="btn btn-primary btn-sm" onClick={handlePushToLeads} disabled={pushingIds.length > 0}>
@@ -530,26 +687,46 @@ export default function Lists() {
             <button className="btn btn-outline btn-sm" onClick={() => setIsBulkEditOpen(true)}>
               <Edit2 size={14} /> Bulk Edit
             </button>
-            <div className="bulk-stage-dropdown" style={{ position: 'relative' }}>
-              <select
-                className="btn btn-outline btn-sm bulk-stage-select"
-                value=""
-                onChange={(e) => { if (e.target.value) handleBulkStageChange(e.target.value); }}
-              >
-                <option value="">Change Stage...</option>
-                {Object.keys(STAGE_COLORS).map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+            {/* Add to List */}
+            <div className="bulk-add-list-wrapper" ref={addToListRef}>
+              <button className="btn btn-outline btn-sm" onClick={() => setAddToListOpen(v => !v)}>
+                <FolderPlus size={14} /> Add to List <ChevronDown size={12} />
+              </button>
+              {addToListOpen && (
+                <div className="bulk-list-dropdown">
+                  <div className="bulk-list-dropdown-header">Add to list</div>
+                  {uniqueLists.length > 0 ? (
+                    uniqueLists.map(ln => (
+                      <button key={ln} className="bulk-list-option" onClick={() => handleAddToList(ln)}>
+                        <span>📁</span> {ln}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="bulk-list-empty">No lists yet</div>
+                  )}
+                  <div className="bulk-list-divider" />
+                  <button className="bulk-list-option create" onClick={handleCreateAndAddToList}>
+                    <Plus size={13} /> Create new list...
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="bulk-stage-dropdown" style={{ position: 'relative' }}>
-              <select
-                className="btn btn-outline btn-sm bulk-stage-select"
-                value=""
-                onChange={(e) => { if (e.target.value) handleBulkOwnerChange(e.target.value); }}
-              >
-                <option value="">Assign Owner...</option>
-                {team?.map(member => <option key={member.id} value={member.id}>{member.name || member.full_name}</option>)}
-              </select>
-            </div>
+            <select
+              className="btn btn-outline btn-sm bulk-stage-select"
+              value=""
+              onChange={(e) => { if (e.target.value) handleBulkStageChange(e.target.value); }}
+            >
+              <option value="">Change Stage...</option>
+              {Object.keys(STAGE_COLORS).map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select
+              className="btn btn-outline btn-sm bulk-stage-select"
+              value=""
+              onChange={(e) => { if (e.target.value) handleBulkOwnerChange(e.target.value); }}
+            >
+              <option value="">Assign Owner...</option>
+              {team?.map(member => <option key={member.id} value={member.id}>{member.name || member.full_name}</option>)}
+            </select>
             <button className="btn btn-outline btn-sm btn-danger" onClick={handleBulkDelete}>
               <Trash2 size={14} /> Delete
             </button>

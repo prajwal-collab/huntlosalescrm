@@ -304,8 +304,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   background: var(--bg-elevated);
   border: 1px solid var(--accent-blue);
   box-shadow: 0 8px 24px rgba(59, 130, 246, 0.12);
@@ -314,6 +313,7 @@
   margin-bottom: 12px;
   animation: slideDown 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   flex-shrink: 0;
+  overflow-x: auto;
 }
 
 .bulk-count {
@@ -322,7 +322,13 @@
   color: var(--text-primary);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.bulk-count-label {
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .count-badge {
@@ -336,11 +342,9 @@
 
 .bulk-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  flex: 1;
+  flex-shrink: 0;
 }
 
 .bulk-actions > * {
@@ -366,11 +370,273 @@
   border: 1px solid var(--bg-border);
   background: var(--bg-elevated);
   color: var(--text-primary);
+  height: 34px;
 }
 
 .btn-sm {
   padding: 6px 12px;
   font-size: 13px;
+}
+
+/* ── Add to List Dropdown ─────────────────── */
+.bulk-add-list-wrapper {
+  position: relative;
+}
+
+.bulk-list-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+  min-width: 200px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--bg-border);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+  overflow: hidden;
+  animation: slideDown 0.15s ease-out;
+}
+
+.bulk-list-dropdown-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  padding: 10px 14px 6px;
+}
+
+.bulk-list-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 14px;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.bulk-list-option:hover {
+  background: var(--bg-hover);
+}
+
+.bulk-list-option.create {
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
+.bulk-list-empty {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.bulk-list-divider {
+  height: 1px;
+  background: var(--bg-border);
+  margin: 4px 0;
+}
+
+/* ── Manage Lists Panel ───────────────────── */
+.manage-lists-panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--bg-border);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  animation: slideDown 0.2s ease-out;
+  flex-shrink: 0;
+}
+
+.manage-lists-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--bg-border);
+  background: var(--bg-page);
+}
+
+.manage-lists-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.manage-lists-body {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.manage-lists-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.manage-lists-empty svg {
+  opacity: 0.3;
+}
+
+.manage-lists-empty p {
+  font-size: 13px;
+  max-width: 360px;
+  line-height: 1.5;
+}
+
+.manage-lists-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.manage-list-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-page);
+  border: 1px solid var(--bg-border);
+  border-radius: 8px;
+  padding: 2px 4px 2px 2px;
+  transition: border-color 0.15s;
+}
+
+.manage-list-item:hover {
+  border-color: rgba(59,130,246,0.3);
+}
+
+.manage-list-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+  transition: background 0.12s;
+}
+
+.manage-list-name:hover {
+  background: var(--bg-hover);
+}
+
+.manage-list-name.active {
+  color: var(--accent-blue);
+  font-weight: 700;
+}
+
+.manage-list-icon {
+  font-size: 14px;
+}
+
+.manage-list-label {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manage-list-count {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(59,130,246,0.1);
+  color: var(--accent-blue);
+  padding: 1px 6px;
+  border-radius: 8px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.manage-list-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.manage-list-rename {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+}
+
+.manage-list-rename-input {
+  padding: 4px 8px;
+  border: 1px solid var(--accent-blue);
+  border-radius: 6px;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  width: 160px;
+}
+
+.manage-lists-create {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding-top: 4px;
+  border-top: 1px solid var(--bg-border);
+  margin-top: 4px;
+}
+
+.manage-list-input {
+  flex: 1;
+  max-width: 260px;
+  padding: 7px 12px;
+  border: 1px solid var(--bg-border);
+  border-radius: 8px;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.manage-list-input:focus {
+  border-color: var(--accent-blue);
+}
+
+.btn-icon-sm {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.btn-icon-sm:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.btn-icon-sm.danger:hover {
+  background: rgba(220,38,38,0.08);
+  color: #dc2626;
 }
 
 /* ── Data Table ───────────────────────────── */
