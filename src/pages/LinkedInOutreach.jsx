@@ -36,7 +36,7 @@ const ACTION_BADGE_LABELS = {
 
 export default function LinkedInOutreach() {
   const {
-    linkedinLogs, leads, logLinkedInOutreach, bulkImportLinkedInOutreach
+    linkedinLogs, leads, list_leads, logLinkedInOutreach, bulkImportLinkedInOutreach
   } = useDataStore();
   const { user, team } = useAuthStore();
 
@@ -152,10 +152,14 @@ export default function LinkedInOutreach() {
     set('linkedin_url', url);
     // Try to match an existing lead and auto-fill
     const normalizedUrl = url.trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, '').split('?')[0].replace(/\/+$/, '');
-    const match = leads.find(l => {
+    
+    const findMatch = (list) => list.find(l => {
       const leadUrl = (l.contact_linkedin || l.linkedin_url || '').toLowerCase().replace(/^https?:\/\/(www\.)?/, '').split('?')[0].replace(/\/+$/, '');
       return leadUrl && leadUrl === normalizedUrl;
     });
+
+    const match = findMatch(leads) || findMatch(list_leads);
+    
     if (match) {
       setForm(prev => ({
         ...prev,
@@ -165,7 +169,7 @@ export default function LinkedInOutreach() {
         designation: prev.designation || match.designation || '',
       }));
     }
-  }, [leads]);
+  }, [leads, list_leads]);
 
   // ── Submit ───────────────────────────────────────────
   const handleSubmit = async () => {

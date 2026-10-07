@@ -2060,37 +2060,44 @@ const useDataStore = create((set, get) => ({
 
   // Find an existing lead matching a LinkedIn outreach entry
   _matchLeadForLinkedIn: (entry, orgId) => {
-    const { leads } = get();
+    const { leads, list_leads } = get();
     const normalizeUrl = get()._normalizeLinkedInUrl;
     const normalizedUrl = normalizeUrl(entry.linkedin_url);
 
-    // Priority 1: Match by normalized LinkedIn URL
-    if (normalizedUrl) {
-      const byLinkedIn = leads.find(l => {
-        if (orgId && l.organization_id !== orgId) return false;
-        const leadUrl = normalizeUrl(l.contact_linkedin) || normalizeUrl(l.linkedin_url);
-        return leadUrl && leadUrl === normalizedUrl;
-      });
-      if (byLinkedIn) return byLinkedIn;
-    }
+    const checkMatch = (list) => {
+      if (normalizedUrl) {
+        const byLinkedIn = list.find(l => {
+          if (orgId && l.organization_id !== orgId) return false;
+          const leadUrl = normalizeUrl(l.contact_linkedin) || normalizeUrl(l.linkedin_url);
+          return leadUrl && leadUrl === normalizedUrl;
+        });
+        if (byLinkedIn) return byLinkedIn;
+      }
 
-    // Priority 2: Match by company_name
-    if (entry.company_name) {
-      const byCompany = leads.find(l => {
-        if (orgId && l.organization_id !== orgId) return false;
-        return l.company_name?.toLowerCase().trim() === entry.company_name.toLowerCase().trim();
-      });
-      if (byCompany) return byCompany;
-    }
+      if (entry.company_name) {
+        const byCompany = list.find(l => {
+          if (orgId && l.organization_id !== orgId) return false;
+          return l.company_name?.toLowerCase().trim() === entry.company_name.toLowerCase().trim();
+        });
+        if (byCompany) return byCompany;
+      }
 
-    // Priority 3: Match by email
-    if (entry.email) {
-      const byEmail = leads.find(l => {
-        if (orgId && l.organization_id !== orgId) return false;
-        return l.email?.toLowerCase().trim() === entry.email.toLowerCase().trim();
-      });
-      if (byEmail) return byEmail;
-    }
+      if (entry.email) {
+        const byEmail = list.find(l => {
+          if (orgId && l.organization_id !== orgId) return false;
+          return l.email?.toLowerCase().trim() === entry.email.toLowerCase().trim();
+        });
+        if (byEmail) return byEmail;
+      }
+
+      return null;
+    };
+
+    const matchedLead = checkMatch(leads);
+    if (matchedLead) return { lead: matchedLead, type: 'leads' };
+
+    const matchedListLead = checkMatch(list_leads);
+    if (matchedListLead) return { lead: matchedListLead, type: 'list_leads' };
 
     return null;
   },
@@ -2126,7 +2133,9 @@ const useDataStore = create((set, get) => ({
     const orgId = await get()._getOrgId();
 
     // 1. Find or create lead (if not skipping sync)
-    let existingLead = entry.skip_sync ? null : get()._matchLeadForLinkedIn(entry, orgId);
+    let matchResult = entry.skip_sync ? null : get()._matchLeadForLinkedIn(entry, orgId);
+    let existingLead = matchResult ? matchResult.lead : null;
+    let leadType = matchResult ? matchResult.type : 'leads'; // defaults to leads for new
     let leadId = existingLead?.id || null;
 
     const timestamp = new Date().toLocaleString('en-IN', {
@@ -2187,14 +2196,18 @@ const useDataStore = create((set, get) => ({
       };
 
       const { data, error } = await supabase
-        .from('leads')
+        .from(leadType) // 'leads' or 'list_leads'
         .update(updates)
         .eq('id', existingLead.id)
         .select()
         .single();
 
       if (!error && data) {
-        set(state => ({ leads: state.leads.map(l => l.id === data.id ? data : l) }));
+        if (leadType === 'leads') {
+          set(state => ({ leads: state.leads.map(l => l.id === data.id ? data : l) }));
+        } else {
+          set(state => ({ list_leads: state.list_leads.map(l => l.id === data.id ? data : l) }));
+        }
         leadId = data.id;
         
         // Auto-create/sync the contact even for existing leads so all connections are tracked
@@ -2321,8 +2334,8 @@ const useDataStore = create((set, get) => ({
 
         if (result?.leadId) {
           // Check if it was a new or existing lead
-          const wasExisting = get()._matchLeadForLinkedIn(row, orgId);
-          if (wasExisting) merged++;
+          const matchResult = get()._matchLeadForLinkedIn(row, orgId);
+          if (matchResult) merged++;
           else created++;
         }
       } catch (err) {
@@ -2345,7 +2358,8 @@ const useDataStore = create((set, get) => ({
       for (const log of missed) {
         try {
           const orgId = log.organization_id || (await get()._getOrgId());
-          let existingLead = get()._matchLeadForLinkedIn(log, orgId);
+          let matchResult = get()._matchLeadForLinkedIn(log, orgId);
+          let existingLead = matchResult ? matchResult.lead : null;
 
           if (!existingLead) {
             // Create a minimal lead
