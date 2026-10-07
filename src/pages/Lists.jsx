@@ -186,7 +186,29 @@ export default function Lists() {
   const [pushSuccess, setPushSuccess] = useState(false);
 
   // ── Computed data ──
-  const segmentDef = SEGMENT_DEFS.find(s => s.id === activeSegment) || SEGMENT_DEFS[0];
+  const uniqueLists = useMemo(() => {
+    const listNames = new Set();
+    list_leads.forEach(l => {
+      if (l.tags && Array.isArray(l.tags)) {
+        l.tags.forEach(t => {
+          if (t.startsWith('list:')) listNames.add(t.replace('list:', ''));
+        });
+      }
+    });
+    return Array.from(listNames).sort();
+  }, [list_leads]);
+
+  const customSegmentsDef = useMemo(() => uniqueLists.map(listName => ({
+    id: `list_${listName}`,
+    label: `📁 ${listName}`,
+    icon: Database,
+    color: '#8b5cf6',
+    filter: l => l.tags && l.tags.includes(`list:${listName}`)
+  })), [uniqueLists]);
+
+  const allSegments = useMemo(() => [...SEGMENT_DEFS, ...customSegmentsDef], [customSegmentsDef]);
+  
+  const segmentDef = allSegments.find(s => s.id === activeSegment) || allSegments[0];
 
   const filtered = useMemo(() => {
     let result = list_leads.filter(segmentDef.filter);
@@ -201,7 +223,8 @@ export default function Lists() {
         (l.contact_name || '').toLowerCase().includes(q) ||
         (l.email || '').toLowerCase().includes(q) ||
         (l.phone || '').toLowerCase().includes(q) ||
-        (l.industry || '').toLowerCase().includes(q)
+        (l.industry || '').toLowerCase().includes(q) ||
+        (l.tags && l.tags.some(t => t.toLowerCase().includes(q)))
       );
     }
 
@@ -209,8 +232,8 @@ export default function Lists() {
   }, [list_leads, segmentDef, searchQuery, filterStage, filterSource]);
 
   const segmentCounts = useMemo(() =>
-    Object.fromEntries(SEGMENT_DEFS.map(s => [s.id, list_leads.filter(s.filter).length])),
-    [list_leads]
+    Object.fromEntries(allSegments.map(s => [s.id, list_leads.filter(s.filter).length])),
+    [list_leads, allSegments]
   );
 
   // Reset page when filters change
@@ -432,7 +455,7 @@ export default function Lists() {
       {/* ── Segment Tabs ──────────────────────────────────── */}
       <div className="segment-tabs-bar">
         <div className="segment-tabs-scroll">
-          {SEGMENT_DEFS.map(seg => (
+          {allSegments.map(seg => (
             <button
               key={seg.id}
               className={`segment-tab ${activeSegment === seg.id ? 'active' : ''}`}

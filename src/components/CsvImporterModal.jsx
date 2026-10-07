@@ -85,6 +85,7 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
   const [error, setError] = useState(null);
   const [results, setResults] = useState({ success: 0, failed: 0, updated: 0, notFound: 0 });
   const [skipInvalidLeads, setSkipInvalidLeads] = useState(false);
+  const [listName, setListName] = useState('');
   const fileInputRef = useRef(null);
 
   const [importType, setImportType] = useState(type);
@@ -212,6 +213,11 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
         if (obj.priority) {
           const validPriority = ['Hot','Warm','Cold'];
           if (!validPriority.includes(obj.priority)) obj.priority = 'Cold';
+        }
+        
+        // Add to specific list if provided
+        if (importType === 'list_leads' && listName && listName.trim() !== '') {
+          obj.tags = [`list:${listName.trim()}`];
         }
       }
 
@@ -528,14 +534,30 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
 
               <div className="csv-actions" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '16px' }}>
                 {(importType === 'leads' || importType === 'list_leads') && (
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={skipInvalidLeads} 
-                      onChange={(e) => setSkipInvalidLeads(e.target.checked)} 
-                    />
-                    Skip invalid leads (missing Contact Name or Phone)
-                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {importType === 'list_leads' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Create or Add to List</label>
+                        <input 
+                          type="text" 
+                          className="input-base" 
+                          placeholder="e.g. Q4 Prospects, High Intent, etc."
+                          value={listName}
+                          onChange={(e) => setListName(e.target.value)}
+                          style={{ maxWidth: '300px' }}
+                        />
+                        <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Optional. Group these leads into a smart list.</span>
+                      </div>
+                    )}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={skipInvalidLeads} 
+                        onChange={(e) => setSkipInvalidLeads(e.target.checked)} 
+                      />
+                      Skip invalid leads (missing Contact Name or Phone)
+                    </label>
+                  </div>
                 )}
                 <div style={{ display: 'flex', gap: '12px' }}>
                   <button className="btn btn-ghost" onClick={() => setStep('upload')}>Back</button>
