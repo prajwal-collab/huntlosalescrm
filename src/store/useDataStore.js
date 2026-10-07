@@ -730,17 +730,21 @@ const useDataStore = create((set, get) => ({
   pushListLeadsToLeads: async (ids) => {
     const state = get();
     const leadsToPush = state.list_leads.filter(l => ids.includes(l.id)).map(l => {
-      const { id, created_at, updated_at, ...rest } = l; // strip ids so they become new leads
+      const { id, created_at, updated_at, tags, ...rest } = l; // strip ids and tags
       return rest;
     });
     if (leadsToPush.length === 0) return;
 
-    // Create in leads
-    const createdLeads = await get().bulkCreateLeads(leadsToPush);
-    // Delete from list_leads
-    await get().bulkDeleteListLeads(ids);
-    
-    return createdLeads;
+    try {
+      // Create in leads
+      const createdLeads = await get().bulkCreateLeads(leadsToPush);
+      // Delete from list_leads
+      await get().bulkDeleteListLeads(ids);
+      return createdLeads;
+    } catch (err) {
+      console.error('[DataStore] Failed to push to leads:', err);
+      throw err;
+    }
   },
 
   // Used by the "Import & Update" flow — enriches existing leads with contact
