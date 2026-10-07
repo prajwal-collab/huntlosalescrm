@@ -100,6 +100,16 @@ function ListLeadRow({ lead, isSelected, onSelect, onClick, team, onCall, onStag
   const ownerMember = team?.find(t => t.id === lead.owner_id);
   const ownerName = ownerMember?.name || ownerMember?.full_name || 'Unassigned';
 
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [noteValue, setNoteValue] = useState(lead.notes || '');
+
+  const handleNoteSave = () => {
+    setIsEditingNote(false);
+    if (noteValue !== (lead.notes || '')) {
+      onNoteChange(lead, noteValue);
+    }
+  };
+
   return (
     <div className={`llr${isSelected ? ' llr--selected' : ''}`} onClick={() => onClick(lead)}>
       {/* Check */}
@@ -175,8 +185,22 @@ function ListLeadRow({ lead, isSelected, onSelect, onClick, team, onCall, onStag
       </div>
 
       {/* Notes */}
-      <div className="llr-notes" title={lead.notes || 'No notes'}>
-        {lead.notes || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>No notes...</span>}
+      <div className="llr-notes" style={{ paddingRight: 16 }} onClick={(e) => e.stopPropagation()} onDoubleClick={() => setIsEditingNote(true)}>
+        {isEditingNote ? (
+          <input
+            autoFocus
+            type="text"
+            style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--accent-blue)', outline: 'none', fontSize: 12, background: 'var(--bg-base)', color: 'var(--text-primary)' }}
+            value={noteValue}
+            onChange={(e) => setNoteValue(e.target.value)}
+            onBlur={handleNoteSave}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleNoteSave(); }}
+          />
+        ) : (
+          <span style={{ fontSize: 12, color: noteValue ? 'var(--text-secondary)' : 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', cursor: 'pointer' }} title={noteValue || 'No notes'}>
+            {noteValue || 'Double-click to add note...'}
+          </span>
+        )}
       </div>
 
       {/* Actions */}
@@ -328,8 +352,29 @@ export default function Lists() {
       const reason = await showPrompt('Mark as Lost', `Reason for ${lead.company_name}?`, 'e.g. Pricing, No Budget...', 'Mark Lost', 'Cancel');
       if (!reason) return;
       obj.lost_reason = reason;
+      obj.notes = lead.notes ? `${lead.notes}\n[Lost Reason]: ${reason}` : `[Lost Reason]: ${reason}`;
     }
-    await updateListLead(lead.id, obj);
+    try {
+      await updateListLead(lead.id, obj);
+    } catch (e) {
+      // Fallback in case lost_reason column doesn't exist on list_leads
+      if (newStage === 'Lost') {
+        try {
+          delete obj.lost_reason;
+          await updateListLead(lead.id, obj);
+        } catch (e2) {
+          console.error('Failed to update stage:', e2);
+        }
+      } else {
+        console.error('Failed to update stage:', e);
+      }
+    }
+  };
+
+  const handleNoteChange = async (lead, noteValue) => {
+    try {
+      await updateListLead(lead.id, { notes: noteValue });
+    } catch (e) { console.error('Failed to update notes:', e); }
   };
 
   const handleOwnerChange = async (lead, oid) => {
@@ -787,6 +832,7 @@ export default function Lists() {
                 onCall={handleStartCall}
                 onStageChange={handleStageChange}
                 onOwnerChange={handleOwnerChange}
+                onNoteChange={handleNoteChange}
               />
             )) : (
               <div className="lp-empty">
