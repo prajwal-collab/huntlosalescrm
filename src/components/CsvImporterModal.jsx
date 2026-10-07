@@ -205,16 +205,37 @@ export default function CsvImporterModal({ isOpen, onClose, type = 'contacts', o
           obj.company_name = obj.contact_name || obj.email || obj.phone || `Imported Lead ${index + 1}`;
         }
         
-        // Clean up constrained fields to avoid DB check constraint errors
-        if (obj.company_type) {
-          const validTypes = ['Recruitment Agency','Staffing Firm','Startup','Enterprise','Other'];
-          if (!validTypes.includes(obj.company_type)) obj.company_type = 'Other';
-        }
-        if (obj.priority) {
-          const validPriority = ['Hot','Warm','Cold'];
-          if (!validPriority.includes(obj.priority)) obj.priority = 'Cold';
-        }
-        
+        // ── Sanitize ALL constrained fields to avoid DB check constraint errors ──
+        const sanitize = (val, valid, fallback) => (val && !valid.includes(val)) ? fallback : val;
+
+        obj.company_type = sanitize(obj.company_type,
+          ['Recruitment Agency','Staffing Firm','Startup','Enterprise','Other'], 'Other');
+
+        obj.priority = sanitize(obj.priority,
+          ['Hot','Warm','Cold'], 'Cold');
+
+        obj.next_action_priority = sanitize(obj.next_action_priority,
+          ['High','Medium','Low'], 'Medium');
+
+        obj.buying_potential = sanitize(obj.buying_potential,
+          ['High','Medium','Low','Unknown'], 'Unknown');
+
+        obj.email_status = sanitize(obj.email_status,
+          ['Not Sent','Sent','Opened','Clicked','Replied','Bounced'], 'Not Sent');
+
+        obj.linkedin_status = sanitize(obj.linkedin_status,
+          ['Not Sent','Requested','Connected','Messaged','Replied'], 'Not Sent');
+
+        obj.whatsapp_status = sanitize(obj.whatsapp_status,
+          ['Not Sent','Sent','Delivered','Read','Replied'], 'Not Sent');
+
+        obj.reply_status = sanitize(obj.reply_status,
+          ['No Reply','Positive','Neutral','Negative','Not Interested'], 'No Reply');
+
+        // Clamp integer score fields 0–100
+        if (obj.signal_score !== undefined) obj.signal_score = Math.min(100, Math.max(0, parseInt(obj.signal_score) || 0));
+        if (obj.icp_match_score !== undefined) obj.icp_match_score = Math.min(100, Math.max(0, parseInt(obj.icp_match_score) || 0));
+
         // Add to specific list if provided
         if (importType === 'list_leads' && listName && listName.trim() !== '') {
           obj.tags = [`list:${listName.trim()}`];
