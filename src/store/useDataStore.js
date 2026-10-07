@@ -731,6 +731,9 @@ const useDataStore = create((set, get) => ({
     const state = get();
     const leadsToPush = state.list_leads.filter(l => ids.includes(l.id)).map(l => {
       const { id, created_at, updated_at, tags, ...rest } = l; // strip ids and tags
+      // Prevent unique constraint conflict for empty strings
+      if (rest.email === '') rest.email = null;
+      if (rest.contact_linkedin === '') rest.contact_linkedin = null;
       return rest;
     });
     if (leadsToPush.length === 0) return;
