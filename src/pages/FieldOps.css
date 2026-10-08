@@ -542,3 +542,19 @@
   background: #eff6ff;
   color: #1b66f2;
 }
+
+/* === MOBILE RESPONSIVE === */
+@media (max-width: 768px) {
+  .fieldops-main {
+    padding: 24px 16px calc(100px + env(safe-area-inset-bottom)) 16px;
+  }
+  .fieldops-hero {
+    padding: 24px 16px 50px 16px;
+  }
+  .premium-card {
+    padding: 16px;
+  }
+  .tracker-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -796,3 +796,53 @@ html.dark-mode .dash-goal-input {
   text-transform: uppercase; letter-spacing: 0.7px;
   display: flex; align-items: center; gap: 6px;
 }
+
+/* === MOBILE RESPONSIVE (< 768px) === */
+@media (max-width: 768px) {
+  .dash-hero {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 16px;
+  }
+  .dash-hero-actions {
+    align-items: flex-start;
+  }
+  .dash-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .dash-priority-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .dash-main-grid {
+    grid-template-columns: 1fr;
+  }
+  .dash-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+  .dash-panel-header {
+    padding: 12px 14px;
+  }
+  .dash-lead-row, .dash-insight-row, .dash-activity-row, .dash-goal-block {
+    padding: 10px 14px;
+  }
+}
+
+/* === MOBILE RESPONSIVE (< 480px) === */
+@media (max-width: 480px) {
+  .dash-stats-row {
+    grid-template-columns: 1fr;
+  }
+  .dash-priority-grid {
+    grid-template-columns: 1fr;
+  }
+  .dash-hero-kpis {
+    flex-wrap: wrap;
+  }
+  .dash-hero-kpi {
+    flex: 1 1 45%;
+    border-bottom: 1px solid var(--bg-border);
+  }
+  .dash-hero-kpi:nth-child(even) {
+    border-right: none;
+  }
+}

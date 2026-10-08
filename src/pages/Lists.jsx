@@ -7,7 +7,7 @@ import {
   Search, Users, Target, FolderPlus, LayoutGrid, List,
   Activity, Mail, Phone, TrendingUp, Layers, Star,
   Clock, Edit2, X, Trash2, Pencil, Zap,
-  ChevronDown, ChevronLeft, ChevronRight, Eye,
+  ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Eye,
   FolderOpen, ArrowUpRight, CheckCircle, RefreshCw,
   MoreHorizontal, SlidersHorizontal, Flame
 } from 'lucide-react';
@@ -90,7 +90,7 @@ const SEGMENT_DEFS = [
 ];
 
 // ── Lead Row ────────────────────────────────────────────────
-function ListLeadRow({ lead, isSelected, onSelect, onClick, team, onCall, onStageChange, onOwnerChange }) {
+function ListLeadRow({ lead, isSelected, onSelect, onClick, team, onCall, onStageChange, onOwnerChange, onNoteChange }) {
   const score = useMemo(() => computeSignalScore(lead), [lead]);
   const completeness = useMemo(() => computeCompleteness(lead), [lead]);
   const completenessColor = getCompletenessColor(completeness);
@@ -197,7 +197,7 @@ function ListLeadRow({ lead, isSelected, onSelect, onClick, team, onCall, onStag
             onKeyDown={(e) => { if (e.key === 'Enter') handleNoteSave(); }}
           />
         ) : (
-          <span style={{ fontSize: 12, color: noteValue ? 'var(--text-secondary)' : 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', cursor: 'pointer' }} title={noteValue || 'No notes'}>
+          <span style={{ display: 'block', fontSize: 12, color: noteValue ? 'var(--text-secondary)' : 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', cursor: 'pointer' }} title={noteValue || 'No notes'}>
             {noteValue || 'Double-click to add note...'}
           </span>
         )}
@@ -229,6 +229,7 @@ export default function Lists() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
   const [viewMode, setViewMode] = useState('table'); // table | card
+  const [showHeader, setShowHeader] = useState(true);
 
   // modals
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -491,6 +492,10 @@ export default function Lists() {
           <p className="lp-subtitle">Segment, enrich and manage your pipeline in one place</p>
         </div>
         <div className="lp-header-right">
+          <button className="lp-btn lp-btn--ghost" onClick={() => setShowHeader(v => !v)}>
+            {showHeader ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            <span>{showHeader ? 'Hide Header' : 'Show Header'}</span>
+          </button>
           <button className={`lp-btn lp-btn--ghost ${showManageLists ? 'active' : ''}`} onClick={() => setShowManageLists(v => !v)}>
             <Layers size={15} />
             <span>Manage Lists</span>
@@ -506,8 +511,11 @@ export default function Lists() {
         </div>
       </div>
 
-      {/* ═══ STATS BAR ═══════════════════════════════════════ */}
-      <div className="lp-stats">
+      {/* ═══ COLLAPSIBLE TOP SECTION ═════════════════════════ */}
+      {showHeader && (
+        <>
+          {/* ═══ STATS BAR ═══════════════════════════════════════ */}
+          <div className="lp-stats">
         <div className="lp-stat">
           <div className="lp-stat-icon" style={{ background: 'rgba(59,130,246,0.12)', color: '#3b82f6' }}><Users size={16} /></div>
           <div>
@@ -682,6 +690,8 @@ export default function Lists() {
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* ═══ TOOLBAR ═════════════════════════════════════════ */}
       <div className="lp-toolbar">

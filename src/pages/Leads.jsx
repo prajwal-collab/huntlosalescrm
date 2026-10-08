@@ -272,7 +272,7 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user, 
             onKeyDown={(e) => { if (e.key === 'Enter') handleNoteSave(); }}
           />
         ) : (
-          <span style={{ fontSize: 12, color: noteValue ? 'var(--text-secondary)' : 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', cursor: 'pointer' }}>
+          <span style={{ display: 'block', fontSize: 12, color: noteValue ? 'var(--text-secondary)' : 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', cursor: 'pointer' }} title={noteValue || 'No notes'}>
             {noteValue || 'Double-click to add note...'}
           </span>
         )}

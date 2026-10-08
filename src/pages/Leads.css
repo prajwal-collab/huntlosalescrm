@@ -745,3 +745,39 @@
 .lbc-action { font-size: 10.5px; color: var(--accent-blue); background: var(--accent-blue-muted); padding: 3px 6px; border-radius: var(--radius-xs); margin-bottom: 6px; font-weight: 500; }
 .lbc-footer { display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: var(--text-tertiary); border-top: 1px dashed var(--bg-border); padding-top: 7px; }
 .lbc-mrr { color: var(--success); font-weight: 600; }
+
+/* === MOBILE RESPONSIVE === */
+@media (max-width: 768px) {
+  .leads-header {
+    height: auto;
+    padding: 12px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .leads-header-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .leads-toolbar {
+    flex-wrap: wrap;
+    padding: 8px 16px;
+  }
+  .leads-search-wrap {
+    max-width: 100%;
+  }
+  .lead-drawer {
+    width: 100%;
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1002;
+  }
+  .bulk-bar {
+    padding: 0 16px;
+    flex-wrap: wrap;
+    height: auto;
+    padding: 8px 16px;
+  }
+}

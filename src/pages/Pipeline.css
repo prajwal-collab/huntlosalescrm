@@ -295,3 +295,22 @@
   border: 1.5px solid #111827;
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
+
+/* === MOBILE RESPONSIVE === */
+@media (max-width: 768px) {
+  .pipeline-toolbar {
+    flex-wrap: wrap;
+    padding: 0 16px;
+  }
+  .filter-chips {
+    overflow-x: auto;
+    padding-bottom: 4px;
+    width: 100%;
+  }
+  .filter-chips::-webkit-scrollbar {
+    display: none;
+  }
+  .kanban-board {
+    padding: 0 16px 16px;
+  }
+}

@@ -800,6 +800,63 @@ input:checked + .toggle-slider:before { transform: translateX(16px); }
   animation: fade-in-fast 0.12s ease;
 }
 
+/* === GLOBAL MOBILE OVERRIDES (< 768px) === */
+@media (max-width: 768px) {
+  .page-content {
+    padding: 12px;
+    padding-bottom: calc(85px + env(safe-area-inset-bottom));
+  }
+
+  /* Improve Tap Targets */
+  .btn, .btn-md {
+    height: 40px;
+    font-size: 14px;
+    padding: 0 16px;
+  }
+  
+  .btn-sm {
+    height: 36px;
+    font-size: 13px;
+  }
+  
+  .input-base, .search-box {
+    height: 42px;
+    font-size: 16px; /* Prevents iOS auto-zoom */
+    padding: 10px 14px;
+  }
+
+  /* Add glass effect utility for premium feel */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+  }
+  
+  html.dark-mode .glass-panel {
+    background: rgba(17, 17, 19, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Make panels adapt to screen width */
+  .card, .dash-panel, .contact-detail {
+    border-radius: var(--radius-md);
+  }
+
+  .contact-detail {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Force scrollbars to show occasionally on touch so user knows it scrolls */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+}
+
 .global-slider-content {
   background: var(--bg-surface);
   width: 100%;
