@@ -37,11 +37,17 @@
     color: var(--text-tertiary);
     text-decoration: none;
     height: 100%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
     transition: var(--transition-fast);
   }
 
   .mobile-nav-item span {
-    font-size: 10px;
+    font-size: 10.5px;
     font-weight: 600;
   }
 

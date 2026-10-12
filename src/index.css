@@ -966,137 +966,104 @@ input:checked + .toggle-slider:before { transform: translateX(16px); }
    GLOBAL MOBILE RESPONSIVENESS (< 768px)
    ============================================ */
 @media (max-width: 768px) {
-  /* Hide scrollbars for cleaner mobile experience while preserving functionality */
-  ::-webkit-scrollbar {
-    display: none;
-  }
-  * {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  /* Prevent whole-page horizontal scrolling/wobble */
+  html, body {
+    overflow-x: hidden;
+    max-width: 100%;
   }
 
-  /* Core Layout Fixes */
+  /* Core Shell & Layout */
   .app-shell {
     flex-direction: column;
+    overflow: hidden;
+    height: 100vh;
+    height: 100dvh;
+    max-width: 100%;
+  }
+
+  .main-area {
+    height: 100%;
+    overflow: hidden;
   }
   
-  /* Give space for bottom nav */
+  /* Give space for fixed bottom nav and safe areas */
   .page-content {
-    padding: var(--space-3) var(--space-3) !important;
-    padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
+    padding: 12px 12px !important;
+    padding-bottom: calc(75px + env(safe-area-inset-bottom)) !important;
+    overflow-x: hidden;
   }
 
-  /* Make all Drawers take full width on mobile & slide up from bottom */
+  /* Drawers behave as native bottom sheets on mobile */
   .contact-detail, 
   .deal-drawer,
-  [class*="drawer"] {
+  .lead-drawer {
     width: 100% !important;
-    right: 0 !important;
     max-width: 100vw !important;
     border-left: none !important;
-    border-radius: 16px 16px 0 0 !important;
-    height: 92vh !important;
-    top: auto !important;
+    border-radius: 18px 18px 0 0 !important;
+    height: 90vh !important;
+    height: 90dvh !important;
+    position: fixed !important;
     bottom: 0 !important;
-    animation: slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    z-index: 1060 !important;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.28) !important;
+    animation: slide-up 0.26s cubic-bezier(0.32, 0.72, 0, 1) !important;
   }
 
-  /* Modals take full width with some margin */
+  /* Modals take responsive screen width */
   .modal,
-  [class*="modal-content"] {
-    width: 92% !important;
-    max-width: none !important;
+  .modal-content {
+    width: calc(100% - 24px) !important;
+    max-width: 520px !important;
     margin: 0 auto !important;
     padding: 16px !important;
   }
 
-  /* Fix Page Headers */
-  .page-header-row,
-  .leads-header,
-  [class*="header"] {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    height: auto !important;
-    padding: 12px 16px !important;
-    gap: 12px !important;
-  }
-  
-  .leads-header-right,
-  .page-header-actions {
-    width: 100% !important;
-    justify-content: flex-start !important;
-    overflow-x: auto !important;
-    padding-bottom: 4px; /* for scrolling */
-  }
-
-  /* Ensure inputs and selects are touch-friendly */
-  input, select, textarea, button {
-    font-size: 16px !important; /* Prevents iOS auto-zoom */
+  /* Prevent iOS zoom on input focus while keeping buttons normal size */
+  input:not([type="checkbox"]):not([type="radio"]), 
+  select, 
+  textarea {
+    font-size: 16px !important;
   }
 
   .input-base {
-    padding: 10px 12px !important;
+    padding: 9px 12px !important;
   }
 
-  /* Grids and Stats collapse to 1 column */
+  /* Stat Grids collapse cleanly */
   .stat-grid,
-  .dashboard-grid,
-  [class*="grid"] {
+  .dashboard-grid {
     grid-template-columns: 1fr !important;
     gap: 12px !important;
   }
 
-  /* Fix Tables / Lists Container */
+  /* Safe horizontal scroll wrappers for tables */
   .table-wrap,
   .leads-table-wrap,
   .lists-body,
   .pipeline-board {
     padding: 0 !important;
-    width: 100vw !important;
-    margin-left: -16px !important; /* Counteract page padding if needed */
-  }
-
-  /* Lists Page Specific */
-  .lp-stats {
-    flex-direction: column !important;
-    gap: 16px !important;
-    padding: 16px !important;
-  }
-  .lp-stat-div {
-    width: 100% !important;
-    height: 1px !important;
-    margin: 8px 0 !important;
-  }
-  .lp-manage-panel-header, .lp-manage-grid {
-    flex-direction: column !important;
-    grid-template-columns: 1fr !important;
-    gap: 12px !important;
-  }
-  .lp-controls {
-    flex-direction: column !important;
-    align-items: stretch !important;
-  }
-  .lp-controls-left, .lp-controls-right {
-    flex-wrap: wrap !important;
-  }
-
-  /* Allow Horizontal Scrolling for rows */
-  .leads-list,
-  .table-container {
-    padding: 0 16px !important;
+    max-width: 100% !important;
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch;
   }
-  
-  .leads-table-head,
-  .lead-row {
-    min-width: 1000px !important; /* Ensure it stays a row */
+
+  /* Allow Horizontal Scrolling for tables */
+  .leads-list,
+  .table-container {
+    padding: 0 4px !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Topbar Fixes */
   .topbar {
-    padding: 8px 12px !important;
+    padding: 0 12px !important;
     gap: 8px !important;
+    height: 52px !important;
   }
   .ai-search-trigger {
     padding: 0 8px !important;

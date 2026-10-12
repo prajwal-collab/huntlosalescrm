@@ -2,16 +2,19 @@
 // HUNTLO SALES OS — TOP BAR v3
 // ============================================
 import { useState, useEffect } from 'react';
-import { Search, Bell, Plus, Command, Moon, Sun } from 'lucide-react';
+import { Search, Bell, Plus, Command, Moon, Sun, Menu } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import useUIStore from '../../store/useUIStore';
 import useAuthStore from '../../store/useAuthStore';
 import NotificationDropdown from './NotificationDropdown';
 import './TopBar.css';
 
+const logoImg = "https://res.cloudinary.com/dxlsyh1qj/image/upload/v1783768087/Group_39_olh8ld.png";
+
 const PAGE_TITLES = {
   '/': 'Dashboard',
   '/leads': 'Leads',
+  '/lists': 'Smart Lists',
   '/pipeline': 'Pipeline',
   '/companies': 'Accounts',
   '/contacts': 'Contacts',
@@ -27,11 +30,13 @@ const PAGE_TITLES = {
   '/calculator': 'Calculator',
   '/utm': 'LinkTrack',
   '/field-ops': 'FieldOps',
+  '/admin-dashboard': 'Admin Analytics',
+  '/linkedin-outreach': 'LinkedIn Outreach',
   '/invoice-generator': 'Invoice Generator',
 };
 
 export default function TopBar({ onNewDeal }) {
-  const { openCommandCenter, activeNotifications } = useUIStore();
+  const { openCommandCenter, activeNotifications, toggleMobileNav } = useUIStore();
   const { user } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
@@ -72,7 +77,20 @@ export default function TopBar({ onNewDeal }) {
   return (
     <header className="topbar">
       <div className="topbar-left">
-        <h1 className="page-title">{title}</h1>
+        <button
+          className="topbar-menu-toggle"
+          onClick={toggleMobileNav}
+          title="Open Menu"
+          aria-label="Open Navigation Menu"
+        >
+          <Menu size={18} />
+        </button>
+        <div className="topbar-title-wrap">
+          <span className="topbar-logo-badge">
+            <img src={logoImg} alt="Huntlo" />
+          </span>
+          <h1 className="page-title">{title}</h1>
+        </div>
       </div>
 
       <div className="topbar-center">
@@ -91,6 +109,16 @@ export default function TopBar({ onNewDeal }) {
       </div>
 
       <div className="topbar-right">
+        {/* Mobile Search Button */}
+        <button
+          className="icon-btn mobile-search-btn"
+          onClick={openCommandCenter}
+          title="Search or ask AI"
+          aria-label="Search"
+        >
+          <Search size={15} />
+        </button>
+
         <button
           className="icon-btn"
           onClick={() => setIsDark(!isDark)}
@@ -101,9 +129,9 @@ export default function TopBar({ onNewDeal }) {
 
         <div className="topbar-divider" />
 
-        <button className="btn btn-sm btn-primary" onClick={onNewDeal}>
+        <button className="btn btn-sm btn-primary new-deal-btn" onClick={onNewDeal}>
           <Plus size={13} />
-          New Deal
+          <span className="new-deal-label">New Deal</span>
         </button>
 
         <div style={{ position: 'relative' }}>

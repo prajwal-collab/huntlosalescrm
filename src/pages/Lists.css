@@ -1292,3 +1292,76 @@
 
 .lp-empty h3 { font-size: 18px; margin: 0 0 8px 0; color: var(--text-primary); }
 .lp-empty p { font-size: 14px; margin: 0 0 24px 0; max-width: 300px; }
+
+/* === MOBILE RESPONSIVE (< 768px) === */
+@media (max-width: 768px) {
+  .lp {
+    padding: 12px;
+    height: auto;
+    min-height: calc(100vh - 56px);
+  }
+
+  .lp-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .lp-header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .lp-stats {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    padding: 12px !important;
+  }
+
+  .lp-stat-div {
+    display: none;
+  }
+
+  .lp-stat-card {
+    padding: 10px 12px;
+  }
+
+  .lp-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .lp-controls-left, .lp-controls-right {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .lp-search-box {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .lp-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-md);
+  }
+
+  .llr-head, .llr {
+    min-width: 820px;
+  }
+
+  .lp-bulk-bar {
+    width: calc(100% - 24px);
+    left: 12px;
+    bottom: calc(75px + env(safe-area-inset-bottom));
+    padding: 10px 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

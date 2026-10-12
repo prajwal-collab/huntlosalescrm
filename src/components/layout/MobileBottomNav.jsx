@@ -1,14 +1,16 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Target, MapPin, CheckSquare, Settings } from 'lucide-react';
+import { LayoutDashboard, Target, BarChart3, Phone, Menu } from 'lucide-react';
+import useUIStore from '../../store/useUIStore';
 import './MobileBottomNav.css';
 
 export default function MobileBottomNav() {
+  const { mobileNavOpen, toggleMobileNav } = useUIStore();
+
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Home' },
     { to: '/leads', icon: Target, label: 'Leads' },
-    { to: '/field-ops', icon: MapPin, label: 'FieldOps' },
-    { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
-    { to: '/settings', icon: Settings, label: 'Settings' }
+    { to: '/pipeline', icon: BarChart3, label: 'Pipeline' },
+    { to: '/call-logs', icon: Phone, label: 'Calls' },
   ];
 
   return (
@@ -24,6 +26,16 @@ export default function MobileBottomNav() {
           <span>{label}</span>
         </NavLink>
       ))}
+
+      <button
+        type="button"
+        className={`mobile-nav-item mobile-menu-tab ${mobileNavOpen ? 'active' : ''}`}
+        onClick={toggleMobileNav}
+        aria-label="Toggle All Apps Menu"
+      >
+        <Menu size={20} />
+        <span>Menu</span>
+      </button>
     </nav>
   );
 }

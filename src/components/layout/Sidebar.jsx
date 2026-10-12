@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BarChart3, Building2, Users, CheckSquare,
   Calendar, Zap, FileText, Settings, Bell, ChevronLeft,
   ChevronRight, LogOut, Sun, Moon, TrendingUp,
-  ChevronDown, Target, BookOpen, Calculator, Video, Link, Phone, BarChart2, MapPin, Receipt, Database
+  ChevronDown, Target, BookOpen, Calculator, Video, Link, Phone, BarChart2, MapPin, Receipt, Database, X
 } from 'lucide-react';
 import useUIStore from '../../store/useUIStore';
 import useAuthStore from '../../store/useAuthStore';
@@ -45,14 +45,21 @@ const NAV_GROUPS = [
   }
 ];
 
-function NavGroup({ group, sidebarCollapsed }) {
+function NavGroup({ group, sidebarCollapsed, onItemClick }) {
   const [expanded, setExpanded] = useState(true);
   
   if (sidebarCollapsed) {
     return (
       <div className="sidebar-group collapsed">
         {group.items.map(({ to, icon: Icon, label }) => (
-          <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title={label}>
+          <NavLink
+            key={to}
+            to={to}
+            end={to === '/'}
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            title={label}
+            onClick={onItemClick}
+          >
             <Icon size={16} />
           </NavLink>
         ))}
@@ -69,7 +76,13 @@ function NavGroup({ group, sidebarCollapsed }) {
       {expanded && (
         <div className="group-items">
           {group.items.map(({ to, icon: Icon, label, badge }) => (
-            <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              onClick={onItemClick}
+            >
               <Icon size={16} />
               <span>{label}</span>
               {badge && <span style={{ fontSize: 8, color: '#16a34a', marginLeft: 'auto' }}>{badge}</span>}
@@ -82,7 +95,7 @@ function NavGroup({ group, sidebarCollapsed }) {
 }
 
 export default function Sidebar() {
-  const { sidebarCollapsed, toggleSidebar, theme, toggleTheme } = useUIStore();
+  const { sidebarCollapsed, toggleSidebar, mobileNavOpen, closeMobileNav } = useUIStore();
   const { user, signOut, team } = useAuthStore();
   const navigate = useNavigate();
 
@@ -96,85 +109,109 @@ export default function Sidebar() {
   const isManager = userProfile?.role === 'Manager';
 
   const handleSignOut = async () => {
+    closeMobileNav();
     await signOut();
     navigate('/signin');
   };
 
+  const handleNav = (path) => {
+    closeMobileNav();
+    navigate(path);
+  };
+
   return (
-    <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
-      {/* Logo */}
-      <div className="sidebar-logo">
-        <div className="logo-wrapper" style={{ display: 'flex', alignItems: 'center', height: '32px', overflow: 'hidden' }}>
-          <img src={logoImg} alt="Huntlo Icon" style={{ height: '32px', width: '32px', objectFit: 'contain', marginLeft: sidebarCollapsed ? '2px' : '0' }} />
-          {!sidebarCollapsed && <span style={{ marginLeft: 8, fontWeight: 800, fontSize: 22, letterSpacing: '-0.03em', color: '#1b66f2', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>Huntlo</span>}
-        </div>
-        <button className="collapse-btn" onClick={toggleSidebar} title="Toggle sidebar">
-          {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </button>
-      </div>
+    <>
+      {/* Mobile Drawer Backdrop */}
+      <div 
+        className={`sidebar-mobile-backdrop ${mobileNavOpen ? 'visible' : ''}`} 
+        onClick={closeMobileNav}
+        aria-hidden="true"
+      />
 
-      {/* Navigation */}
-      <nav className="sidebar-nav">
-        {NAV_GROUPS.map((group) => (
-          <NavGroup key={group.title} group={group} sidebarCollapsed={sidebarCollapsed} />
-        ))}
-        {/* Admin/Manager section */}
-        {(isAdmin || isManager) && (
-          <div className="sidebar-group">
-            {!sidebarCollapsed && (
-              <div className="group-header">
-                <span className="group-title">Admin</span>
-              </div>
-            )}
-            <div className={sidebarCollapsed ? '' : 'group-items'}>
-              <NavLink
-                to="/admin-dashboard"
-                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                title="Admin Analytics"
-              >
-                <BarChart2 size={16} />
-                {!sidebarCollapsed && <span>Admin Analytics</span>}
-                {!sidebarCollapsed && <span style={{ fontSize: 8, color: '#8b5cf6', marginLeft: 'auto' }}>●</span>}
-              </NavLink>
-            </div>
+      <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${mobileNavOpen ? 'mobile-open' : ''}`}>
+        {/* Logo & Header */}
+        <div className="sidebar-logo">
+          <div className="logo-wrapper" style={{ display: 'flex', alignItems: 'center', height: '32px', overflow: 'hidden' }}>
+            <img src={logoImg} alt="Huntlo Icon" style={{ height: '32px', width: '32px', objectFit: 'contain', marginLeft: sidebarCollapsed ? '2px' : '0' }} />
+            {!sidebarCollapsed && <span style={{ marginLeft: 8, fontWeight: 800, fontSize: 22, letterSpacing: '-0.03em', color: '#1b66f2', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>Huntlo</span>}
           </div>
-        )}
-      </nav>
-
-      {/* Bottom */}
-      <div className="sidebar-bottom">
-        <button className="nav-item" onClick={() => navigate('/settings?tab=notifications')}>
-          <Bell size={16} />
-          {!sidebarCollapsed && <span>Notifications</span>}
-        </button>
-        <button className="nav-item" onClick={() => navigate('/settings?tab=guide')}>
-          <BookOpen size={16} />
-          {!sidebarCollapsed && <span>User Guide</span>}
-        </button>
-        {isAdmin && (
-          <button className="nav-item" onClick={() => navigate('/settings')}>
-            <Settings size={16} />
-            {!sidebarCollapsed && <span>Settings</span>}
+          <button className="collapse-btn" onClick={toggleSidebar} title="Toggle sidebar">
+            {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           </button>
-        )}
+          <button className="mobile-close-btn" onClick={closeMobileNav} title="Close navigation menu">
+            <X size={18} />
+          </button>
+        </div>
 
-        <div className="sidebar-user" onClick={() => navigate('/settings?tab=profile')}>
-          <div className="avatar avatar-sm" style={{ background: avatarColor, width: 24, height: 24, fontSize: 10, borderRadius: 6 }}>
-            {initials}
-          </div>
-          {!sidebarCollapsed && (
-            <div className="user-info">
-              <span className="user-name">{name}</span>
+        {/* Navigation */}
+        <nav className="sidebar-nav">
+          {NAV_GROUPS.map((group) => (
+            <NavGroup
+              key={group.title}
+              group={group}
+              sidebarCollapsed={sidebarCollapsed}
+              onItemClick={closeMobileNav}
+            />
+          ))}
+          {/* Admin/Manager section */}
+          {(isAdmin || isManager) && (
+            <div className="sidebar-group">
+              {!sidebarCollapsed && (
+                <div className="group-header">
+                  <span className="group-title">Admin</span>
+                </div>
+              )}
+              <div className={sidebarCollapsed ? '' : 'group-items'}>
+                <NavLink
+                  to="/admin-dashboard"
+                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                  title="Admin Analytics"
+                  onClick={closeMobileNav}
+                >
+                  <BarChart2 size={16} />
+                  {!sidebarCollapsed && <span>Admin Analytics</span>}
+                  {!sidebarCollapsed && <span style={{ fontSize: 8, color: '#8b5cf6', marginLeft: 'auto' }}>●</span>}
+                </NavLink>
+              </div>
             </div>
           )}
-          {!sidebarCollapsed && (
-            <button className="sign-out-btn" onClick={(e) => { e.stopPropagation(); handleSignOut(); }} title="Sign out" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)' }}>
-              <LogOut size={14} />
-              <span style={{ fontSize: 12, fontWeight: 500 }}>Logout</span>
+        </nav>
+
+        {/* Bottom */}
+        <div className="sidebar-bottom">
+          <button className="nav-item" onClick={() => handleNav('/settings?tab=notifications')}>
+            <Bell size={16} />
+            {!sidebarCollapsed && <span>Notifications</span>}
+          </button>
+          <button className="nav-item" onClick={() => handleNav('/settings?tab=guide')}>
+            <BookOpen size={16} />
+            {!sidebarCollapsed && <span>User Guide</span>}
+          </button>
+          {isAdmin && (
+            <button className="nav-item" onClick={() => handleNav('/settings')}>
+              <Settings size={16} />
+              {!sidebarCollapsed && <span>Settings</span>}
             </button>
           )}
+
+          <div className="sidebar-user" onClick={() => handleNav('/settings?tab=profile')}>
+            <div className="avatar avatar-sm" style={{ background: avatarColor, width: 24, height: 24, fontSize: 10, borderRadius: 6 }}>
+              {initials}
+            </div>
+            {!sidebarCollapsed && (
+              <div className="user-info">
+                <span className="user-name">{name}</span>
+              </div>
+            )}
+            {!sidebarCollapsed && (
+              <button className="sign-out-btn" onClick={(e) => { e.stopPropagation(); handleSignOut(); }} title="Sign out" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)' }}>
+                <LogOut size={14} />
+                <span style={{ fontSize: 12, fontWeight: 500 }}>Logout</span>
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }

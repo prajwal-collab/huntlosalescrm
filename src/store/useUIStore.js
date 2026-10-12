@@ -13,6 +13,7 @@ const useUIStore = create(
   persist(
     (set) => ({
       sidebarCollapsed: false,
+      mobileNavOpen: false,
       commandCenterOpen: false,
       newLeadOpen: false,
       activeNotifications: 0,
@@ -21,6 +22,9 @@ const useUIStore = create(
 
       toggleSidebar: () => set(state => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),
+      openMobileNav: () => set({ mobileNavOpen: true }),
+      closeMobileNav: () => set({ mobileNavOpen: false }),
+      toggleMobileNav: () => set(state => ({ mobileNavOpen: !state.mobileNavOpen })),
       openCommandCenter: () => set({ commandCenterOpen: true }),
       closeCommandCenter: () => set({ commandCenterOpen: false }),
       toggleCommandCenter: () => set(state => ({ commandCenterOpen: !state.commandCenterOpen })),
