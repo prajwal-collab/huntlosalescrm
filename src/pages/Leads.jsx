@@ -3,6 +3,7 @@
 // AI-Native Signal-Driven Lead System
 // ============================================
 import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Search, Plus, X, Zap, TrendingUp, Building2,
   Mail, Link2, Phone, Globe, ChevronDown, ChevronLeft, ChevronRight,
@@ -388,6 +389,22 @@ export default function Leads() {
   const [showImporter, setShowImporter] = useState(false);
   const [showImporterUpdate, setShowImporterUpdate] = useState(false);
   const [convertLead, setConvertLead] = useState(null); // lead being converted to deal
+  const [searchParams] = useSearchParams();
+
+  // Handle URL deep-linking from Call Logs (leadId or search)
+  useEffect(() => {
+    const urlLeadId = searchParams.get('leadId');
+    const urlSearch = searchParams.get('search');
+    if (urlSearch && !search) {
+      setSearch(urlSearch);
+    }
+    if (urlLeadId && leads.length > 0) {
+      const target = leads.find(l => l.id === urlLeadId);
+      if (target) {
+        setSelectedLead(target);
+      }
+    }
+  }, [searchParams, leads]);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);

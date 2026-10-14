@@ -2,11 +2,12 @@
 // HUNTLO SALES OS — CALL LOGS PAGE
 // ============================================
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Search, PhoneCall, PhoneOff, PhoneForwarded, 
   Clock, Calendar, User, Building2, FileText, 
   Filter, ChevronDown, Phone, Play, UploadCloud, Save, X, AlertTriangle,
-  Bell, ArrowRight
+  Bell, ArrowRight, CheckCircle, ExternalLink, ArrowUpRight
 } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,6 +34,7 @@ function safeFormatDate(dateStr) {
 }
 
 export default function CallLogs() {
+  const navigate = useNavigate();
   const { tasks, leads, contacts, createTask, appendLeadNotes } = useDataStore();
   const { user, team, updateProfileMeta } = useAuthStore();
   const { addNotification } = useUIStore();
@@ -52,6 +54,40 @@ export default function CallLogs() {
   const [filterOutcome, setFilterOutcome] = useState('all');
   const [filterDate, setFilterDate] = useState('all');
   const [selectedCall, setSelectedCall] = useState(null);
+
+  // Helper: Find existing lead in CRM for a given call
+  const getCallLead = (call) => {
+    if (!call) return null;
+    if (call.linkedLeadId) {
+      const found = leads.find(l => l.id === call.linkedLeadId);
+      if (found) return found;
+    }
+    const cleanPhone = (call.phone || '').replace(/\D/g, '').slice(-10);
+    const company = (call.company || '').toLowerCase().trim();
+    const contact = (call.contactName || '').toLowerCase().trim();
+    const email = (call.email || '').toLowerCase().trim();
+
+    return leads.find(l => 
+      (email && l.email && l.email.toLowerCase().trim() === email) ||
+      (cleanPhone && cleanPhone.length >= 7 && l.phone && l.phone.replace(/\D/g, '').slice(-10) === cleanPhone) ||
+      (company && l.company_name && l.company_name.toLowerCase().trim() === company) ||
+      (contact && l.contact_name && l.contact_name.toLowerCase().trim() === contact)
+    ) || null;
+  };
+
+  // Helper: Jump to lead in Leads CRM
+  const navigateToLead = (call) => {
+    if (!call) return;
+    const lead = getCallLead(call);
+    if (lead) {
+      navigate(`/leads?leadId=${lead.id}`);
+    } else if (call.linkedLeadId) {
+      navigate(`/leads?leadId=${call.linkedLeadId}`);
+    } else {
+      const q = call.company || call.contactName || call.phone;
+      navigate(`/leads?search=${encodeURIComponent(q || '')}`);
+    }
+  };
 
   // Dialer & Call Logger State
   const [showCallLogger, setShowCallLogger] = useState(false);
@@ -75,7 +111,7 @@ export default function CallLogs() {
   const callLogs = useMemo(() => {
     return tasks
       .filter(t => {
-        const isCallType = t.type === 'cold_call' || (t.type === 'call' && t.notes && t.notes.includes('_type":"cold_call_log"')) || (t.type === 'calling_list_item' && t.status === 'completed');
+        const isCallType = t.type === 'cold_call' || (t.type === 'call' && t.notes && t.notes.includes('_type":"cold_call_log"')) || (t.type === 'calling_list_item' && (t.status === 'completed' || t.status === 'skipped'));
         if (!isCallType) return false;
         // Non-admins only see their own call logs
         if (!isAdmin && t.owner_id && user?.id && t.owner_id !== user.id) return false;
@@ -94,11 +130,13 @@ export default function CallLogs() {
           contactName: callData.contactName || t.title || '',
           company: callData.company || callData.company_name || '',
           phone: callData.phone || '',
+          email: callData.email || '',
           outcome: callData.outcome || 'unknown',
           outcomeLabel: callData.outcomeLabel || '',
           duration: callData.duration || '',
           notes: callData.notes || '',
           pushedToLead: callData.pushedToLead || false,
+          linkedLeadId: callData.linkedLeadId || null,
           isDialerCall: t.type === 'calling_list_item'
         };
       })
@@ -381,7 +419,7 @@ export default function CallLogs() {
     }
   };
 
-  const saveActiveCallWithForm = async (status, form, isPushed = false) => {
+  const saveActiveCallWithForm = async (status, form, isPushed = false, linkedLeadId = null) => {
     const curr = callingList[activeCallIdx];
     if (!curr) return;
     const task = tasks.find(t => t.id === curr.id);
@@ -389,6 +427,7 @@ export default function CallLogs() {
     let data = {};
     try { data = JSON.parse(task.notes || '{}'); } catch(e) {}
     const outcomeObj = CALL_OUTCOMES.find(o => o.value === form.outcome);
+    const finalLinkedLeadId = linkedLeadId || data.linkedLeadId || null;
     const newNotes = JSON.stringify({
       ...data,
       outcome: form.outcome,
@@ -396,7 +435,8 @@ export default function CallLogs() {
       duration: form.duration,
       notes: form.notes,
       timestamp: new Date().toISOString(),
-      ...(isPushed ? { pushedToLead: true } : {})
+      ...(isPushed ? { pushedToLead: true } : {}),
+      ...(finalLinkedLeadId ? { linkedLeadId: finalLinkedLeadId } : {})
     });
     await useDataStore.getState().updateTask(curr.id, { status, notes: newNotes });
   };
@@ -426,9 +466,6 @@ export default function CallLogs() {
     const pending = callingList.filter(c => c.status === 'pending');
     if (!pending.length) { alert('No pending contacts to push.'); return; }
 
-    // Identify contacts that should be skipped because they already exist as
-    // an Account (Company) record in the CRM. We match by company_name (exact,
-    // case-insensitive). These are already tracked as Accounts — not Leads.
     const currentCompanies = useDataStore.getState().companies;
     const existingAccountNames = new Set(
       currentCompanies.map(co => (co.name || '').toLowerCase().trim())
@@ -457,7 +494,7 @@ export default function CallLogs() {
           company_name: uniqueCompany,
           contact_name: curr.contact_name || '',
           phone: curr.phone || '',
-          email: curr.email || null,
+          email: curr.email?.trim() || null,
           stage: 'New Lead',
           source: 'Power Dialer',
           notes: 'Pushed from Power Dialer calling list.',
@@ -465,31 +502,33 @@ export default function CallLogs() {
         };
       });
       
-      await useDataStore.getState().bulkCreateLeadsFromDialer(leadsToCreate);
+      const resLeads = await useDataStore.getState().bulkCreateLeadsFromDialer(leadsToCreate);
       
       const allTasks = useDataStore.getState().tasks;
-      // Mark ALL pending tasks (including skipped accounts) as completed and pushed
-      const tasksToUpdate = pending.map(curr => {
-        const originalTask = allTasks.find(t => t.id === curr.id) || {};
+      // Mark ALL pending tasks as completed and pushed with linkedLeadId
+      const tasksToUpdate = pending.map((curr, idx) => {
+        const originalTask = allTasks.find(t => t.id === curr.id);
         let data = {};
-        try { data = JSON.parse(originalTask.notes || '{}'); } catch(e) {}
-        const newNotes = JSON.stringify({ ...data, pushedToLead: true });
+        if (originalTask) {
+          try { data = JSON.parse(originalTask.notes || '{}'); } catch(e) {}
+        }
+        const linkedId = resLeads?.[idx]?.id || null;
+        const newNotes = JSON.stringify({ ...data, pushedToLead: true, ...(linkedId ? { linkedLeadId: linkedId } : {}) });
 
         return {
-          ...originalTask,
+          id: curr.id,
           status: 'completed',
           notes: newNotes
         };
       });
       await useDataStore.getState().bulkUpdateTasks(tasksToUpdate);
       
-      // Force-refresh leads so the Leads page reflects bulk-pushed entries immediately
       useDataStore.getState()._refreshTable('leads');
       
       alert(`Successfully pushed ${leadsToCreate.length} contact(s) to CRM Leads!${toSkip.length > 0 ? `\n${toSkip.length} skipped (existing Accounts).` : ''}`);
     } catch (e) {
       console.error(e);
-      alert('Error pushing leads.');
+      alert('Error pushing leads: ' + e.message);
     } finally {
       setSaving(false);
     }
@@ -507,16 +546,11 @@ export default function CallLogs() {
     try {
       const curr = callingList[activeCallIdx];
       const savedForm = { ...activeCallForm };
-      
-      // 1. Save locally to tasks (marks as completed + pushedToLead)
-      await saveActiveCallWithForm('completed', savedForm, true);
 
-      // 2. Immediately push to CRM.
+      // 1. Immediately push to CRM.
       const outcomeObj = CALL_OUTCOMES.find(o => o.value === savedForm.outcome);
       const callNote = `📞 [${new Date().toLocaleDateString()}] ${outcomeObj?.label || savedForm.outcome} — ${savedForm.duration ? savedForm.duration + ' min' : 'N/A'} — ${savedForm.notes || 'No notes'}`;
 
-      // Try to find an exact matching lead in the store (by phone, contact name, or company)
-      // No existing lead found — create a new CRM lead via the dialer function
       const uniqueCompany = curr.company_name
         || (curr.contact_name ? `${curr.contact_name} (Individual)` : null)
         || `Dialer-${curr.id}`;
@@ -524,13 +558,17 @@ export default function CallLogs() {
         company_name: uniqueCompany,
         contact_name: curr.contact_name || '',
         phone: curr.phone || '',
-        ...(curr.email ? { email: curr.email } : {}),
+        email: curr.email?.trim() || null,
         stage: savedForm.outcome === 'connected' ? 'Engaged' : 'New Lead',
         source: 'Power Dialer',
         notes: callNote,
         last_contacted_at: new Date().toISOString(),
       };
-      await useDataStore.getState().bulkCreateLeadsFromDialer([leadData]);
+      const resLeads = await useDataStore.getState().bulkCreateLeadsFromDialer([leadData]);
+      const linkedLeadId = resLeads?.[0]?.id || null;
+
+      // 2. Save locally to tasks (marks as completed + pushedToLead + linkedLeadId)
+      await saveActiveCallWithForm('completed', savedForm, true, linkedLeadId);
 
       // ── Auto Follow-up Task ──────────────────────────────────────────
       if (savedForm.outcome === 'connected') {
@@ -585,7 +623,6 @@ export default function CallLogs() {
       const curr = callingList[activeCallIdx];
       const savedForm = { ...activeCallForm, outcome: 'skipped' };
       setActiveCallForm({ outcome: '', duration: '', notes: '' });
-      await saveActiveCallWithForm('skipped', savedForm, true);
 
       const callNote = `⏭️ [${new Date().toLocaleDateString()}] Skipped from Power Dialer`;
 
@@ -596,13 +633,16 @@ export default function CallLogs() {
         company_name: uniqueCompany,
         contact_name: curr.contact_name || '',
         phone: curr.phone || '',
-        ...(curr.email ? { email: curr.email } : {}),
+        email: curr.email?.trim() || null,
         stage: 'New Lead',
         source: 'Power Dialer',
         notes: callNote,
         last_contacted_at: new Date().toISOString(),
       };
-      await useDataStore.getState().bulkCreateLeadsFromDialer([leadData]);
+      const resLeads = await useDataStore.getState().bulkCreateLeadsFromDialer([leadData]);
+      const linkedLeadId = resLeads?.[0]?.id || null;
+
+      await saveActiveCallWithForm('skipped', savedForm, true, linkedLeadId);
 
       const due = new Date();
       due.setDate(due.getDate() + 1);
@@ -655,6 +695,36 @@ export default function CallLogs() {
         if (matchedLead) linkedLeadId = matchedLead.id;
       }
 
+      if (linkedLeadId) {
+        // ── Update existing lead with call notes ──────────────────────
+        const stageOrder = [
+          'New Lead','Researching','Ready for Outreach','Outreach Started',
+          'Engaged','Qualified','Demo Scheduled','Demo Complete',
+          'Trial Started','Customer','Lost'
+        ];
+        const existingLead = leads.find(l => l.id === linkedLeadId);
+        const currentStageIdx = stageOrder.indexOf(existingLead?.stage || 'New Lead');
+        const newStage = callForm.outcome === 'connected' ? 'Engaged' : existingLead?.stage;
+        const newStageIdx = stageOrder.indexOf(newStage || 'New Lead');
+        const stageUpdate = callForm.updateLeadStage || (newStageIdx > currentStageIdx ? newStage : null);
+        await appendLeadNotes(linkedLeadId, noteText, stageUpdate);
+      } else {
+        // ── No existing lead linked → auto-create a new CRM lead ──────
+        const uniqueCompany = callForm.company
+          || (callForm.contactName ? `${callForm.contactName} (Individual)` : `Contact-${Date.now()}`);
+        const resLeads = await useDataStore.getState().bulkCreateLeadsFromDialer([{
+          company_name: uniqueCompany,
+          contact_name: callForm.contactName || '',
+          phone: callForm.phone || '',
+          stage: callForm.outcome === 'connected' ? 'Engaged' : 'New Lead',
+          source: 'Cold Call Log',
+          notes: `📞 [${new Date().toLocaleDateString()}] ${noteText}`
+        }]);
+        if (resLeads?.[0]?.id) {
+          linkedLeadId = resLeads[0].id;
+        }
+      }
+
       const callData = {
         _type: 'cold_call_log',
         contactName: callForm.contactName,
@@ -677,33 +747,6 @@ export default function CallLogs() {
         status: 'completed',
         notes: JSON.stringify(callData),
       });
-
-      if (linkedLeadId) {
-        // ── Update existing lead with call notes ──────────────────────
-        const stageOrder = [
-          'New Lead','Researching','Ready for Outreach','Outreach Started',
-          'Engaged','Qualified','Demo Scheduled','Demo Complete',
-          'Trial Started','Customer','Lost'
-        ];
-        const existingLead = leads.find(l => l.id === linkedLeadId);
-        const currentStageIdx = stageOrder.indexOf(existingLead?.stage || 'New Lead');
-        const newStage = callForm.outcome === 'connected' ? 'Engaged' : existingLead?.stage;
-        const newStageIdx = stageOrder.indexOf(newStage || 'New Lead');
-        const stageUpdate = callForm.updateLeadStage || (newStageIdx > currentStageIdx ? newStage : null);
-        await appendLeadNotes(linkedLeadId, noteText, stageUpdate);
-      } else {
-        // ── No existing lead linked → auto-create a new CRM lead ──────
-        const uniqueCompany = callForm.company
-          || (callForm.contactName ? `${callForm.contactName} (Individual)` : `Contact-${Date.now()}`);
-        await useDataStore.getState().bulkCreateLeadsFromDialer([{
-          company_name: uniqueCompany,
-          contact_name: callForm.contactName || '',
-          phone: callForm.phone || '',
-          stage: callForm.outcome === 'connected' ? 'Engaged' : 'New Lead',
-          source: 'Cold Call Log',
-          notes: `📞 [${new Date().toLocaleDateString()}] ${noteText}`
-        }]);
-      }
 
 
       if (callForm.createFollowUp && callForm.followUpDue) {
@@ -765,18 +808,15 @@ export default function CallLogs() {
   };
 
   const handlePushAllPending = async () => {
-    // Use ALL call logs (not just current date filter) so nothing gets missed
-    const pendingLogs = callLogs.filter(call => !call.pushedToLead);
-    if (pendingLogs.length === 0) return;
+    // Push all calls that are either not marked pushed OR have no matching lead in the CRM
+    const pendingLogs = callLogs.filter(call => !call.pushedToLead || !getCallLead(call));
+    if (pendingLogs.length === 0) {
+      alert("All call logs are already pushed to Leads!");
+      return;
+    }
     
     setSaving(true);
     try {
-      const stageOrder = [
-        'New Lead','Researching','Ready for Outreach','Outreach Started',
-        'Engaged','Qualified','Demo Scheduled','Demo Complete',
-        'Trial Started','Customer','Lost'
-      ];
-
       const leadsToCreate = pendingLogs.map(call => {
         const callNote = `📞 [${new Date().toLocaleDateString()}] ${call.outcomeLabel || call.outcome} — ${call.duration ? call.duration + ' min' : 'N/A'} — ${call.notes || 'No notes'}`;
         const uniqueCompany = call.company
@@ -786,27 +826,27 @@ export default function CallLogs() {
           company_name: uniqueCompany,
           contact_name: call.contactName || '',
           phone: call.phone || '',
+          email: call.email || null,
           stage: call.outcome === 'connected' ? 'Engaged' : 'New Lead',
           source: 'Bulk Push from History',
           notes: callNote,
           last_contacted_at: new Date().toISOString(),
         };
       });
-      if (leadsToCreate.length > 0) {
-        await useDataStore.getState().bulkCreateLeadsFromDialer(leadsToCreate);
-      }
 
-      // Mark all pending logs as pushed in tasks.
-      // Use getState().tasks (not the closure) to get the latest task records.
+      const resLeads = await useDataStore.getState().bulkCreateLeadsFromDialer(leadsToCreate);
+
+      // Mark all pending logs as pushed in tasks with linkedLeadId
       const latestTasks = useDataStore.getState().tasks;
       const tasksToUpdate = [];
-      pendingLogs.forEach(call => {
+      pendingLogs.forEach((call, idx) => {
         const task = latestTasks.find(t => t.id === call.id);
         if (task) {
           let data = {};
           try { data = JSON.parse(task.notes || '{}'); } catch(e) {}
-          const newNotes = JSON.stringify({ ...data, pushedToLead: true });
-          tasksToUpdate.push({ ...task, notes: newNotes });
+          const linkedId = resLeads?.[idx]?.id || resLeads?.[0]?.id || null;
+          const newNotes = JSON.stringify({ ...data, pushedToLead: true, ...(linkedId ? { linkedLeadId: linkedId } : {}) });
+          tasksToUpdate.push({ id: task.id, notes: newNotes });
         }
       });
       if (tasksToUpdate.length > 0) {
@@ -818,6 +858,7 @@ export default function CallLogs() {
       if (selectedCall && pendingLogs.some(p => p.id === selectedCall.id)) {
         setSelectedCall({ ...selectedCall, pushedToLead: true });
       }
+      alert(`Successfully pushed/synced ${leadsToCreate.length} call log(s) to Leads CRM!`);
     } catch(e) {
       alert("Error pushing pending leads: " + e.message);
     } finally {
@@ -826,32 +867,36 @@ export default function CallLogs() {
   };
 
   const handleManualPush = async (call) => {
-    if (!call || call.pushedToLead) return;
+    if (!call) return;
     setSaving(true);
     try {
       const callNote = `📞 [${new Date().toLocaleDateString()}] ${call.outcomeLabel || call.outcome} — ${call.duration ? call.duration + ' min' : 'N/A'} — ${call.notes || 'No notes'}`;
       const uniqueCompany = call.company
         || (call.contactName ? `${call.contactName} (Individual)` : 'Unknown Company');
-      await useDataStore.getState().bulkCreateLeadsFromDialer([{
+      
+      const resLeads = await useDataStore.getState().bulkCreateLeadsFromDialer([{
         company_name: uniqueCompany,
         contact_name: call.contactName || '',
         phone: call.phone || '',
+        email: call.email || null,
         stage: call.outcome === 'connected' ? 'Engaged' : 'New Lead',
         source: 'Manual Push from History',
         notes: callNote,
         last_contacted_at: new Date().toISOString(),
       }]);
 
-      // Use getState().tasks (not the stale closure) to get the latest task record
+      const linkedId = resLeads?.[0]?.id || null;
+
+      // Update task record with pushedToLead and linkedLeadId
       const latestTask = useDataStore.getState().tasks.find(t => t.id === call.id);
       if (latestTask) {
         let data = {};
         try { data = JSON.parse(latestTask.notes || '{}'); } catch(e) {}
-        const newNotes = JSON.stringify({ ...data, pushedToLead: true });
+        const newNotes = JSON.stringify({ ...data, pushedToLead: true, ...(linkedId ? { linkedLeadId: linkedId } : {}) });
         await useDataStore.getState().updateTask(latestTask.id, { notes: newNotes });
       }
       useDataStore.getState()._refreshTable('leads');
-      setSelectedCall({ ...call, pushedToLead: true });
+      setSelectedCall({ ...call, pushedToLead: true, ...(linkedId ? { linkedLeadId: linkedId } : {}) });
     } catch(e) {
       alert("Error pushing to lead: " + e.message);
     } finally {
@@ -1087,7 +1132,7 @@ export default function CallLogs() {
                         </div>
                       </td>
                       <td>
-                        {!call.pushedToLead ? (
+                        {!call.pushedToLead && !getCallLead(call) ? (
                           <button 
                             className="cl-push-btn" 
                             onClick={(e) => { e.stopPropagation(); handleManualPush(call); }}
@@ -1096,9 +1141,13 @@ export default function CallLogs() {
                             Push to CRM
                           </button>
                         ) : (
-                          <span className="cl-pushed-badge">
-                            <Save size={12} /> Pushed
-                          </span>
+                          <button 
+                            className="cl-pushed-badge cl-pushed-link-btn" 
+                            onClick={(e) => { e.stopPropagation(); navigateToLead(call); }}
+                            title="Click to view lead in Leads CRM"
+                          >
+                            <CheckCircle size={12} /> Lead <ArrowUpRight size={11} style={{ marginLeft: 2 }} />
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -1171,17 +1220,25 @@ export default function CallLogs() {
                     {selectedCall.notes || 'No notes provided for this call.'}
                   </div>
                   
-                  {/* The manual push button is now available in the table view as well */}
-                  {!selectedCall.pushedToLead && (
+                  {/* The manual push button or direct CRM navigation */}
+                  {selectedCall.pushedToLead || getCallLead(selectedCall) ? (
+                    <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ color: 'var(--success)', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                        <CheckCircle size={14} /> Synced to CRM Lead
+                      </div>
+                      <button 
+                        className="btn btn-outline" 
+                        onClick={() => navigateToLead(selectedCall)}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', fontSize: '13px', padding: '8px 12px' }}
+                      >
+                        <ExternalLink size={14} /> Open in Leads CRM
+                      </button>
+                    </div>
+                  ) : (
                     <div style={{ marginTop: '16px' }}>
                       <button className="btn btn-primary" onClick={() => handleManualPush(selectedCall)} disabled={saving} style={{ width: '100%' }}>
                         Push to CRM Lead
                       </button>
-                    </div>
-                  )}
-                  {selectedCall.pushedToLead && (
-                    <div style={{ marginTop: '16px', color: 'var(--success)', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
-                      <Save size={14} /> Pushed to Lead successfully
                     </div>
                   )}
                 </div>
@@ -1485,10 +1542,11 @@ export default function CallLogs() {
                 style={{ background: '#ef4444', color: 'white', border: 'none' }}
                 disabled={saving}
                 onClick={async () => {
-                  if (!window.confirm("This will forcefully push ALL uncalled contacts and any un-pushed logs to the Leads CRM. Continue?")) return;
+                  if (!window.confirm("This will forcefully push/sync all completed and uncalled contacts to CRM Leads. Continue?")) return;
                   setSaving(true);
                   try {
                     const latestTasks = useDataStore.getState().tasks;
+                    const currentLeads = useDataStore.getState().leads;
                     const toPush = latestTasks.filter(t => t.type === 'calling_list_item' || t.type === 'cold_call');
                     
                     const leadsToCreate = [];
@@ -1498,35 +1556,59 @@ export default function CallLogs() {
                        let data = {};
                        try { data = JSON.parse(t.notes || '{}'); } catch(e) {}
                        
-                       if (data.pushedToLead) continue; // already pushed
+                       const contactName = (data.contactName || t.title || '').trim();
+                       const company = (data.company || data.company_name || '').trim();
+                       const cleanPhone = (data.phone || '').replace(/\D/g, '').slice(-10);
+                       const cleanEmail = (data.email || '').toLowerCase().trim();
                        
-                       const company = data.company_name || t.title || '';
-                       const uniqueCompany = company || `Contact-${t.id}`;
+                       // Skip only if already pushed AND verified to exist in Leads
+                       const existsInDb = currentLeads.some(l => 
+                         (data.linkedLeadId && l.id === data.linkedLeadId) ||
+                         (cleanEmail && l.email && l.email.toLowerCase().trim() === cleanEmail) ||
+                         (cleanPhone && cleanPhone.length >= 7 && l.phone && l.phone.replace(/\D/g, '').slice(-10) === cleanPhone) ||
+                         (company && l.company_name && l.company_name.toLowerCase().trim() === company.toLowerCase())
+                       );
+
+                       if (data.pushedToLead && existsInDb) continue;
+                       
+                       const uniqueCompany = company || (contactName ? `${contactName} (Individual)` : `Contact-${t.id}`);
                        leadsToCreate.push({
                          company_name: uniqueCompany,
-                         contact_name: t.title || '',
-                         phone: data.phone || '',
-                         email: data.email || null,
+                         contact_name: contactName && contactName !== company ? contactName : '',
+                         phone: data.phone?.trim() || '',
+                         email: data.email?.trim() || null,
                          stage: data.outcome === 'connected' ? 'Engaged' : 'New Lead',
                          source: 'Force Push',
-                         notes: data.notes ? `[Call Note]: ${data.notes}` : 'Force pushed'
+                         notes: data.notes ? `[Call Note]: ${data.notes}` : 'Force pushed call log'
                        });
                        
                        tasksToUpdate.push({
-                         ...t,
+                         id: t.id,
                          status: 'completed',
                          notes: JSON.stringify({ ...data, pushedToLead: true })
                        });
                     }
                     
                     if (leadsToCreate.length > 0) {
-                      await useDataStore.getState().bulkCreateLeadsFromDialer(leadsToCreate);
+                      const resLeads = await useDataStore.getState().bulkCreateLeadsFromDialer(leadsToCreate);
+                      if (resLeads && resLeads.length > 0) {
+                        tasksToUpdate.forEach((tu, idx) => {
+                          const matchedRes = resLeads[idx] || resLeads[0];
+                          if (matchedRes?.id) {
+                            try {
+                              const parsed = JSON.parse(tu.notes);
+                              parsed.linkedLeadId = matchedRes.id;
+                              tu.notes = JSON.stringify(parsed);
+                            } catch(e) {}
+                          }
+                        });
+                      }
                     }
                     if (tasksToUpdate.length > 0) {
                       await useDataStore.getState().bulkUpdateTasks(tasksToUpdate);
                     }
                     useDataStore.getState()._refreshTable('leads');
-                    alert(`Emergency push successful! Pushed ${leadsToCreate.length} contacts to CRM.`);
+                    alert(`Emergency push successful! Pushed/synced ${leadsToCreate.length} contact(s) to CRM Leads.`);
                   } catch(e) {
                     alert("Error during force push: " + e.message);
                   } finally {

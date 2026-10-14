@@ -414,29 +414,41 @@ const useDataStore = create((set, get) => ({
   // Previously this only ran for calls from previous days (taskDate < today).
   // Now it covers ALL un-pushed completed calls including same-day calls so
   // that leads are never missed if the SDR forgot to click "Log & Next".
+  // Auto-push all un-pushed completed call logs to Leads CRM on app load.
+  // Handles BOTH calling_list_item (power dialer) AND cold_call (manual call logger).
+  // Also checks if a matching lead actually exists in the store to rescue any orphan logs.
   autoPushMissedCallLogs: async () => {
     try {
-      const { tasks, bulkCreateLeadsFromDialer, bulkUpdateTasks } = get();
+      const { tasks, leads, bulkCreateLeadsFromDialer, bulkUpdateTasks } = get();
 
-      // Handle BOTH calling_list_item (power dialer) AND cold_call (manual call logger)
-      // so that ALL 935+ un-pushed call logs get reflected in the Leads CRM.
       const missedTasks = tasks.filter(t => {
         const isCallType = t.type === 'calling_list_item' || t.type === 'cold_call';
         if (!isCallType) return false;
-        // calling_list_item must be completed; cold_call logs are always completed by design
         if (t.type === 'calling_list_item' && t.status !== 'completed') return false;
         
         let data = {};
         try { data = JSON.parse(t.notes || '{}'); } catch(e) {}
         
-        if (data.pushedToLead) return false;
-        if (!data.outcome) return false;
+        // If already marked pushed, verify if a matching lead exists in the store
+        if (data.pushedToLead) {
+          const company = (data.company || data.company_name || '').toLowerCase().trim();
+          const cleanPhone = (data.phone || '').replace(/\D/g, '').slice(-10);
+          const cleanEmail = (data.email || '').toLowerCase().trim();
+          const leadExists = leads.some(l => 
+            (data.linkedLeadId && l.id === data.linkedLeadId) ||
+            (cleanEmail && l.email && l.email.toLowerCase().trim() === cleanEmail) ||
+            (cleanPhone && cleanPhone.length >= 7 && l.phone && l.phone.replace(/\D/g, '').slice(-10) === cleanPhone) ||
+            (company && l.company_name && l.company_name.toLowerCase().trim() === company)
+          );
+          if (leadExists) return false;
+        }
         
-        return true; // Push all un-pushed completed calls regardless of date
+        if (!data.outcome) return false;
+        return true;
       });
 
       if (missedTasks.length === 0) return;
-      console.log(`[DataStore] Found ${missedTasks.length} un-pushed call log(s) — auto-pushing to leads...`);
+      console.log(`[DataStore] Found ${missedTasks.length} un-pushed/orphan call log(s) — auto-pushing to leads...`);
 
       const leadsToCreate = [];
       const tasksToUpdate = [];
@@ -445,49 +457,54 @@ const useDataStore = create((set, get) => ({
         let data = {};
         try { data = JSON.parse(t.notes || '{}'); } catch(e) {}
         
-        // cold_call logs store contact/company differently than calling_list_item
-        const contactName = data.contactName || t.title || '';
-        const companyName = data.company || data.company_name || '';
+        const contactName = (data.contactName || t.title || '').trim();
+        const companyName = (data.company || data.company_name || '').trim();
 
-        // Use a unique company_name per contact to avoid upsert collisions.
-        // Contacts without a company_name fall back to "[Name] (Individual)" or
-        // a unique ID-based key so they never merge into a shared "Unknown Company".
         const uniqueCompany = companyName
           || (contactName ? `${contactName} (Individual)` : null)
-          || `AutoPush-${t.id}`;
+          || `Contact-${t.id}`;
 
         const callDate = t.created_at ? new Date(t.created_at).toLocaleDateString() : new Date().toLocaleDateString();
         leadsToCreate.push({
           company_name: uniqueCompany,
           contact_name: contactName && contactName !== companyName ? contactName : '',
-          phone: data.phone || '',
-          ...(data.email ? { email: data.email } : {}),
+          phone: data.phone?.trim() || null,
+          email: data.email?.trim() || null,
           stage: data.outcome === 'connected' ? 'Engaged' : 'New Lead',
-          source: t.type === 'cold_call' ? 'Cold Call Log' : 'Auto-Push Missed Call',
+          source: t.type === 'cold_call' ? 'Cold Call Log' : 'Power Dialer',
           notes: `📞 [${callDate}] ${data.outcomeLabel || data.outcome} — ${data.duration ? data.duration + ' min' : 'N/A'} — ${data.notes || 'No notes'}`
         });
 
-        // Always mark as pushed — even if the lead upsert merges into an existing
-        // record, we don't want to retry this task on every subsequent page load.
         tasksToUpdate.push({
           id: t.id,
           notes: JSON.stringify({ ...data, pushedToLead: true })
         });
       }
 
-      // Always mark tasks as pushed first, then attempt lead upsert.
-      // This prevents the same tasks from being retried infinitely if the
-      // upsert hits a duplicate (which is now handled gracefully anyway).
-      await bulkUpdateTasks(tasksToUpdate);
       if (leadsToCreate.length > 0) {
         try {
-          await bulkCreateLeadsFromDialer(leadsToCreate);
+          const resultLeads = await bulkCreateLeadsFromDialer(leadsToCreate);
+          if (resultLeads && resultLeads.length > 0) {
+            tasksToUpdate.forEach((tu, idx) => {
+              const matchedRes = resultLeads[idx] || resultLeads[0];
+              if (matchedRes?.id) {
+                try {
+                  const parsed = JSON.parse(tu.notes);
+                  parsed.linkedLeadId = matchedRes.id;
+                  tu.notes = JSON.stringify(parsed);
+                } catch(e) {}
+              }
+            });
+          }
         } catch (upsertErr) {
           console.error('[DataStore] Auto-push lead upsert failed:', upsertErr.message);
-          // Don't re-throw — tasks are already marked pushed; leads can be created manually.
         }
       }
-      console.log(`[DataStore] Auto-pushed ${leadsToCreate.length} call log(s) to leads (dialer + cold call).`);
+
+      if (tasksToUpdate.length > 0) {
+        await bulkUpdateTasks(tasksToUpdate);
+      }
+      console.log(`[DataStore] Auto-pushed ${leadsToCreate.length} call log(s) to leads.`);
 
     } catch (err) {
       console.error('[DataStore] Failed to auto-push missed calls:', err);
@@ -590,14 +607,23 @@ const useDataStore = create((set, get) => ({
 
   // Append timestamped notes to a lead without overwriting existing notes
   appendLeadNotes: async (id, newNote, stageUpdate) => {
-    const lead = get().leads.find(l => l.id === id);
+    let lead = get().leads.find(l => l.id === id);
+    if (!lead) {
+      // Fallback: fetch directly from Supabase if not in store memory
+      const { data: dbLead } = await supabase.from('leads').select('*').eq('id', id).maybeSingle();
+      if (dbLead) lead = dbLead;
+    }
     if (!lead) return null;
+
     const timestamp = new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     const existingNotes = lead.notes || '';
     const appendedNotes = existingNotes
       ? `${existingNotes}\n\n---\n📞 [${timestamp}] ${newNote}`
       : `📞 [${timestamp}] ${newNote}`;
-    const updates = { notes: appendedNotes };
+    const updates = { 
+      notes: appendedNotes,
+      last_contacted_at: new Date().toISOString()
+    };
     if (stageUpdate) updates.stage = stageUpdate;
     const { data, error } = await supabase.from('leads').update(updates).eq('id', id).select().single();
     if (error) throw error;
@@ -838,109 +864,180 @@ const useDataStore = create((set, get) => ({
   // For existing leads (matched by company_name), call notes are APPENDED to
   // the existing notes rather than overwritten. For new leads, a fresh record is created.
   bulkCreateLeadsFromDialer: async (leadsList) => {
+    if (!leadsList || leadsList.length === 0) return [];
     const { user } = useAuthStore.getState();
     await get().ensureProfile();
     const orgId = await get()._getOrgId();
 
     const inserted = [];
     const mergedLeads = [];
+    const currentLeads = [...get().leads];
+
+    const normalizePhone = (p) => p ? String(p).replace(/\D/g, '').slice(-10) : '';
+
+    const stageOrder = [
+      'New Lead','Researching','Ready for Outreach','Outreach Started',
+      'Engaged','Qualified','Demo Scheduled','Demo Complete',
+      'Trial Started','Customer','Lost'
+    ];
 
     for (const lead of leadsList) {
-      const record = {
-        ...lead,
-        owner_id: user?.id,
-        ...(orgId ? { organization_id: orgId } : {})
-      };
+      try {
+        // 1. Sanitize all incoming fields
+        const trimmedCompany = (lead.company_name || '').trim();
+        const trimmedContact = (lead.contact_name || '').trim();
+        const cleanEmail = lead.email && String(lead.email).trim() !== '' 
+          ? String(lead.email).trim().toLowerCase() 
+          : null;
+        const cleanPhone = lead.phone && String(lead.phone).trim() !== '' 
+          ? String(lead.phone).trim() 
+          : null;
+        const cleanLinkedin = lead.contact_linkedin && String(lead.contact_linkedin).trim() !== '' 
+          ? String(lead.contact_linkedin).trim() 
+          : null;
 
-      // ── Check if a lead already exists for this company in this org ──
-      const existingLead = orgId
-        ? get().leads.find(
-            l =>
-              l.organization_id === orgId &&
-              l.company_name?.toLowerCase().trim() === lead.company_name?.toLowerCase().trim()
-          )
-        : null;
+        // Ensure non-empty company_name (Postgres NOT NULL constraint)
+        const finalCompany = trimmedCompany || (trimmedContact ? `${trimmedContact} (Individual)` : 'Lead');
+        const phoneDigits = normalizePhone(cleanPhone);
 
-      if (existingLead) {
-        // ── Existing lead: APPEND call note to existing notes ───────────
-        const timestamp = new Date().toLocaleString('en-IN', {
-          day: 'numeric', month: 'short', year: 'numeric',
-          hour: '2-digit', minute: '2-digit'
+        // 2. Comprehensive matching for existing lead:
+        let existingLead = currentLeads.find(l => {
+          if (lead.id && l.id === lead.id) return true;
+          if (cleanEmail && l.email && l.email.toLowerCase().trim() === cleanEmail) return true;
+          if (phoneDigits && phoneDigits.length >= 7 && normalizePhone(l.phone) === phoneDigits) return true;
+          if (orgId && l.organization_id === orgId && l.company_name?.toLowerCase().trim() === finalCompany.toLowerCase()) return true;
+          if (!orgId && l.company_name?.toLowerCase().trim() === finalCompany.toLowerCase()) return true;
+          return false;
         });
-        const existingNotes = existingLead.notes || '';
-        const newCallNote = lead.notes || '';
-        const appendedNotes = existingNotes
-          ? `${existingNotes}\n\n---\n${newCallNote}`
-          : newCallNote;
 
-        // Only update stage if the new stage is "more advanced" than current
-        const stageOrder = [
-          'New Lead','Researching','Ready for Outreach','Outreach Started',
-          'Engaged','Qualified','Demo Scheduled','Demo Complete',
-          'Trial Started','Customer','Lost'
-        ];
-        const currentStageIdx = stageOrder.indexOf(existingLead.stage || 'New Lead');
-        const newStageIdx = stageOrder.indexOf(lead.stage || 'New Lead');
-        const updatedStage = newStageIdx > currentStageIdx ? lead.stage : existingLead.stage;
-
-        const updates = {
-          notes: appendedNotes,
-          stage: updatedStage,
-          last_contacted_at: new Date().toISOString(),
-          // Enrich phone/contact_name if missing on existing lead
-          ...(lead.phone && !existingLead.phone ? { phone: lead.phone } : {}),
-          ...(lead.contact_name && !existingLead.contact_name ? { contact_name: lead.contact_name } : {}),
-          ...(lead.email && !existingLead.email ? { email: lead.email } : {}),
-        };
-
-        const { data, error } = await supabase
-          .from('leads')
-          .update(updates)
-          .eq('id', existingLead.id)
-          .select()
-          .single();
-
-        if (error) {
-          console.error('[Dialer] Lead update error:', error.message, lead.company_name);
-          throw error;
-        } else if (data) {
-          mergedLeads.push(data);
-          set(state => ({
-            leads: state.leads.map(l => l.id === data.id ? data : l)
-          }));
-        }
-      } else {
-        // ── New lead: upsert (handles race conditions / DB-level duplicates) ──
-        const { data, error } = await supabase
-          .from('leads')
-          .upsert(record, {
-            onConflict: 'organization_id,company_name',
-            ignoreDuplicates: false,
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('[Dialer] Lead upsert error:', error.message, lead.company_name);
-          throw error;
-        } else if (data) {
-          // Double-check: was it actually new or did it merge at DB level?
-          const existsBefore = get().leads.some(l => l.id === data.id);
-          if (existsBefore) {
-            mergedLeads.push(data);
-            set(state => ({
-              leads: state.leads.map(l => l.id === data.id ? data : l)
-            }));
+        // Quick DB fallback if not found in memory
+        if (!existingLead && (cleanEmail || finalCompany)) {
+          let query = supabase.from('leads').select('*');
+          if (orgId) query = query.eq('organization_id', orgId);
+          if (cleanEmail) {
+            query = query.eq('email', cleanEmail);
           } else {
-            inserted.push(data);
-            set(state => ({ leads: [data, ...state.leads] }));
+            query = query.ilike('company_name', finalCompany);
           }
-          try {
-            await get()._autoLinkLeadToEntities(data, orgId);
-          } catch (linkErr) {
-            console.warn('[DataStore] Auto-link failed (non-fatal):', linkErr.message);
+          const { data: dbMatch } = await query.maybeSingle();
+          if (dbMatch) {
+            existingLead = dbMatch;
           }
         }
+
+        if (existingLead) {
+          // ── Existing lead: APPEND notes & update stage ──
+          const existingNotes = existingLead.notes || '';
+          const newCallNote = lead.notes || '';
+          const appendedNotes = existingNotes
+            ? (newCallNote ? `${existingNotes}\n\n---\n${newCallNote}` : existingNotes)
+            : newCallNote;
+
+          const currentStageIdx = stageOrder.indexOf(existingLead.stage || 'New Lead');
+          const newStageIdx = stageOrder.indexOf(lead.stage || 'New Lead');
+          const updatedStage = newStageIdx > currentStageIdx ? lead.stage : existingLead.stage;
+
+          const updates = {
+            notes: appendedNotes,
+            stage: updatedStage,
+            last_contacted_at: new Date().toISOString(),
+            ...(cleanPhone && !existingLead.phone ? { phone: cleanPhone } : {}),
+            ...(trimmedContact && !existingLead.contact_name ? { contact_name: trimmedContact } : {}),
+            ...(cleanEmail && !existingLead.email ? { email: cleanEmail } : {}),
+            ...(cleanLinkedin && !existingLead.contact_linkedin ? { contact_linkedin: cleanLinkedin } : {}),
+          };
+
+          const { data: updatedData, error: updateErr } = await supabase
+            .from('leads')
+            .update(updates)
+            .eq('id', existingLead.id)
+            .select()
+            .single();
+
+          if (!updateErr && updatedData) {
+            mergedLeads.push(updatedData);
+            const idx = currentLeads.findIndex(l => l.id === updatedData.id);
+            if (idx >= 0) currentLeads[idx] = updatedData;
+            else currentLeads.push(updatedData);
+          } else {
+            console.warn('[Dialer] Update lead fallback warning:', updateErr?.message);
+            // Keep memory copy up to date even if DB update encountered edge case
+            mergedLeads.push({ ...existingLead, ...updates });
+          }
+        } else {
+          // ── New lead: INSERT record ──
+          const newRecord = {
+            company_name: finalCompany,
+            contact_name: trimmedContact || null,
+            phone: cleanPhone,
+            email: cleanEmail,
+            contact_linkedin: cleanLinkedin,
+            stage: lead.stage || 'New Lead',
+            source: lead.source || 'Power Dialer',
+            notes: lead.notes || null,
+            last_contacted_at: lead.last_contacted_at || new Date().toISOString(),
+            owner_id: user?.id,
+            ...(orgId ? { organization_id: orgId } : {})
+          };
+
+          let { data: insertedData, error: insertErr } = await supabase
+            .from('leads')
+            .insert(newRecord)
+            .select()
+            .single();
+
+          // Handle conflict (e.g. unique constraint on company_name or email)
+          if (insertErr && (insertErr.code === '23505' || insertErr.message?.includes('unique constraint') || insertErr.message?.includes('duplicate key'))) {
+            console.log('[Dialer] Conflict detected on insert, finding conflicting lead to merge:', insertErr.message);
+            let fetchQuery = supabase.from('leads').select('*');
+            if (orgId) fetchQuery = fetchQuery.eq('organization_id', orgId);
+            if (cleanEmail) {
+              fetchQuery = fetchQuery.eq('email', cleanEmail);
+            } else {
+              fetchQuery = fetchQuery.ilike('company_name', finalCompany);
+            }
+            const { data: conflictLead } = await fetchQuery.maybeSingle();
+
+            if (conflictLead) {
+              const existingNotes = conflictLead.notes || '';
+              const newCallNote = lead.notes || '';
+              const appendedNotes = existingNotes
+                ? (newCallNote ? `${existingNotes}\n\n---\n${newCallNote}` : existingNotes)
+                : newCallNote;
+
+              const { data: mergedData } = await supabase
+                .from('leads')
+                .update({
+                  notes: appendedNotes,
+                  last_contacted_at: new Date().toISOString(),
+                  ...(cleanPhone && !conflictLead.phone ? { phone: cleanPhone } : {}),
+                  ...(cleanEmail && !conflictLead.email ? { email: cleanEmail } : {}),
+                })
+                .eq('id', conflictLead.id)
+                .select()
+                .single();
+
+              if (mergedData) {
+                mergedLeads.push(mergedData);
+                const idx = currentLeads.findIndex(l => l.id === mergedData.id);
+                if (idx >= 0) currentLeads[idx] = mergedData;
+                else currentLeads.push(mergedData);
+              }
+            }
+          } else if (!insertErr && insertedData) {
+            inserted.push(insertedData);
+            currentLeads.unshift(insertedData);
+            try {
+              await get()._autoLinkLeadToEntities(insertedData, orgId);
+            } catch (linkErr) {
+              console.warn('[DataStore] Auto-link failed (non-fatal):', linkErr.message);
+            }
+          } else if (insertErr) {
+            console.error('[Dialer] Lead insert error:', insertErr.message, finalCompany);
+          }
+        }
+      } catch (itemErr) {
+        console.error('[Dialer] Unexpected error processing lead item:', itemErr);
       }
     }
 
@@ -951,20 +1048,11 @@ const useDataStore = create((set, get) => ({
       console.log(`[Dialer] Created ${inserted.length} new lead(s).`);
     }
 
-    // Force-refresh the leads table so the Leads page reflects new/updated entries
-    // immediately without waiting for Realtime events (which can be delayed).
+    // Refresh store state with updated leads
+    set({ leads: currentLeads });
     try {
-      const { data: freshLeads, error: refreshErr } = await supabase
-        .from('leads')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (!refreshErr && freshLeads) {
-        set({ leads: freshLeads });
-        console.log(`[Dialer] Leads refreshed — ${freshLeads.length} total in store.`);
-      }
-    } catch (refreshErr) {
-      console.warn('[Dialer] Post-insert leads refresh failed (non-fatal):', refreshErr);
-    }
+      get()._refreshTable('leads');
+    } catch(e) {}
 
     return [...inserted, ...mergedLeads];
   },
@@ -1331,15 +1419,40 @@ const useDataStore = create((set, get) => ({
   },
 
   bulkUpdateTasks: async (tasksList) => {
-    const { data, error } = await supabase.from('tasks').upsert(tasksList).select();
-    if (error) throw error;
-    set(state => ({
-      tasks: state.tasks.map(t => {
-        const updated = data.find(d => d.id === t.id);
-        return updated || t;
-      })
-    }));
-    return data;
+    if (!tasksList || tasksList.length === 0) return [];
+
+    // Safely update tasks by id using .update() to avoid NOT NULL violations on partial fields
+    const updated = [];
+    for (const t of tasksList) {
+      if (!t.id) continue;
+      const { id, ...fields } = t;
+      if (Object.keys(fields).length === 0) continue;
+      try {
+        const { data, error } = await supabase
+          .from('tasks')
+          .update(fields)
+          .eq('id', id)
+          .select()
+          .maybeSingle();
+        if (!error && data) {
+          updated.push(data);
+        } else if (error) {
+          console.warn(`[DataStore] Failed to update task ${id}:`, error.message);
+        }
+      } catch (err) {
+        console.warn(`[DataStore] Exception updating task ${id}:`, err);
+      }
+    }
+
+    if (updated.length > 0) {
+      set(state => ({
+        tasks: state.tasks.map(t => {
+          const u = updated.find(d => d.id === t.id);
+          return u || t;
+        })
+      }));
+    }
+    return updated;
   },
 
   // ── Proposals ──────────────────────────────

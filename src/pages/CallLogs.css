@@ -314,6 +314,22 @@
   border-radius: var(--radius-sm);
 }
 
+.cl-pushed-link-btn {
+  border: 1px solid rgba(22, 163, 74, 0.25);
+  cursor: pointer;
+  background: rgba(22, 163, 74, 0.08);
+  transition: var(--transition-fast);
+  text-decoration: none;
+}
+
+.cl-pushed-link-btn:hover {
+  background: rgba(22, 163, 74, 0.18);
+  border-color: rgba(22, 163, 74, 0.45);
+  color: #15803d;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(22, 163, 74, 0.15);
+}
+
 /* ── Empty State ── */
 .cl-empty-cell { padding: 48px 20px; }
 .cl-empty-state {
