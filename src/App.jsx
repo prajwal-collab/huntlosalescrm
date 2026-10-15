@@ -29,7 +29,7 @@ import Tasks from './pages/Tasks';
 import Meetings from './pages/Meetings';
 import Documents from './pages/Documents';
 import Reports from './pages/Reports';
-import Settings from './pages/Settings';
+import Settings from './pages/Settings.jsx';
 import Team from './pages/Team';
 import CallLogs from './pages/CallLogs';
 import AdminDashboard from './pages/AdminDashboard';
