@@ -72,6 +72,7 @@ function LinkedInQuickLogger({ lead, onUpdate }) {
     setSaving(true);
     try {
       await logLinkedInOutreach({
+        lead_id: lead.id,
         contact_name: lead.contact_name || '',
         company_name: lead.company_name || '',
         designation: lead.designation || '',
@@ -80,6 +81,20 @@ function LinkedInQuickLogger({ lead, onUpdate }) {
         reply_sentiment: action === 'replied' ? (sentiment || 'neutral') : null,
         notes: note,
       });
+      const LI_STATUS_MAP = {
+        connection_request: 'Requested',
+        accepted: 'Connected',
+        message: 'Messaged',
+        inmail: 'Messaged',
+        replied: 'Replied',
+      };
+      const newStatus = LI_STATUS_MAP[action] || 'Requested';
+      if (onUpdate) {
+        onUpdate(lead.id, {
+          linkedin_status: newStatus,
+          stage: (action === 'replied' || action === 'accepted') ? 'Engaged' : lead.stage,
+        });
+      }
       setDone('✅ Logged!');
       setAction('');
       setSentiment('');

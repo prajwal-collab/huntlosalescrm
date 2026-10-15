@@ -2183,31 +2183,56 @@ const useDataStore = create((set, get) => ({
     const { leads, list_leads } = get();
     const normalizeUrl = get()._normalizeLinkedInUrl;
     const normalizedUrl = normalizeUrl(entry.linkedin_url);
+    const cleanEmail = entry.email && String(entry.email).trim() !== '' ? String(entry.email).trim().toLowerCase() : null;
+    const cleanCompany = entry.company_name?.toLowerCase().trim();
+    const cleanContact = entry.contact_name?.toLowerCase().trim();
 
     const checkMatch = (list) => {
+      // 1. Direct lead_id match if provided
+      if (entry.lead_id) {
+        const byId = list.find(l => l.id === entry.lead_id);
+        if (byId) return byId;
+      }
+
+      // 2. Exact LinkedIn URL match
       if (normalizedUrl) {
         const byLinkedIn = list.find(l => {
-          if (orgId && l.organization_id !== orgId) return false;
+          if (orgId && l.organization_id && l.organization_id !== orgId) return false;
           const leadUrl = normalizeUrl(l.contact_linkedin) || normalizeUrl(l.linkedin_url);
           return leadUrl && leadUrl === normalizedUrl;
         });
         if (byLinkedIn) return byLinkedIn;
       }
 
-      if (entry.company_name) {
-        const byCompany = list.find(l => {
-          if (orgId && l.organization_id !== orgId) return false;
-          return l.company_name?.toLowerCase().trim() === entry.company_name.toLowerCase().trim();
-        });
-        if (byCompany) return byCompany;
-      }
-
-      if (entry.email) {
+      // 3. Email match
+      if (cleanEmail) {
         const byEmail = list.find(l => {
-          if (orgId && l.organization_id !== orgId) return false;
-          return l.email?.toLowerCase().trim() === entry.email.toLowerCase().trim();
+          if (orgId && l.organization_id && l.organization_id !== orgId) return false;
+          return l.email?.toLowerCase().trim() === cleanEmail;
         });
         if (byEmail) return byEmail;
+      }
+
+      // 4. Company + Contact match
+      if (cleanCompany && cleanContact) {
+        const byBoth = list.find(l => {
+          if (orgId && l.organization_id && l.organization_id !== orgId) return false;
+          const matchComp = l.company_name?.toLowerCase().trim() === cleanCompany;
+          const matchName = l.contact_name?.toLowerCase().trim() === cleanContact;
+          return matchComp && matchName;
+        });
+        if (byBoth) return byBoth;
+      }
+
+      // 5. Company match ONLY if existing lead has NO contact or matching contact
+      if (cleanCompany) {
+        const byCompany = list.find(l => {
+          if (orgId && l.organization_id && l.organization_id !== orgId) return false;
+          const matchComp = l.company_name?.toLowerCase().trim() === cleanCompany;
+          const noOtherContact = !l.contact_name || (cleanContact && l.contact_name?.toLowerCase().trim() === cleanContact);
+          return matchComp && noOtherContact;
+        });
+        if (byCompany) return byCompany;
       }
 
       return null;
@@ -2252,11 +2277,19 @@ const useDataStore = create((set, get) => ({
     await get().ensureProfile();
     const orgId = await get()._getOrgId();
 
+    const LI_STATUS_MAP = {
+      connection_request: 'Requested',
+      accepted: 'Connected',
+      message: 'Messaged',
+      inmail: 'Messaged',
+      replied: 'Replied',
+    };
+
     // 1. Find or create lead (if not skipping sync)
     let matchResult = entry.skip_sync ? null : get()._matchLeadForLinkedIn(entry, orgId);
     let existingLead = matchResult ? matchResult.lead : null;
     let leadType = matchResult ? matchResult.type : 'leads'; // defaults to leads for new
-    let leadId = existingLead?.id || null;
+    let leadId = existingLead?.id || entry.lead_id || null;
 
     const timestamp = new Date().toLocaleString('en-IN', {
       day: 'numeric', month: 'short', year: 'numeric',
@@ -2274,6 +2307,13 @@ const useDataStore = create((set, get) => ({
     const sentimentNote = entry.reply_sentiment ? ` — Sentiment: ${entry.reply_sentiment}` : '';
     const contactInfo = entry.contact_name ? ` to ${entry.contact_name}` : '';
     const noteText = `🔗 [${timestamp}] LinkedIn: ${actionLabel}${contactInfo}${sentimentNote}${entry.notes ? ' — ' + entry.notes : ''}`;
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const cleanEmail = (entry.email && String(entry.email).trim() !== '') ? String(entry.email).trim().toLowerCase() : null;
+    const cleanLinkedin = (entry.linkedin_url && String(entry.linkedin_url).trim() !== '') ? String(entry.linkedin_url).trim() : null;
+    const cleanCompany = (entry.company_name && entry.company_name.trim()) 
+      || (entry.contact_name ? `${entry.contact_name.trim()} (Individual)` : 'Prospect (LinkedIn)');
+    const cleanContact = entry.contact_name ? entry.contact_name.trim() : '';
 
     if (existingLead) {
       // Update existing lead
@@ -2285,35 +2325,33 @@ const useDataStore = create((set, get) => ({
         ? `${existingNotes}\n\n---\n${noteText}`
         : noteText;
 
-      // Determine linkedin_status from action_type
-      const LI_STATUS_MAP = {
-        connection_request: 'Requested',
-        accepted: 'Connected',
-        message: 'Messaged',
-        inmail: 'Messaged',
-        replied: 'Replied',
-      };
-
       const updates = {
         notes: appendedNotes,
         stage: newStage,
-        linkedin_status: LI_STATUS_MAP[entry.action_type] || existingLead.linkedin_status,
-        outreach_sent: true,
-        linkedin_touches: (existingLead.linkedin_touches || 0) + 1,
+        linkedin_status: LI_STATUS_MAP[entry.action_type] || existingLead.linkedin_status || 'Requested',
         signals: {
           ...(existingLead.signals || {}),
           linkedin_activity: true,
         },
         // Enrich contact_linkedin if missing
-        ...(!existingLead.contact_linkedin && entry.linkedin_url ? { contact_linkedin: entry.linkedin_url } : {}),
+        ...(!existingLead.contact_linkedin && cleanLinkedin ? { contact_linkedin: cleanLinkedin } : {}),
         // Enrich contact_name if missing
-        ...(!existingLead.contact_name && entry.contact_name ? { contact_name: entry.contact_name } : {}),
+        ...(!existingLead.contact_name && cleanContact ? { contact_name: cleanContact } : {}),
+        // Enrich designation if missing
+        ...(!existingLead.designation && entry.designation ? { designation: entry.designation.trim() } : {}),
+        // Enrich email if missing
+        ...(!existingLead.email && cleanEmail ? { email: cleanEmail } : {}),
         // Set positive_interest for interested/demo_booked
         ...(entry.reply_sentiment === 'interested' || entry.reply_sentiment === 'demo_booked'
           ? { positive_interest: true } : {}),
         ...(entry.reply_sentiment === 'demo_booked' ? { demo_requested: true } : {}),
-        last_contacted_at: new Date().toISOString(),
+        last_contact_date: todayStr,
       };
+
+      if (leadType === 'leads') {
+        updates.outreach_sent = true;
+        updates.linkedin_touches = (existingLead.linkedin_touches || 0) + 1;
+      }
 
       const { data, error } = await supabase
         .from(leadType) // 'leads' or 'list_leads'
@@ -2330,32 +2368,34 @@ const useDataStore = create((set, get) => ({
         }
         leadId = data.id;
         
-        // Auto-create/sync the contact even for existing leads so all connections are tracked
+        // Auto-create/sync company + contact
         await get()._autoCreateCompanyContact({
-          company_name: existingLead.company_name || entry.company_name,
-          contact_name: entry.contact_name,
-          designation: entry.designation,
-          contact_linkedin: entry.linkedin_url,
-          email: entry.email
+          company_name: existingLead.company_name || cleanCompany,
+          contact_name: cleanContact || existingLead.contact_name,
+          designation: entry.designation || existingLead.designation,
+          contact_linkedin: cleanLinkedin || existingLead.contact_linkedin,
+          email: cleanEmail || existingLead.email
         }, orgId);
+      } else {
+        console.warn('[LinkedIn] Error updating existing lead:', error?.message);
+        // Fallback: update in-memory state so user sees change immediately
+        const merged = { ...existingLead, ...updates };
+        if (leadType === 'leads') {
+          set(state => ({ leads: state.leads.map(l => l.id === existingLead.id ? merged : l) }));
+        } else {
+          set(state => ({ list_leads: state.list_leads.map(l => l.id === existingLead.id ? merged : l) }));
+        }
+        leadId = existingLead.id;
       }
     } else if (!entry.skip_sync) {
       // Create new lead
-      const LI_STATUS_MAP = {
-        connection_request: 'Requested',
-        accepted: 'Connected',
-        message: 'Messaged',
-        inmail: 'Messaged',
-        replied: 'Replied',
-      };
-
       const newStage = get()._linkedInActionToStage(entry.action_type, entry.reply_sentiment, 'New Lead');
 
       const leadPayload = {
-        company_name: entry.company_name || `${entry.contact_name || 'Unknown'} (Individual)`,
-        contact_name: entry.contact_name || '',
-        designation: entry.designation || '',
-        contact_linkedin: entry.linkedin_url || '',
+        company_name: cleanCompany,
+        contact_name: cleanContact,
+        designation: entry.designation ? entry.designation.trim() : '',
+        contact_linkedin: cleanLinkedin,
         stage: newStage,
         source: 'LinkedIn Outreach',
         linkedin_status: LI_STATUS_MAP[entry.action_type] || 'Requested',
@@ -2372,41 +2412,73 @@ const useDataStore = create((set, get) => ({
         notes: noteText,
         owner_id: user?.id,
         ...(orgId ? { organization_id: orgId } : {}),
-        ...(entry.email ? { email: entry.email } : {}),
+        ...(cleanEmail ? { email: cleanEmail } : {}),
         ...(entry.reply_sentiment === 'interested' || entry.reply_sentiment === 'demo_booked'
           ? { positive_interest: true } : {}),
         ...(entry.reply_sentiment === 'demo_booked' ? { demo_requested: true } : {}),
-        last_contacted_at: new Date().toISOString(),
+        last_contact_date: todayStr,
       };
 
-      const { data: newLead, error: leadErr } = await supabase
+      let { data: newLead, error: leadErr } = await supabase
         .from('leads')
         .insert(leadPayload)
         .select()
         .single();
 
+      // Handle duplicate/unique conflict if any
+      if (leadErr && (leadErr.code === '23505' || leadErr.message?.includes('unique constraint') || leadErr.message?.includes('duplicate key'))) {
+        console.log('[LinkedIn] Conflict on insert, merging into existing lead:', leadErr.message);
+        let query = supabase.from('leads').select('*');
+        if (orgId) query = query.eq('organization_id', orgId);
+        if (cleanEmail) {
+          query = query.eq('email', cleanEmail);
+        } else {
+          query = query.ilike('company_name', cleanCompany);
+        }
+        const { data: conflictLead } = await query.maybeSingle();
+        if (conflictLead) {
+          newLead = conflictLead;
+          leadErr = null;
+          const mergedNotes = conflictLead.notes ? `${conflictLead.notes}\n\n---\n${noteText}` : noteText;
+          const conflictUpdates = {
+            notes: mergedNotes,
+            stage: newStage,
+            linkedin_status: LI_STATUS_MAP[entry.action_type] || conflictLead.linkedin_status || 'Requested',
+            outreach_sent: true,
+            linkedin_touches: (conflictLead.linkedin_touches || 0) + 1,
+            last_contact_date: todayStr,
+            ...(cleanLinkedin && !conflictLead.contact_linkedin ? { contact_linkedin: cleanLinkedin } : {}),
+            ...(cleanContact && !conflictLead.contact_name ? { contact_name: cleanContact } : {}),
+          };
+          await supabase.from('leads').update(conflictUpdates).eq('id', conflictLead.id);
+          set(state => ({ leads: state.leads.map(l => l.id === conflictLead.id ? { ...l, ...conflictUpdates } : l) }));
+        }
+      }
+
       if (!leadErr && newLead) {
         set(state => ({ leads: [newLead, ...state.leads] }));
         leadId = newLead.id;
 
-        // Auto-create company + contact (same pattern as createLead)
+        // Auto-create company + contact
         await get()._autoCreateCompanyContact(newLead, orgId);
+      } else if (leadErr) {
+        console.error('[LinkedIn] Lead creation failed:', leadErr.message);
       }
     }
 
     // 2. Write to linkedin_outreach_logs
     const logPayload = {
-      contact_name: entry.contact_name || '',
-      company_name: entry.company_name || '',
-      designation: entry.designation || '',
-      linkedin_url: entry.linkedin_url || '',
+      contact_name: cleanContact,
+      company_name: cleanCompany,
+      designation: entry.designation ? entry.designation.trim() : '',
+      linkedin_url: cleanLinkedin || entry.linkedin_url || '',
       action_type: entry.action_type,
       message_template: entry.message_template || null,
       reply_sentiment: entry.reply_sentiment || null,
       notes: entry.notes || null,
       lead_id: leadId,
       owner_id: user?.id,
-      pushed_to_lead: !entry.skip_sync,
+      pushed_to_lead: !!leadId,
       ...(orgId ? { organization_id: orgId } : {}),
     };
 
@@ -2424,15 +2496,160 @@ const useDataStore = create((set, get) => ({
   },
 
   updateLinkedInOutreach: async (id, updates) => {
+    const { user } = useAuthStore.getState();
+    const orgId = await get()._getOrgId();
     const { data, error } = await supabase.from('linkedin_outreach_logs').update(updates).eq('id', id).select().single();
     if (error) throw error;
     set(state => ({ linkedinLogs: state.linkedinLogs.map(l => l.id === id ? data : l) }));
+
+    const LI_STATUS_MAP = {
+      connection_request: 'Requested',
+      accepted: 'Connected',
+      message: 'Messaged',
+      inmail: 'Messaged',
+      replied: 'Replied',
+    };
+
+    // Synchronize updates directly to associated lead in Leads CRM
+    try {
+      const { leads, list_leads } = get();
+      let lead = null;
+      let leadType = 'leads';
+
+      if (data.lead_id) {
+        lead = leads.find(l => l.id === data.lead_id);
+        if (!lead) {
+          lead = list_leads.find(l => l.id === data.lead_id);
+          if (lead) leadType = 'list_leads';
+        }
+      }
+
+      // If not linked yet, try matching by URL or details
+      if (!lead) {
+        const matchResult = get()._matchLeadForLinkedIn(data, orgId);
+        if (matchResult) {
+          lead = matchResult.lead;
+          leadType = matchResult.type;
+        }
+      }
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      const currentAction = updates.action_type || data.action_type;
+      const currentSentiment = updates.reply_sentiment !== undefined ? updates.reply_sentiment : data.reply_sentiment;
+      const targetStatus = LI_STATUS_MAP[currentAction] || 'Requested';
+
+      if (lead) {
+        const newStage = get()._linkedInActionToStage(currentAction, currentSentiment, lead.stage);
+        
+        const timestamp = new Date().toLocaleString('en-IN', {
+          day: 'numeric', month: 'short', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+        const noteAddition = updates.notes ? `🔗 [${timestamp}] LinkedIn update (${targetStatus}): ${updates.notes}` : '';
+        const existingNotes = lead.notes || '';
+        const updatedNotes = noteAddition
+          ? (existingNotes ? `${existingNotes}\n\n---\n${noteAddition}` : noteAddition)
+          : existingNotes;
+
+        const leadUpdates = {
+          stage: newStage,
+          linkedin_status: targetStatus,
+          signals: {
+            ...(lead.signals || {}),
+            linkedin_activity: true,
+          },
+          last_contact_date: todayStr,
+          ...(updates.notes ? { notes: updatedNotes } : {}),
+          ...(updates.contact_name ? { contact_name: updates.contact_name.trim() } : {}),
+          ...(updates.company_name ? { company_name: updates.company_name.trim() } : {}),
+          ...(updates.designation ? { designation: updates.designation.trim() } : {}),
+          ...(updates.linkedin_url ? { contact_linkedin: updates.linkedin_url.trim() } : {}),
+          ...(currentSentiment === 'interested' || currentSentiment === 'demo_booked' ? { positive_interest: true } : {}),
+          ...(currentSentiment === 'demo_booked' ? { demo_requested: true } : {}),
+        };
+
+        if (leadType === 'leads') {
+          leadUpdates.outreach_sent = true;
+        }
+
+        const { data: updatedLead, error: leadUpdateErr } = await supabase
+          .from(leadType)
+          .update(leadUpdates)
+          .eq('id', lead.id)
+          .select()
+          .single();
+
+        const finalLead = (!leadUpdateErr && updatedLead) ? updatedLead : { ...lead, ...leadUpdates };
+        if (leadType === 'leads') {
+          set(state => ({ leads: state.leads.map(l => l.id === lead.id ? finalLead : l) }));
+        } else {
+          set(state => ({ list_leads: state.list_leads.map(l => l.id === lead.id ? finalLead : l) }));
+        }
+
+        // Link the log if not linked
+        if (!data.lead_id) {
+          await supabase.from('linkedin_outreach_logs').update({ lead_id: lead.id, pushed_to_lead: true }).eq('id', id);
+          set(state => ({ linkedinLogs: state.linkedinLogs.map(l => l.id === id ? { ...l, lead_id: lead.id, pushed_to_lead: true } : l) }));
+        }
+      } else if (!data.lead_id) {
+        // No matching lead found: Auto-create the lead in CRM so it reflects in leads!
+        const newStage = get()._linkedInActionToStage(currentAction, currentSentiment, 'New Lead');
+        const timestamp = new Date().toLocaleString('en-IN', {
+          day: 'numeric', month: 'short', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+        const noteText = `🔗 [${timestamp}] LinkedIn: ${targetStatus} to ${data.contact_name || 'Prospect'}${data.notes ? ' — ' + data.notes : ''}`;
+
+        const cleanCompany = (data.company_name && data.company_name.trim()) 
+          || (data.contact_name ? `${data.contact_name.trim()} (Individual)` : 'Prospect (LinkedIn)');
+
+        const leadPayload = {
+          company_name: cleanCompany,
+          contact_name: data.contact_name ? data.contact_name.trim() : '',
+          designation: data.designation ? data.designation.trim() : '',
+          contact_linkedin: data.linkedin_url ? data.linkedin_url.trim() : null,
+          stage: newStage,
+          source: 'LinkedIn Outreach',
+          linkedin_status: targetStatus,
+          outreach_sent: true,
+          linkedin_touches: 1,
+          signals: {
+            hiring_activity: false,
+            recruiter_hiring: false,
+            funding_activity: false,
+            linkedin_activity: true,
+            job_posting_activity: false,
+            company_growth: false,
+          },
+          notes: noteText,
+          owner_id: user?.id,
+          ...(orgId ? { organization_id: orgId } : {}),
+          ...(currentSentiment === 'interested' || currentSentiment === 'demo_booked' ? { positive_interest: true } : {}),
+          ...(currentSentiment === 'demo_booked' ? { demo_requested: true } : {}),
+          last_contact_date: todayStr,
+        };
+
+        const { data: newLead, error: leadErr } = await supabase
+          .from('leads')
+          .insert(leadPayload)
+          .select()
+          .single();
+
+        if (!leadErr && newLead) {
+          set(state => ({ leads: [newLead, ...state.leads] }));
+          await supabase.from('linkedin_outreach_logs').update({ lead_id: newLead.id, pushed_to_lead: true }).eq('id', id);
+          set(state => ({ linkedinLogs: state.linkedinLogs.map(l => l.id === id ? { ...l, lead_id: newLead.id, pushed_to_lead: true } : l) }));
+        }
+      }
+    } catch (syncErr) {
+      console.warn('[LinkedIn] Error syncing log update to leads:', syncErr);
+    }
+
     return data;
   },
 
   // Bulk import LinkedIn outreach from CSV (Sales Navigator / Apollo)
   bulkImportLinkedInOutreach: async (rows) => {
-    const { user } = useAuthStore.getState();
     await get().ensureProfile();
     const orgId = await get()._getOrgId();
     let created = 0;
@@ -2440,20 +2657,24 @@ const useDataStore = create((set, get) => ({
 
     for (const row of rows) {
       try {
+        const contactName = row.contact_name || ((row['First Name'] || row['Last Name'])
+          ? `${row['First Name'] || ''} ${row['Last Name'] || ''}`.trim()
+          : row.name || '');
+        const companyName = row.company_name || row['Company'] || row['Company Name'] || '';
+        const linkedinUrl = row.linkedin_url || row['LinkedIn URL'] || row['Person Linkedin Url'] || row['Profile URL'] || '';
+        if (!linkedinUrl && !contactName && !companyName) continue;
+
         const result = await get().logLinkedInOutreach({
-          contact_name: row.contact_name || row['First Name'] && row['Last Name']
-            ? `${row['First Name'] || ''} ${row['Last Name'] || ''}`.trim()
-            : row.name || '',
-          company_name: row.company_name || row['Company'] || row['Company Name'] || '',
+          contact_name: contactName,
+          company_name: companyName,
           designation: row.designation || row['Title'] || row['Job Title'] || '',
-          linkedin_url: row.linkedin_url || row['LinkedIn URL'] || row['Person Linkedin Url'] || row['Profile URL'] || '',
+          linkedin_url: linkedinUrl,
           action_type: row.action_type || 'connection_request',
           email: row.email || row['Email'] || '',
           notes: row.notes || '',
         });
 
         if (result?.leadId) {
-          // Check if it was a new or existing lead
           const matchResult = get()._matchLeadForLinkedIn(row, orgId);
           if (matchResult) merged++;
           else created++;
@@ -2469,34 +2690,76 @@ const useDataStore = create((set, get) => ({
   // Auto-push fail-safe: push any un-pushed LinkedIn logs to leads on startup
   autoPushMissedLinkedInOutreach: async () => {
     try {
-      const { linkedinLogs } = get();
-      const missed = linkedinLogs.filter(l => !l.pushed_to_lead);
-      if (missed.length === 0) return;
+      const { linkedinLogs, leads, list_leads } = get();
+      if (!linkedinLogs || linkedinLogs.length === 0) return;
 
-      console.log(`[DataStore] Found ${missed.length} un-pushed LinkedIn outreach log(s) — auto-syncing...`);
+      const missed = linkedinLogs.filter(l => {
+        if (!l.pushed_to_lead || !l.lead_id) return true;
+        const exists = leads.some(lead => lead.id === l.lead_id) || list_leads.some(ll => ll.id === l.lead_id);
+        if (!exists) return true;
+        // Check if lead exists but linkedin_status is still missing or Not Sent
+        const lead = leads.find(lead => lead.id === l.lead_id) || list_leads.find(ll => ll.id === l.lead_id);
+        if (!lead.linkedin_status || lead.linkedin_status === 'Not Sent') return true;
+        return false;
+      });
+
+      if (missed.length === 0) return;
+      console.log(`[DataStore] Found ${missed.length} un-synced LinkedIn outreach log(s) — auto-syncing to leads...`);
+
+      const LI_STATUS_MAP = {
+        connection_request: 'Requested',
+        accepted: 'Connected',
+        message: 'Messaged',
+        inmail: 'Messaged',
+        replied: 'Replied',
+      };
+      const orgId = await get()._getOrgId();
+      const todayStr = new Date().toISOString().split('T')[0];
 
       for (const log of missed) {
         try {
-          const orgId = log.organization_id || (await get()._getOrgId());
-          let matchResult = get()._matchLeadForLinkedIn(log, orgId);
-          let existingLead = matchResult ? matchResult.lead : null;
+          let matchResult = get()._matchLeadForLinkedIn(log, log.organization_id || orgId);
+          let existingLead = matchResult ? matchResult.lead : (log.lead_id ? leads.find(l => l.id === log.lead_id) : null);
+          let leadType = matchResult ? matchResult.type : 'leads';
 
-          if (!existingLead) {
-            // Create a minimal lead
-            await get().logLinkedInOutreach(log);
+          if (existingLead) {
+            const targetStatus = LI_STATUS_MAP[log.action_type] || 'Requested';
+            const newStage = get()._linkedInActionToStage(log.action_type, log.reply_sentiment, existingLead.stage);
+            const updates = {
+              stage: newStage,
+              linkedin_status: targetStatus,
+              signals: {
+                ...(existingLead.signals || {}),
+                linkedin_activity: true,
+              },
+              last_contact_date: todayStr,
+              ...(leadType === 'leads' ? { outreach_sent: true, linkedin_touches: Math.max(existingLead.linkedin_touches || 0, 1) } : {}),
+              ...(log.reply_sentiment === 'interested' || log.reply_sentiment === 'demo_booked' ? { positive_interest: true } : {}),
+              ...(log.reply_sentiment === 'demo_booked' ? { demo_requested: true } : {}),
+              ...(!existingLead.contact_linkedin && log.linkedin_url ? { contact_linkedin: log.linkedin_url } : {}),
+              ...(!existingLead.contact_name && log.contact_name ? { contact_name: log.contact_name } : {}),
+            };
+
+            await supabase.from(leadType).update(updates).eq('id', existingLead.id);
+            await supabase.from('linkedin_outreach_logs').update({ pushed_to_lead: true, lead_id: existingLead.id }).eq('id', log.id);
+
+            if (leadType === 'leads') {
+              set(state => ({ leads: state.leads.map(l => l.id === existingLead.id ? { ...l, ...updates } : l) }));
+            } else {
+              set(state => ({ list_leads: state.list_leads.map(l => l.id === existingLead.id ? { ...l, ...updates } : l) }));
+            }
           } else {
-            // Just mark as pushed
-            await supabase
-              .from('linkedin_outreach_logs')
-              .update({ pushed_to_lead: true, lead_id: existingLead.id })
-              .eq('id', log.id);
+            // Create the lead
+            await get().logLinkedInOutreach({
+              ...log,
+              skip_sync: false
+            });
           }
         } catch (err) {
-          console.error('[LinkedIn AutoPush] Error:', err);
+          console.error('[LinkedIn AutoPush] Error syncing log:', log.id, err);
         }
       }
 
-      // Refresh logs
       await get()._refreshLinkedInLogs();
     } catch (err) {
       console.warn('[DataStore] LinkedIn auto-push failed:', err);

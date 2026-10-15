@@ -174,13 +174,17 @@ export default function LinkedInOutreach() {
   // ── Submit ───────────────────────────────────────────
   const handleSubmit = async () => {
     if (!form.linkedin_url.trim() || !form.action_type) return;
-    if (!form.contact_name.trim() || !form.company_name.trim()) return;
+    const finalContact = form.contact_name.trim();
+    const finalCompany = form.company_name.trim() || (finalContact ? `${finalContact} (Individual)` : 'Prospect (LinkedIn)');
+    if (!finalContact && !form.company_name.trim()) return;
 
     setSaving(true);
     setSuccessMsg('');
     try {
       const result = await logLinkedInOutreach({
         ...form,
+        contact_name: finalContact || finalCompany,
+        company_name: finalCompany,
         reply_sentiment: form.action_type === 'replied' ? (form.reply_sentiment || 'neutral') : null,
         skip_sync: !syncToCRM,
       });
@@ -188,8 +192,7 @@ export default function LinkedInOutreach() {
       if (!syncToCRM) {
         setSuccessMsg('✅ Logged to LinkedIn Activity Only');
       } else {
-        const wasNew = !leads.find(l => l.id === result?.leadId && l.created_at !== l.updated_at);
-        setSuccessMsg(wasNew ? '✅ Logged & new lead created in CRM!' : '✅ Logged & synced to existing lead!');
+        setSuccessMsg('✅ Logged & synced to Leads CRM!');
       }
 
       // Reset form
@@ -291,7 +294,7 @@ export default function LinkedInOutreach() {
     }
   };
 
-  const canSubmit = form.linkedin_url.trim() && form.action_type && form.contact_name.trim() && form.company_name.trim();
+  const canSubmit = form.linkedin_url.trim() && form.action_type && (form.contact_name.trim() || form.company_name.trim());
 
   return (
     <div className="li-page" onKeyDown={handleKeyDown}>
@@ -604,9 +607,27 @@ export default function LinkedInOutreach() {
                           ))}
                         </select>
                       ) : (
-                        <span className={`li-action-badge ${log.action_type}`}>
-                          {ACTION_BADGE_LABELS[log.action_type] || log.action_type}
-                        </span>
+                        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                          <select
+                            className={`li-action-badge ${log.action_type}`}
+                            style={{ cursor: 'pointer', border: 'none', outline: 'none', appearance: 'none', paddingRight: '16px' }}
+                            value={log.action_type}
+                            title="Click to quickly change action and sync to CRM"
+                            onChange={async (e) => {
+                              const newAction = e.target.value;
+                              await useDataStore.getState().updateLinkedInOutreach(log.id, { action_type: newAction });
+                              setSuccessMsg(`Status updated to ${ACTION_BADGE_LABELS[newAction] || newAction} & synced to Leads CRM!`);
+                              setTimeout(() => setSuccessMsg(''), 3000);
+                            }}
+                          >
+                            {ACTION_TYPES.map(a => (
+                              <option key={a.id} value={a.id} style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>
+                                {a.label}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown size={10} style={{ position: 'absolute', right: 4, pointerEvents: 'none', opacity: 0.6 }} />
+                        </div>
                       )}
                     </td>
                     <td>
@@ -624,10 +645,28 @@ export default function LinkedInOutreach() {
                           ))}
                         </select>
                       ) : (
-                        log.reply_sentiment ? (
-                          <span className={`li-sentiment-badge ${log.reply_sentiment}`}>
-                            {log.reply_sentiment.replace('_', ' ')}
-                          </span>
+                        log.action_type === 'replied' ? (
+                          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                            <select
+                              className={`li-sentiment-badge ${log.reply_sentiment || 'neutral'}`}
+                              style={{ cursor: 'pointer', border: 'none', outline: 'none', appearance: 'none', paddingRight: '16px' }}
+                              value={log.reply_sentiment || 'neutral'}
+                              title="Click to change sentiment and sync to CRM"
+                              onChange={async (e) => {
+                                const newSentiment = e.target.value;
+                                await useDataStore.getState().updateLinkedInOutreach(log.id, { reply_sentiment: newSentiment });
+                                setSuccessMsg(`Sentiment updated & synced to Leads CRM!`);
+                                setTimeout(() => setSuccessMsg(''), 3000);
+                              }}
+                            >
+                              {SENTIMENTS.map(s => (
+                                <option key={s.id} value={s.id} style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}>
+                                  {s.label}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown size={10} style={{ position: 'absolute', right: 4, pointerEvents: 'none', opacity: 0.6 }} />
+                          </div>
                         ) : '—'
                       )}
                     </td>

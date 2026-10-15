@@ -125,11 +125,20 @@ function LeadRow({ lead, isSelected, onSelect, onClick, updateLead, team, user, 
         <div className="lead-company-info">
           <span className="lead-company-name">{lead.company_name || '—'}</span>
           <span className="lead-contact-name">{lead.contact_name || lead.designation || 'No contact'}</span>
-          <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '4px', alignItems: 'center' }}>
             <Mail size={12} color={lead.email ? "var(--accent-blue)" : "var(--text-tertiary)"} style={{ opacity: lead.email ? 1 : 0.3 }} title={lead.email || "No Email"} />
             <Phone size={12} color={lead.phone ? "var(--accent-blue)" : "var(--text-tertiary)"} style={{ opacity: lead.phone ? 1 : 0.3 }} title={lead.phone || "No Phone"} />
-            <Link2 size={12} color={lead.linkedin_url ? "var(--accent-blue)" : "var(--text-tertiary)"} style={{ opacity: lead.linkedin_url ? 1 : 0.3 }} title={lead.linkedin_url || "No LinkedIn"} />
+            <Link2 size={12} color={(lead.contact_linkedin || lead.linkedin_url) ? "var(--accent-blue)" : "var(--text-tertiary)"} style={{ opacity: (lead.contact_linkedin || lead.linkedin_url) ? 1 : 0.3 }} title={lead.contact_linkedin || lead.linkedin_url || "No LinkedIn"} />
             <Globe size={12} color={lead.website ? "var(--accent-blue)" : "var(--text-tertiary)"} style={{ opacity: lead.website ? 1 : 0.3 }} title={lead.website || "No Website"} />
+            {lead.linkedin_status && lead.linkedin_status !== 'Not Sent' && (
+              <span className={`badge ${
+                lead.linkedin_status === 'Replied' ? 'badge-green' :
+                lead.linkedin_status === 'Connected' ? 'badge-blue' :
+                lead.linkedin_status === 'Messaged' ? 'badge-yellow' : 'badge-gray'
+              }`} style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, fontWeight: 600 }}>
+                🔗 {lead.linkedin_status}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -881,7 +890,7 @@ export default function Leads() {
         {/* Right Drawer */}
         {selectedLead && (
           <LeadDrawer
-            lead={selectedLead}
+            lead={leads.find(l => l.id === selectedLead.id) || selectedLead}
             onClose={() => setSelectedLead(null)}
             onUpdate={handleLeadUpdate}
             onDelete={async (id) => {
