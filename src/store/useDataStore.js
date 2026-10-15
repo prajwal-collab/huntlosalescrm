@@ -424,12 +424,13 @@ const useDataStore = create((set, get) => ({
       const missedTasks = tasks.filter(t => {
         const isCallType = t.type === 'calling_list_item' || t.type === 'cold_call';
         if (!isCallType) return false;
-        if (t.type === 'calling_list_item' && t.status !== 'completed') return false;
+        // calling_list_item: process completed OR skipped ones, NOT still-pending
+        if (t.type === 'calling_list_item' && t.status === 'pending') return false;
         
         let data = {};
         try { data = JSON.parse(t.notes || '{}'); } catch(e) {}
         
-        // If already marked pushed, verify if a matching lead exists in the store
+        // If already marked pushed, verify if a matching lead actually exists in the store
         if (data.pushedToLead) {
           const company = (data.company || data.company_name || '').toLowerCase().trim();
           const cleanPhone = (data.phone || '').replace(/\D/g, '').slice(-10);
@@ -442,8 +443,10 @@ const useDataStore = create((set, get) => ({
           );
           if (leadExists) return false;
         }
-        
-        if (!data.outcome) return false;
+
+        // For cold_call: require an outcome to be logged (manually entered calls)
+        // For calling_list_item: the contact data itself is sufficient — no outcome required
+        if (t.type === 'cold_call' && !data.outcome) return false;
         return true;
       });
 
@@ -941,6 +944,7 @@ const useDataStore = create((set, get) => ({
             notes: appendedNotes,
             stage: updatedStage,
             last_contacted_at: new Date().toISOString(),
+            last_contact_date: new Date().toISOString().split('T')[0],
             ...(cleanPhone && !existingLead.phone ? { phone: cleanPhone } : {}),
             ...(trimmedContact && !existingLead.contact_name ? { contact_name: trimmedContact } : {}),
             ...(cleanEmail && !existingLead.email ? { email: cleanEmail } : {}),
@@ -975,7 +979,9 @@ const useDataStore = create((set, get) => ({
             stage: lead.stage || 'New Lead',
             source: lead.source || 'Power Dialer',
             notes: lead.notes || null,
-            last_contacted_at: lead.last_contacted_at || new Date().toISOString(),
+            // Support both field name variants from callers
+            last_contacted_at: lead.last_contacted_at || lead.last_contact_date || new Date().toISOString(),
+            last_contact_date: lead.last_contact_date || lead.last_contacted_at || new Date().toISOString().split('T')[0],
             owner_id: user?.id,
             ...(orgId ? { organization_id: orgId } : {})
           };
@@ -2197,6 +2203,7 @@ const useDataStore = create((set, get) => ({
       // 2. Exact LinkedIn URL match
       if (normalizedUrl) {
         const byLinkedIn = list.find(l => {
+          // Only filter by org if BOTH sides have an org_id set
           if (orgId && l.organization_id && l.organization_id !== orgId) return false;
           const leadUrl = normalizeUrl(l.contact_linkedin) || normalizeUrl(l.linkedin_url);
           return leadUrl && leadUrl === normalizedUrl;
@@ -2229,7 +2236,8 @@ const useDataStore = create((set, get) => ({
         const byCompany = list.find(l => {
           if (orgId && l.organization_id && l.organization_id !== orgId) return false;
           const matchComp = l.company_name?.toLowerCase().trim() === cleanCompany;
-          const noOtherContact = !l.contact_name || (cleanContact && l.contact_name?.toLowerCase().trim() === cleanContact);
+          // Allow match if lead has no contact name, or if contact names match
+          const noOtherContact = !l.contact_name || !cleanContact || l.contact_name?.toLowerCase().trim() === cleanContact;
           return matchComp && noOtherContact;
         });
         if (byCompany) return byCompany;
@@ -2761,6 +2769,8 @@ const useDataStore = create((set, get) => ({
       }
 
       await get()._refreshLinkedInLogs();
+      // Also refresh leads so the Leads page picks up linkedin_status + signal changes
+      await get()._refreshTable('leads');
     } catch (err) {
       console.warn('[DataStore] LinkedIn auto-push failed:', err);
     }

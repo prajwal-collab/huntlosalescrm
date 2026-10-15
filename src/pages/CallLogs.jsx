@@ -498,7 +498,7 @@ export default function CallLogs() {
           stage: 'New Lead',
           source: 'Power Dialer',
           notes: 'Pushed from Power Dialer calling list.',
-          last_contacted_at: new Date().toISOString(),
+          last_contact_date: new Date().toISOString().split('T')[0],
         };
       });
       
@@ -506,13 +506,16 @@ export default function CallLogs() {
       
       const allTasks = useDataStore.getState().tasks;
       // Mark ALL pending tasks as completed and pushed with linkedLeadId
-      const tasksToUpdate = pending.map((curr, idx) => {
+      // Match by company name (not array index) since bulkCreateLeadsFromDialer may reorder merged vs inserted results
+      const tasksToUpdate = pending.map((curr) => {
         const originalTask = allTasks.find(t => t.id === curr.id);
         let data = {};
         if (originalTask) {
           try { data = JSON.parse(originalTask.notes || '{}'); } catch(e) {}
         }
-        const linkedId = resLeads?.[idx]?.id || null;
+        const uniqueCompany = (curr.company_name || (curr.contact_name ? `${curr.contact_name} (Individual)` : null) || `Dialer-${curr.id}`).toLowerCase();
+        const matchedLead = resLeads?.find(r => r.company_name?.toLowerCase() === uniqueCompany);
+        const linkedId = matchedLead?.id || null;
         const newNotes = JSON.stringify({ ...data, pushedToLead: true, ...(linkedId ? { linkedLeadId: linkedId } : {}) });
 
         return {
@@ -523,7 +526,7 @@ export default function CallLogs() {
       });
       await useDataStore.getState().bulkUpdateTasks(tasksToUpdate);
       
-      useDataStore.getState()._refreshTable('leads');
+      await useDataStore.getState()._refreshTable('leads');
       
       alert(`Successfully pushed ${leadsToCreate.length} contact(s) to CRM Leads!${toSkip.length > 0 ? `\n${toSkip.length} skipped (existing Accounts).` : ''}`);
     } catch (e) {
@@ -562,7 +565,7 @@ export default function CallLogs() {
         stage: savedForm.outcome === 'connected' ? 'Engaged' : 'New Lead',
         source: 'Power Dialer',
         notes: callNote,
-        last_contacted_at: new Date().toISOString(),
+        last_contact_date: new Date().toISOString().split('T')[0],
       };
       const resLeads = await useDataStore.getState().bulkCreateLeadsFromDialer([leadData]);
       const linkedLeadId = resLeads?.[0]?.id || null;
@@ -605,7 +608,7 @@ export default function CallLogs() {
       }
 
       // 3. Force-refresh leads table so the Leads page reflects new entries immediately
-      useDataStore.getState()._refreshTable('leads');
+      await useDataStore.getState()._refreshTable('leads');
       
       // 4. Clear the form and move to next pending contact
       setActiveCallForm({ outcome: '', duration: '', notes: '' });
@@ -637,7 +640,7 @@ export default function CallLogs() {
         stage: 'New Lead',
         source: 'Power Dialer',
         notes: callNote,
-        last_contacted_at: new Date().toISOString(),
+        last_contact_date: new Date().toISOString().split('T')[0],
       };
       const resLeads = await useDataStore.getState().bulkCreateLeadsFromDialer([leadData]);
       const linkedLeadId = resLeads?.[0]?.id || null;
@@ -654,7 +657,7 @@ export default function CallLogs() {
         status: 'pending'
       });
 
-      useDataStore.getState()._refreshTable('leads');
+      await useDataStore.getState()._refreshTable('leads');
 
       addNotification({
         id: `skip-${Date.now()}`,
@@ -830,7 +833,7 @@ export default function CallLogs() {
           stage: call.outcome === 'connected' ? 'Engaged' : 'New Lead',
           source: 'Bulk Push from History',
           notes: callNote,
-          last_contacted_at: new Date().toISOString(),
+          last_contact_date: new Date().toISOString().split('T')[0],
         };
       });
 
@@ -853,7 +856,7 @@ export default function CallLogs() {
         await useDataStore.getState().bulkUpdateTasks(tasksToUpdate);
       }
       
-      useDataStore.getState()._refreshTable('leads');
+      await useDataStore.getState()._refreshTable('leads');
       
       if (selectedCall && pendingLogs.some(p => p.id === selectedCall.id)) {
         setSelectedCall({ ...selectedCall, pushedToLead: true });
@@ -882,7 +885,7 @@ export default function CallLogs() {
         stage: call.outcome === 'connected' ? 'Engaged' : 'New Lead',
         source: 'Manual Push from History',
         notes: callNote,
-        last_contacted_at: new Date().toISOString(),
+        last_contact_date: new Date().toISOString().split('T')[0],
       }]);
 
       const linkedId = resLeads?.[0]?.id || null;
@@ -895,7 +898,7 @@ export default function CallLogs() {
         const newNotes = JSON.stringify({ ...data, pushedToLead: true, ...(linkedId ? { linkedLeadId: linkedId } : {}) });
         await useDataStore.getState().updateTask(latestTask.id, { notes: newNotes });
       }
-      useDataStore.getState()._refreshTable('leads');
+      await useDataStore.getState()._refreshTable('leads');
       setSelectedCall({ ...call, pushedToLead: true, ...(linkedId ? { linkedLeadId: linkedId } : {}) });
     } catch(e) {
       alert("Error pushing to lead: " + e.message);

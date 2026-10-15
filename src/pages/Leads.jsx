@@ -686,6 +686,10 @@ export default function Leads() {
           <option value="Manual">Manual</option>
           <option value="Import">Import</option>
           <option value="Webhook">Webhook</option>
+          <option value="LinkedIn Outreach">🔗 LinkedIn Outreach</option>
+          <option value="Power Dialer">📞 Power Dialer</option>
+          <option value="Cold Call Log">📋 Cold Call Log</option>
+          <option value="Bulk Push from History">📤 Bulk Push</option>
           <option value="LinkedIn">LinkedIn</option>
           <option value="Referral">Referral</option>
         </select>
